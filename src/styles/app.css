@@ -122,3 +122,41 @@
 }
 .update-banner-text { color: var(--text-primary); }
 .update-banner-text span { color: var(--accent-light); font-weight: 600; }
+
+/* Home Page Genre Grid */
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.genre-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 90px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition);
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.genre-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+
+.genre-card-icon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.genre-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}

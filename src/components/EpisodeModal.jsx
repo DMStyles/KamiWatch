@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { AppContext } from '../App'
 
-const API = 'http://localhost:8642'
+const API = 'http://localhost:8765'
 
 export default function EpisodeModal() {
   const { episodeModal, setEpisodeModal, setDownloads, settings } = useContext(AppContext)
@@ -12,8 +12,12 @@ export default function EpisodeModal() {
   const [subDub, setSubDub] = useState(settings.subDub || 'sub')
   const [queuing, setQueuing] = useState(false)
 
+  const [follows, setFollows] = useState([])
+  const [isFollowed, setIsFollowed] = useState(false)
+
   useEffect(() => {
     fetchEpisodes()
+    fetchFollows()
   }, [episodeModal])
 
   const fetchEpisodes = async () => {
@@ -28,6 +32,32 @@ export default function EpisodeModal() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchFollows = async () => {
+    try {
+      const res = await fetch(`${API}/library/follows`)
+      const data = await res.json()
+      setFollows(data)
+      const found = data.find(f => f.title === episodeModal.title)
+      setIsFollowed(!!found)
+    } catch {}
+  }
+
+  const toggleFollow = async () => {
+    try {
+      if (isFollowed) {
+        const found = follows.find(f => f.title === episodeModal.title)
+        if (found) {
+          await fetch(`${API}/library/follows/${found.id}`, { method: 'DELETE' })
+        }
+      } else {
+        await fetch(`${API}/library/follows?title=${encodeURIComponent(episodeModal.title)}&url=${encodeURIComponent(episodeModal.url)}&thumbnail=${encodeURIComponent(episodeModal.thumbnail)}&source=${encodeURIComponent(episodeModal.source)}`, {
+          method: 'POST'
+        })
+      }
+      fetchFollows()
+    } catch {}
   }
 
   const toggleEp = (num) => {
@@ -83,6 +113,13 @@ export default function EpisodeModal() {
                 {episodeModal.sub_episodes !== '0' && <span className="badge badge-sub">SUB</span>}
                 {episodeModal.dub_episodes !== '0' && <span className="badge badge-dub">DUB</span>}
               </div>
+              <button
+                className={`btn ${isFollowed ? 'btn-secondary' : 'btn-primary'}`}
+                style={{marginTop: 8, padding: '4px 10px', fontSize: 11}}
+                onClick={toggleFollow}
+              >
+                {isFollowed ? '❤️ Followed' : '🤍 Follow Series'}
+              </button>
             </div>
           </div>
           <button className="modal-close" onClick={() => setEpisodeModal(null)}>✕</button>

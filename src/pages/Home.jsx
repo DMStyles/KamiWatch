@@ -2,6 +2,8 @@ import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
 
+const API = 'http://localhost:8765'
+
 const HERO_SLIDES = [
   {
     title: 'One Piece',
@@ -38,13 +40,23 @@ const TRENDING = [
 export default function Home() {
   const [heroIdx, setHeroIdx] = useState(0)
   const [activeGenre, setActiveGenre] = useState(null)
+  const [follows, setFollows] = useState([])
   const navigate = useNavigate()
   const { setEpisodeModal } = useContext(AppContext)
 
   useEffect(() => {
     const timer = setInterval(() => setHeroIdx(i => (i + 1) % HERO_SLIDES.length), 5000)
+    fetchFollows()
     return () => clearInterval(timer)
   }, [])
+
+  const fetchFollows = async () => {
+    try {
+      const res = await fetch(`${API}/library/follows`)
+      const data = await res.json()
+      setFollows(data)
+    } catch {}
+  }
 
   const hero = HERO_SLIDES[heroIdx]
 
@@ -95,12 +107,43 @@ export default function Home() {
           <button
             key={g}
             className={`genre-tag${activeGenre === g ? ' active' : ''}`}
-            onClick={() => { setActiveGenre(g === activeGenre ? null : g); navigate('/search') }}
+            onClick={() => { setActiveGenre(g === activeGenre ? null : g); navigate('/search', { state: { searchQuery: g } }) }}
           >
             {g}
           </button>
         ))}
       </div>
+
+      {/* My Follow List */}
+      {follows.length > 0 && (
+        <section className="home-section">
+          <div className="section-header">
+            <span className="section-title">💖 My Follow List</span>
+          </div>
+          <div className="horizontal-scroll">
+            {follows.map((item, i) => (
+              <div
+                key={i}
+                className="anime-card"
+                onClick={() => setEpisodeModal(item)}
+              >
+                <div className="anime-card-img">
+                  <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
+                  <div className="anime-card-overlay">
+                    <button className="card-play-btn">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                  </div>
+                  <span className="anime-card-badge" style={{textTransform:'capitalize'}}>{item.source}</span>
+                </div>
+                <div className="anime-card-info">
+                  <p className="anime-card-title">{item.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Trending Row */}
       <section className="home-section">
@@ -163,7 +206,36 @@ export default function Home() {
         </div>
       </section>
 
-      <div style={{height: 40}} />
+      {/* Popular Genres */}
+      <section className="home-section" style={{padding: '0 24px'}}>
+        <div className="section-header" style={{padding: 0}}>
+          <span className="section-title">🎭 Browse Genres</span>
+        </div>
+        <div className="genre-grid">
+          {[
+            { name: 'Action', gradient: 'linear-gradient(135deg, #ef4444, #ec4899)', icon: '⚔️' },
+            { name: 'Fantasy', gradient: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', icon: '🔮' },
+            { name: 'Adventure', gradient: 'linear-gradient(135deg, #06b6d4, #10b981)', icon: '🗺️' },
+            { name: 'Comedy', gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)', icon: '😂' },
+            { name: 'Sci-Fi', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)', icon: '🚀' },
+            { name: 'Romance', gradient: 'linear-gradient(135deg, #ec4899, #f43f5e)', icon: '💖' },
+            { name: 'Mystery', gradient: 'linear-gradient(135deg, #1f2937, #4b5563)', icon: '🕵️' },
+            { name: 'Supernatural', gradient: 'linear-gradient(135deg, #4f46e5, #06b6d4)', icon: '👻' }
+          ].map((genre, i) => (
+            <div
+              key={i}
+              className="genre-card"
+              style={{ background: genre.gradient }}
+              onClick={() => navigate('/search', { state: { searchQuery: genre.name } })}
+            >
+              <span className="genre-card-icon">{genre.icon}</span>
+              <span className="genre-card-name">{genre.name}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div style={{height: 60}} />
     </div>
   )
 }

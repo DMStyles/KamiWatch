@@ -2,7 +2,7 @@ import React, { useState, useContext, useRef, useEffect } from 'react'
 import { AppContext } from '../App'
 import { useLocation } from 'react-router-dom'
 
-const API = 'http://localhost:8642'
+const API = 'http://localhost:8765'
 
 export default function Search() {
   const [query, setQuery] = useState('')
