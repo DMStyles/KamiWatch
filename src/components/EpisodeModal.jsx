@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { AppContext } from '../App'
 
-const API = 'http://localhost:8765'
+const API = 'http://localhost:8642'
 
 export default function EpisodeModal() {
   const { episodeModal, setEpisodeModal, setDownloads, settings } = useContext(AppContext)

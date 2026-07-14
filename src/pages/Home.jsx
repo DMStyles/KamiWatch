@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
 
-const API = 'http://localhost:8765'
+const API = 'http://localhost:8642'
 
 const HERO_SLIDES = [
   {
@@ -28,22 +28,22 @@ const HERO_SLIDES = [
 const GENRE_TAGS = ['Action','Adventure','Comedy','Drama','Ecchi','Fantasy','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Supernatural','Thriller']
 
 const TRENDING = [
-  { title: 'Solo Leveling', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx151807-g44W9EtHwNf0.jpg', ep: 12, type: 'TV' },
-  { title: 'Demon Slayer', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-W3dFGF0RtObY.jpg', ep: 26, type: 'TV' },
-  { title: 'Grand Blue', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx10290-7p7K97x6g5x4.png', ep: 12, type: 'TV' },
-  { title: 'One Piece', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-63UX5Ju7zT66.png', ep: 1000, type: 'TV' },
-  { title: 'Jujutsu Kaisen', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-bbBWjZLv63G1.png', ep: 24, type: 'TV' },
-  { title: 'Attack on Titan', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-C6FP1ymZnjiV.png', ep: 25, type: 'TV' },
-  { title: 'Chainsaw Man', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx127230-NuFpgyI9g4rS.png', ep: 12, type: 'TV' },
-  { title: 'Frieren: Beyond Journey\'s End', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-n2ccFQLwth4y.jpg', ep: 28, type: 'TV' },
-  { title: 'Spy x Family', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx140960-9V56yBAd4U1n.jpg', ep: 25, type: 'TV' },
-  { title: 'Oshi no Ko', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx150075-A1Q1gqJpZ2pZ.jpg', ep: 11, type: 'TV' },
-  { title: 'Bocchi the Rock!', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx130003-59l7bbPSpX69.png', ep: 12, type: 'TV' },
-  { title: 'My Hero Academia', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21459-ye6xe6u6.png', ep: 13, type: 'TV' },
-  { title: 'Bleach: Thousand-Year Blood War', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx147103-l39iT5f9L1N9.png', ep: 13, type: 'TV' },
-  { title: 'Naruto Shippuden', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1735-gzF67Wb0m043.png', ep: 500, type: 'TV' },
-  { title: 'Hunter x Hunter (2011)', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx11061-s3t3SpJE165J.png', ep: 148, type: 'TV' },
-  { title: 'Death Note', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-law1dz.png', ep: 37, type: 'TV' },
+  { title: 'Solo Leveling', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx151807-it355ZgzquUd.png', ep: 12, type: 'TV' },
+  { title: 'Demon Slayer', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21612-d5zrx9CWkxNl.png', ep: 26, type: 'TV' },
+  { title: 'Grand Blue', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100922-uxEhaCsqMMp3.png', ep: 12, type: 'TV' },
+  { title: 'One Piece', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-ELSYx3yMPcKM.jpg', ep: 1000, type: 'TV' },
+  { title: 'Jujutsu Kaisen', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx113415-LHBAeoZDIsnF.jpg', ep: 24, type: 'TV' },
+  { title: 'Attack on Titan', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx16498-buvcRTBx4NSm.jpg', ep: 25, type: 'TV' },
+  { title: 'Chainsaw Man', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx127230-DdP4vAdssLoz.png', ep: 12, type: 'TV' },
+  { title: 'Frieren: Beyond Journey\'s End', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx170068-ijY3tCP8KoWP.jpg', ep: 28, type: 'TV' },
+  { title: 'Spy x Family', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx140960-Kb6R5nYQfjmP.jpg', ep: 25, type: 'TV' },
+  { title: 'Oshi no Ko', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx150672-WqmmwZ4nMzAy.png', ep: 11, type: 'TV' },
+  { title: 'Bocchi the Rock!', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx130003-HTDmeL4RGeJ4.png', ep: 12, type: 'TV' },
+  { title: 'My Hero Academia', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21459-nYh85uj2Fuwr.jpg', ep: 13, type: 'TV' },
+  { title: 'Bleach: Thousand-Year Blood War', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx116674-p3zK4PUX2Aag.jpg', ep: 13, type: 'TV' },
+  { title: 'Naruto Shippuden', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1735-kGfVm0YqCPcu.png', ep: 500, type: 'TV' },
+  { title: 'Hunter x Hunter', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx136-gj0bbCpDNrKG.jpg', ep: 148, type: 'TV' },
+  { title: 'Death Note', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1535-kUgkcrfOrkUM.jpg', ep: 37, type: 'TV' },
 ]
 
 export default function Home() {
@@ -168,7 +168,7 @@ export default function Home() {
               onClick={() => navigate('/search', { state: { searchQuery: item.title } })}
             >
               <div className="anime-card-img">
-                <img src={item.thumbnail} alt={item.title} loading="lazy" />
+                <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
                 <div className="anime-card-overlay">
                   <button className="card-play-btn">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -199,7 +199,7 @@ export default function Home() {
               onClick={() => navigate('/search', { state: { searchQuery: item.title } })}
             >
               <div className="anime-card-img">
-                <img src={item.thumbnail} alt={item.title} loading="lazy" />
+                <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
                 <div className="anime-card-overlay">
                   <button className="card-play-btn">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>

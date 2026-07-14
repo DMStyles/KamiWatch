@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-const API = 'http://localhost:8765'
+const API = 'http://localhost:8642'
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 
 export default function Schedule() {

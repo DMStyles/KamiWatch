@@ -12,7 +12,7 @@ let backendProcess;
 function waitForBackend(retries = 30, delay = 500) {
   return new Promise((resolve, reject) => {
     const attempt = (n) => {
-      http.get('http://127.0.0.1:8765/health', (res) => {
+      http.get('http://127.0.0.1:8642/health', (res) => {
         if (res.statusCode === 200) resolve();
         else if (n > 0) setTimeout(() => attempt(n - 1), delay);
         else reject(new Error('Backend not ready'));
