@@ -72,12 +72,21 @@ export default function Schedule() {
                 />
               )}
               <div className="schedule-card-info">
-                <p className="schedule-title">{show.title || show.romaji}</p>
-                <p className="schedule-time" style={{color:'var(--accent-light)',fontSize:12,marginTop:4}}>
-                  {show.time ? `🕐 ${show.time}` : 'Time TBA'}
-                </p>
-                {show.episodeNumber && (
-                  <span className="badge badge-sub" style={{marginTop:6}}>Ep {show.episodeNumber}</span>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8}}>
+                  <p className="schedule-title" style={{flex: 1}}>{show.title}</p>
+                  {show.episode && (
+                    <span className="badge badge-source" style={{fontSize:10, flexShrink:0}}>{show.episode}</span>
+                  )}
+                </div>
+                {show.airings && show.airings.length > 0 && (
+                  <div className="schedule-airings">
+                    {show.airings.map((air, idx) => (
+                      <div key={idx} className="airing-row">
+                        <span className={`airing-type-badge badge-${air.type.toLowerCase()}`}>{air.type}</span>
+                        <span className="airing-time-val">{air.time}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
