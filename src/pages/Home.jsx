@@ -127,7 +127,7 @@ export default function Home() {
           <button
             key={g}
             className={`genre-tag${activeGenre === g ? ' active' : ''}`}
-            onClick={() => { setActiveGenre(g === activeGenre ? null : g); navigate('/search', { state: { searchQuery: g } }) }}
+            onClick={() => { setActiveGenre(g === activeGenre ? null : g); navigate('/search', { state: { genre: g } }) }}
           >
             {g}
           </button>
@@ -277,7 +277,7 @@ export default function Home() {
               key={i}
               className="genre-card"
               style={{ background: genre.gradient }}
-              onClick={() => navigate('/search', { state: { searchQuery: genre.name } })}
+              onClick={() => navigate('/search', { state: { genre: genre.name } })}
             >
               <span className="genre-card-icon">{genre.icon}</span>
               <span className="genre-card-name">{genre.name}</span>
