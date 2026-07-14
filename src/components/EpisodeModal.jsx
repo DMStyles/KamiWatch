@@ -112,6 +112,11 @@ export default function EpisodeModal() {
         const res = await fetch(`${API}/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}`)
         const data = await res.json()
         if (data.url) finalUrl = data.url
+      } else if (finalUrl.startsWith('kissanime:') || finalUrl.includes('kissanime.com.vc')) {
+        // KissAnime URL directly to the episode page
+        const res = await fetch(`${API}/kissanime/resolve?url=${encodeURIComponent(finalUrl)}`)
+        const data = await res.json()
+        if (data.url) finalUrl = data.url
       }
       setPlayerModal({ title: `${episodeModal.title} - Episode ${ep.number}`, url: finalUrl })
       setEpisodeModal(null)
@@ -120,6 +125,8 @@ export default function EpisodeModal() {
   }
 
   const isAnikoto = episodeModal.source === 'anikoto'
+  const isKissanime = episodeModal.source === 'kissanime'
+  const isDownloadDisabled = isAnikoto || isKissanime
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setEpisodeModal(null)}>
@@ -194,7 +201,7 @@ export default function EpisodeModal() {
         </div>
 
         <div className="modal-footer">
-          {isAnikoto && <span style={{fontSize:12, color:'var(--text-muted)', marginRight:'auto'}}>Downloads are currently disabled for Anikoto streams (protection). Please use Watch.</span>}
+          {isDownloadDisabled && <span style={{fontSize:12, color:'var(--text-muted)', marginRight:'auto'}}>Downloads are currently disabled for protected streams. Please use Watch.</span>}
           <button className="btn btn-ghost" onClick={() => setEpisodeModal(null)}>Cancel</button>
           <button
             className="btn btn-secondary"
@@ -206,8 +213,8 @@ export default function EpisodeModal() {
           <button
             className="btn btn-primary"
             onClick={startDownloads}
-            disabled={selected.size === 0 || queuing || isAnikoto}
-            title={isAnikoto ? "Downloads are disabled for this source" : ""}
+            disabled={selected.size === 0 || queuing || isDownloadDisabled}
+            title={isDownloadDisabled ? "Downloads are disabled for this source" : ""}
           >
             {queuing ? <span className="spinner" /> : `Download ${selected.size > 0 ? selected.size + ' Episode' + (selected.size > 1 ? 's' : '') : ''}`}
           </button>

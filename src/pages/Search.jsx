@@ -27,13 +27,15 @@ export default function Search() {
     setError('')
     setResults([])
     try {
-      const [r1, r2] = await Promise.allSettled([
+      const [r1, r2, r3] = await Promise.allSettled([
         fetch(`${API}/anikoto/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
         fetch(`${API}/animetake/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
+        fetch(`${API}/kissanime/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
       ])
       const merged = [
         ...(r1.status === 'fulfilled' ? r1.value.results || [] : []),
         ...(r2.status === 'fulfilled' ? r2.value.results || [] : []),
+        ...(r3.status === 'fulfilled' ? r3.value.results || [] : []),
       ]
       setResults(merged)
       if (merged.length === 0) setError('No results found. Try a different search term.')
@@ -75,13 +77,13 @@ export default function Search() {
 
         {results.length > 0 && (
           <div className="source-tabs">
-            {['all', 'anikoto', 'animetake'].map(s => (
+            {['all', 'anikoto', 'kissanime', 'animetake'].map(s => (
               <button
                 key={s}
                 className={`source-tab${activeSource === s ? ' active' : ''}`}
                 onClick={() => setActiveSource(s)}
               >
-                {s === 'all' ? `All (${results.length})` : s === 'anikoto' ? `Anikoto (${results.filter(r=>r.source==='anikoto').length})` : `AnimeTake (${results.filter(r=>r.source==='animetake').length})`}
+                {s === 'all' ? `All (${results.length})` : s === 'anikoto' ? `Anikoto (${results.filter(r=>r.source==='anikoto').length})` : s === 'kissanime' ? `Kissanime (${results.filter(r=>r.source==='kissanime').length})` : `AnimeTake (${results.filter(r=>r.source==='animetake').length})`}
               </button>
             ))}
           </div>

@@ -21,6 +21,7 @@ export default function PlayerModal() {
         <iframe
           src={playerModal.url}
           allowFullScreen
+          sandbox="allow-scripts allow-same-origin"
           className="player-video"
           style={{width:'100%',height:'calc(100% - 48px)',background:'#000',border:'none',outline:'none'}}
         />
