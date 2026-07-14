@@ -414,7 +414,7 @@
 
 .schedule-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
   gap: 16px;
 }
 
@@ -429,7 +429,7 @@
 
 .schedule-card-img {
   width: 100%;
-  aspect-ratio: 2/1;
+  aspect-ratio: 2/3;
   object-fit: cover;
   display: block;
 }
