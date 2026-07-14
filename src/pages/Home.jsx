@@ -51,15 +51,17 @@ export default function Home() {
   const [activeGenre, setActiveGenre] = useState(null)
   const [follows, setFollows] = useState([])
   const [airingEpisodes, setAiringEpisodes] = useState([])
+  const [heroSlides, setHeroSlides] = useState(HERO_SLIDES)
   const navigate = useNavigate()
   const { setEpisodeModal } = useContext(AppContext)
 
   useEffect(() => {
-    const timer = setInterval(() => setHeroIdx(i => (i + 1) % HERO_SLIDES.length), 5000)
+    const timer = setInterval(() => setHeroIdx(i => (i + 1) % heroSlides.length), 5000)
     fetchFollows()
     fetchAiring()
+    fetchHeroSlides()
     return () => clearInterval(timer)
-  }, [])
+  }, [heroSlides.length])
 
   const fetchFollows = async () => {
     try {
@@ -77,7 +79,18 @@ export default function Home() {
     } catch {}
   }
 
-  const hero = HERO_SLIDES[heroIdx]
+  const fetchHeroSlides = async () => {
+    try {
+      const res = await fetch(`${API}/jikan/hero-slides`)
+      const data = await res.json()
+      if (data.slides && data.slides.length >= 3) {
+        setHeroSlides(data.slides)
+        setHeroIdx(0)
+      }
+    } catch {}
+  }
+
+  const hero = heroSlides[heroIdx] || HERO_SLIDES[0]
 
   return (
     <div className="home-page">
@@ -110,7 +123,7 @@ export default function Home() {
           </div>
         </div>
         <div className="hero-dots">
-          {HERO_SLIDES.map((_, i) => (
+          {heroSlides.map((_, i) => (
             <button
               key={i}
               className={`hero-dot${i === heroIdx ? ' active' : ''}`}

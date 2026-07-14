@@ -163,20 +163,47 @@ async def get_airing(limit: int = 20):
 @router.get("/all")
 async def get_all_anime(page: int = 1, letter: str = None):
     if letter and letter != "#":
-        # Search by letter prefix
+        # Sort alphabetically ascending - A titles appear on page 1
+        # Use search with letter to find relevant anime
         query = """
         query ($search: String, $page: Int) {
           Page(page: $page, perPage: 24) {
             pageInfo { hasNextPage currentPage lastPage }
-            media(type: ANIME, search: $search, sort: TITLE_ENGLISH_DESC, isAdult: false) {
+            media(type: ANIME, search: $search, sort: POPULARITY_DESC, isAdult: false) {
               """ + MEDIA_FRAGMENT + """
             }
           }
         }
         """
-        variables = {"search": letter, "page": page}
+        # Try with the letter, fall back to letter+common suffix if 0 results
+        result = await anilist_post(query, {"search": letter, "page": page})
+        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+
+        # If no results (letter too short for AniList search), use alphabetical sort
+        if not anime_list:
+            fallback_query = """
+            query ($page: Int) {
+              Page(page: $page, perPage: 24) {
+                pageInfo { hasNextPage currentPage lastPage }
+                media(type: ANIME, sort: TITLE_ENGLISH, isAdult: false) {
+                  """ + MEDIA_FRAGMENT + """
+                }
+              }
+            }
+            """
+            result = await anilist_post(fallback_query, {"page": page})
+            page_data = ((result.get("data") or {}).get("Page")) or {}
+            all_items = page_data.get("media") or []
+            # Filter client-side to titles starting with selected letter
+            anime_list = [
+                i for i in all_items
+                if ((i.get("title") or {}).get("english") or (i.get("title") or {}).get("romaji") or "").upper().startswith(letter.upper())
+            ]
+            # If still none (e.g. page doesn't have that letter yet), return raw alphabetical
+            if not anime_list:
+                anime_list = all_items
     else:
-        # Default: popular anime
+        # Default: most popular anime
         query = """
         query ($page: Int) {
           Page(page: $page, perPage: 24) {
@@ -187,21 +214,19 @@ async def get_all_anime(page: int = 1, letter: str = None):
           }
         }
         """
-        variables = {"page": page}
+        result = await anilist_post(query, {"page": page})
 
-    result = await anilist_post(query, variables)
     errors = result.get("errors")
     page_data = ((result.get("data") or {}).get("Page")) or {}
-    anime_list = page_data.get("media") or []
+    if not anime_list:
+        anime_list = page_data.get("media") or []
     page_info = page_data.get("pageInfo") or {}
 
     if errors and not anime_list:
         return {
             "results": [],
             "error": errors[0].get("message", "Unknown error"),
-            "page": page,
-            "has_next": False,
-            "total_pages": 1,
+            "page": page, "has_next": False, "total_pages": 1,
         }
 
     return {
@@ -211,3 +236,61 @@ async def get_all_anime(page: int = 1, letter: str = None):
         "total_pages": page_info.get("lastPage", 1),
         "letter": letter,
     }
+
+
+@router.get("/hero-slides")
+async def get_hero_slides():
+    """Return randomized trending anime with banner images for the home hero."""
+    import random
+    query = """
+    query {
+      Page(perPage: 25) {
+        media(type: ANIME, sort: TRENDING_DESC, isAdult: false, format_in: [TV]) {
+          id
+          title { english romaji }
+          description(asHtml: false)
+          bannerImage
+          coverImage { extraLarge large }
+          format
+          episodes
+          averageScore
+          genres
+          status
+          season
+          seasonYear
+        }
+      }
+    }
+    """
+    result = await anilist_post(query)
+    anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+
+    # Only use anime that have a bannerImage
+    with_banners = [a for a in anime_list if a.get("bannerImage")]
+    if not with_banners:
+        return {"slides": []}
+
+    # Shuffle and pick up to 6
+    random.shuffle(with_banners)
+    picks = with_banners[:6]
+
+    slides = []
+    for item in picks:
+        title_en = (item.get("title") or {}).get("english") or (item.get("title") or {}).get("romaji", "")
+        # Strip HTML from description
+        desc = (item.get("description") or "").replace("<br>", " ").replace("<br/>", " ")
+        import re
+        desc = re.sub(r"<[^>]+>", "", desc)[:180]
+        score = item.get("averageScore")
+        episodes = item.get("episodes") or "?"
+        slides.append({
+            "title": title_en,
+            "synopsis": desc,
+            "image": item.get("bannerImage") or (item.get("coverImage") or {}).get("extraLarge", ""),
+            "type": (item.get("format") or "TV").replace("_", " "),
+            "episodes": str(episodes),
+            "rating": f"{round(score/10,1)}/10" if score else "N/A",
+            "genres": item.get("genres") or [],
+        })
+
+    return {"slides": slides}
