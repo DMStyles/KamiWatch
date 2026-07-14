@@ -1,5 +1,6 @@
 import httpx
 import asyncio
+from typing import Optional
 from fastapi import APIRouter
 
 router = APIRouter()
