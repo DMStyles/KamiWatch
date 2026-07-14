@@ -27,11 +27,11 @@ app.include_router(library_router, prefix="/library", tags=["Library"])
 @app.on_event("startup")
 async def startup():
     init_db()
-    print("AniVault backend started on http://localhost:8642")
+    print("AniVault backend started on http://localhost:8765")
 
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8642, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=8765, log_level="info")

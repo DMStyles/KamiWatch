@@ -28,13 +28,22 @@ const HERO_SLIDES = [
 const GENRE_TAGS = ['Action','Adventure','Comedy','Drama','Ecchi','Fantasy','Mystery','Psychological','Romance','Sci-Fi','Slice of Life','Supernatural','Thriller']
 
 const TRENDING = [
-  { title: 'Solo Leveling S2', thumbnail: 'https://cdn.anipixcdn.co/thumbnail/33c62722584316e94dc5107447218121.jpg', ep: 12, type: 'TV' },
-  { title: 'Demon Slayer', thumbnail: 'https://cdn.anipixcdn.co/thumbnail/279f2530e2209f81b0d5f758e480385a.jpg', ep: 26, type: 'TV' },
-  { title: 'Grand Blue S3', thumbnail: 'https://cdn.anipixcdn.co/thumbnail/a1ea8c4b315b25f06e3c212423037951.jpg', ep: 2, type: 'TV' },
-  { title: 'Black Torch', thumbnail: 'https://cdn.anipixcdn.co/thumbnail/6aa020e879ccd33affde6c1b1af4bb2f.jpg', ep: 12, type: 'TV' },
-  { title: 'Skeleton Knight S2', thumbnail: 'https://cdn.anipixcdn.co/thumbnail/6c5d124eddd0219b81c8ac758464e25b.jpg', ep: 2, type: 'TV' },
-  { title: 'Kill Blue', thumbnail: 'https://cdn.anipixcdn.co/thumbnail/6aa020e879ccd33affde6c1b1af4bb2f.jpg', ep: 12, type: 'TV' },
-  { title: 'Oh Boy Was I Wrong', thumbnail: 'https://cdn.anipixcdn.co/thumbnail/4419e6f092d05cce603eb9337e62b210.jpg', ep: 2, type: 'TV' },
+  { title: 'Solo Leveling', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx151807-g44W9EtHwNf0.jpg', ep: 12, type: 'TV' },
+  { title: 'Demon Slayer', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-W3dFGF0RtObY.jpg', ep: 26, type: 'TV' },
+  { title: 'Grand Blue', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx10290-7p7K97x6g5x4.png', ep: 12, type: 'TV' },
+  { title: 'One Piece', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-63UX5Ju7zT66.png', ep: 1000, type: 'TV' },
+  { title: 'Jujutsu Kaisen', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-bbBWjZLv63G1.png', ep: 24, type: 'TV' },
+  { title: 'Attack on Titan', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-C6FP1ymZnjiV.png', ep: 25, type: 'TV' },
+  { title: 'Chainsaw Man', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx127230-NuFpgyI9g4rS.png', ep: 12, type: 'TV' },
+  { title: 'Frieren: Beyond Journey\'s End', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx154587-n2ccFQLwth4y.jpg', ep: 28, type: 'TV' },
+  { title: 'Spy x Family', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx140960-9V56yBAd4U1n.jpg', ep: 25, type: 'TV' },
+  { title: 'Oshi no Ko', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx150075-A1Q1gqJpZ2pZ.jpg', ep: 11, type: 'TV' },
+  { title: 'Bocchi the Rock!', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx130003-59l7bbPSpX69.png', ep: 12, type: 'TV' },
+  { title: 'My Hero Academia', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21459-ye6xe6u6.png', ep: 13, type: 'TV' },
+  { title: 'Bleach: Thousand-Year Blood War', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx147103-l39iT5f9L1N9.png', ep: 13, type: 'TV' },
+  { title: 'Naruto Shippuden', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1735-gzF67Wb0m043.png', ep: 500, type: 'TV' },
+  { title: 'Hunter x Hunter (2011)', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx11061-s3t3SpJE165J.png', ep: 148, type: 'TV' },
+  { title: 'Death Note', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-law1dz.png', ep: 37, type: 'TV' },
 ]
 
 export default function Home() {
