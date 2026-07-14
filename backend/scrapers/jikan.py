@@ -343,7 +343,7 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
             }
           }
         }
-        recommendations(limit: 6) {
+        recommendations(perPage: 6) {
           nodes {
             mediaRecommendation {
               id
