@@ -46,6 +46,17 @@ const TRENDING = [
   { title: 'Death Note', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1535-kUgkcrfOrkUM.jpg', ep: 37, type: 'TV' },
 ]
 
+const RECENT_EPISODES = [
+  { title: 'Kaiju No. 8', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx153288-z2GkS1vLg1bB.jpg', ep: 10, type: 'TV' },
+  { title: 'Wind Breaker', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx163132-uG71E62YIfvL.jpg', ep: 12, type: 'TV' },
+  { title: 'Mushoku Tensei S2 P2', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx166873-1pX13L8E0Jk2.png', ep: 11, type: 'TV' },
+  { title: 'Demon Slayer: Hashira Training', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx166240-yZlO0qjQWj5X.jpg', ep: 6, type: 'TV' },
+  { title: 'My Hero Academia S7', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx163146-H04sO2kO0A0S.jpg', ep: 8, type: 'TV' },
+  { title: 'Slime S3', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx156822-0l2Gz4Z2H3xG.png', ep: 11, type: 'TV' },
+  { title: 'Spice and Wolf', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx145680-W8B9gKxTGyZf.png', ep: 12, type: 'TV' },
+  { title: 'KonoSuba S3', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx133031-G21d0kZ1R6i1.jpg', ep: 11, type: 'TV' },
+]
+
 export default function Home() {
   const [heroIdx, setHeroIdx] = useState(0)
   const [activeGenre, setActiveGenre] = useState(null)
@@ -185,10 +196,41 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Recently Updated */}
+      {/* Recently Released Episodes */}
       <section className="home-section">
         <div className="section-header">
-          <span className="section-title">🆕 Recently Updated</span>
+          <span className="section-title">🕒 Recently Released Episodes</span>
+          <button className="btn btn-ghost" style={{fontSize:13}} onClick={() => navigate('/search')}>See all →</button>
+        </div>
+        <div className="horizontal-scroll">
+          {RECENT_EPISODES.map((item, i) => (
+            <div
+              key={i}
+              className="anime-card"
+              onClick={() => navigate('/search', { state: { searchQuery: item.title } })}
+            >
+              <div className="anime-card-img">
+                <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
+                <div className="anime-card-overlay">
+                  <button className="card-play-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  </button>
+                </div>
+                <span className="anime-card-badge" style={{background: 'var(--primary)'}}>New Ep {item.ep}</span>
+              </div>
+              <div className="anime-card-info">
+                <p className="anime-card-title">{item.title}</p>
+                <p className="anime-card-ep">{item.type} Series</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Recently Updated Series */}
+      <section className="home-section">
+        <div className="section-header">
+          <span className="section-title">🔄 Recently Updated Series</span>
           <button className="btn btn-ghost" style={{fontSize:13}} onClick={() => navigate('/search')}>See all →</button>
         </div>
         <div className="horizontal-scroll">
