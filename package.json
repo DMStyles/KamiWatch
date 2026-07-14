@@ -3,7 +3,7 @@
   "version": "1.0.2",
   "description": "AniVault — Anime & Media Downloader",
   "main": "electron/main.js",
-  "homepage": "https://github.com/yourusername/anivault",
+  "homepage": "https://github.com/DMStyles/AniVault",
   "author": {
     "name": "AniVault",
     "email": "anivault@example.com"
@@ -54,8 +54,8 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "yourusername",
-      "repo": "anivault",
+      "owner": "DMStyles",
+      "repo": "AniVault",
       "releaseType": "release"
     },
     "win": {

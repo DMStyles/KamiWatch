@@ -169,9 +169,19 @@ ipcMain.handle('install-update', () => {
 });
 
 // ─── Auto-updater events ─────────────────────────────────
+autoUpdater.on('checking-for-update', () => {
+  console.log('[Updater] Checking for update...');
+  mainWindow?.webContents.send('checking-for-update');
+});
+
 autoUpdater.on('update-available', (info) => {
   console.log('[Updater] Update available:', info.version);
   mainWindow?.webContents.send('update-available', info);
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('[Updater] Update not available:', info ? info.version : '');
+  mainWindow?.webContents.send('update-not-available', info);
 });
 
 autoUpdater.on('update-downloaded', (info) => {
@@ -181,4 +191,5 @@ autoUpdater.on('update-downloaded', (info) => {
 
 autoUpdater.on('error', (err) => {
   console.error('[Updater] Error:', err.message);
+  mainWindow?.webContents.send('update-error', err.message);
 });

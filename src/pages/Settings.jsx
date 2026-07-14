@@ -19,10 +19,27 @@ export default function Settings() {
     if (folder) set('downloadFolder', folder)
   }
 
-  const checkUpdate = async () => {
+  React.useEffect(() => {
+    if (window.electronAPI) {
+      window.electronAPI.onCheckingForUpdate(() => {
+        setUpdateStatus('Checking for updates...')
+      })
+      window.electronAPI.onUpdateAvailable((_, info) => {
+        setUpdateStatus(`✨ Update available! (v${info.version})`)
+      })
+      window.electronAPI.onUpdateNotAvailable(() => {
+        setUpdateStatus('✅ You are on the latest version!')
+      })
+      window.electronAPI.onUpdateError((_, errMsg) => {
+        setUpdateStatus(`❌ Update check failed!`)
+        console.error(errMsg)
+      })
+    }
+  }, [])
+
+  const checkUpdate = () => {
     setUpdateStatus('Checking for updates...')
     window.electronAPI?.checkUpdate()
-    setTimeout(() => setUpdateStatus('✅ You are on the latest version!'), 3000)
   }
 
   return (
