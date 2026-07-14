@@ -108,17 +108,17 @@ export default function Home() {
           <div className="hero-actions">
             <button
               className="btn btn-primary hero-btn"
-              onClick={() => navigate('/search', { state: { searchQuery: hero.title } })}
+              onClick={() => navigate('/anime/0', { state: { searchQuery: hero.title } })}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               Watch Now
             </button>
             <button
               className="btn btn-secondary hero-btn"
-              onClick={() => navigate('/search', { state: { searchQuery: hero.title } })}
+              onClick={() => navigate('/anime/0', { state: { searchQuery: hero.title } })}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              Find Episodes
+              Details & Episodes
             </button>
           </div>
         </div>
@@ -157,7 +157,7 @@ export default function Home() {
               <div
                 key={i}
                 className="anime-card"
-                onClick={() => setEpisodeModal(item)}
+                onClick={() => navigate('/anime/0', { state: { searchQuery: item.title } })}
               >
                 <div className="anime-card-img">
                   <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
@@ -188,7 +188,7 @@ export default function Home() {
             <div
               key={i}
               className="anime-card"
-              onClick={() => navigate('/search', { state: { searchQuery: item.title } })}
+              onClick={() => navigate('/anime/0', { state: { searchQuery: item.title } })}
             >
               <div className="anime-card-img">
                 <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
@@ -219,7 +219,7 @@ export default function Home() {
             <div
               key={i}
               className="anime-card"
-              onClick={() => item && navigate('/search', { state: { searchQuery: item.title } })}
+              onClick={() => item && navigate(item.mal_id ? `/anime/${item.mal_id}` : '/anime/0', { state: { searchQuery: item.title } })}
             >
               <div className="anime-card-img">
                 {item ? (
@@ -256,7 +256,7 @@ export default function Home() {
             <div
               key={i}
               className="anime-card"
-              onClick={() => navigate('/search', { state: { searchQuery: item.title } })}
+              onClick={() => navigate('/anime/0', { state: { searchQuery: item.title } })}
             >
               <div className="anime-card-img">
                 <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />

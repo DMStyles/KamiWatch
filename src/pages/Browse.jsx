@@ -108,7 +108,7 @@ export default function Browse() {
               <div
                 key={i}
                 className="result-card"
-                onClick={() => navigate('/search', { state: { searchQuery: item.title } })}
+                onClick={() => navigate(item.mal_id ? `/anime/${item.mal_id}` : '/anime/0', { state: { searchQuery: item.title } })}
               >
                 <div className="result-card-img">
                   <img

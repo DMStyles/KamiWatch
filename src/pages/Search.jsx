@@ -176,10 +176,13 @@ export default function Search() {
             <div
               key={i}
               className="result-card"
-              onClick={() => genreMode
-                ? navigate('/search', { state: { searchQuery: item.title } })
-                : setEpisodeModal(item)
-              }
+              onClick={() => {
+                if (item.source === 'jikan' || genreMode) {
+                  navigate(item.mal_id ? `/anime/${item.mal_id}` : '/anime/0', { state: { searchQuery: item.title } })
+                } else {
+                  navigate('/anime/0', { state: { searchQuery: item.title } })
+                }
+              }}
             >
               <div className="result-card-img">
                 <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />

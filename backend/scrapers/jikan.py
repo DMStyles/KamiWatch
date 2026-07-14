@@ -294,3 +294,144 @@ async def get_hero_slides():
         })
 
     return {"slides": slides}
+
+
+@router.get("/details")
+async def get_details(id: Optional[int] = None, title: Optional[str] = None):
+    """Get full details of an anime by ID or Title from AniList."""
+    if not id and not title:
+        return {"error": "Must provide id or title"}
+
+    query = """
+    query ($id: Int, $search: String) {
+      Media(id: $id, search: $search, type: ANIME) {
+        id
+        title {
+          english
+          romaji
+          native
+        }
+        bannerImage
+        coverImage {
+          extraLarge
+          large
+        }
+        description(asHtml: false)
+        startDate { year month day }
+        endDate { year month day }
+        season
+        seasonYear
+        status
+        episodes
+        duration
+        genres
+        averageScore
+        studios(isMain: true) {
+          nodes {
+            name
+          }
+        }
+        relations {
+          edges {
+            relationType
+            node {
+              id
+              title { english romaji }
+              type
+              status
+            }
+          }
+        }
+        recommendations(limit: 6) {
+          nodes {
+            mediaRecommendation {
+              id
+              title { english romaji }
+              coverImage { large }
+              type
+            }
+          }
+        }
+      }
+    }
+    """
+
+    variables = {}
+    if id:
+        variables["id"] = id
+    else:
+        variables["search"] = title
+
+    result = await anilist_post(query, variables)
+    errors = result.get("errors")
+    media = (result.get("data") or {}).get("Media")
+
+    if errors and not media:
+        return {"error": errors[0].get("message", "Unknown error")}
+
+    # Parse relations to find prequel, sequel, spin-offs, alternative setting etc.
+    relations = []
+    edges = (media.get("relations") or {}).get("edges") or []
+    for edge in edges:
+        node = edge.get("node")
+        if node and node.get("type") == "ANIME":
+            rel_type = edge.get("relationType", "")
+            title_en = (node.get("title") or {}).get("english") or (node.get("title") or {}).get("romaji", "")
+            relations.append({
+                "id": node.get("id"),
+                "title": title_en,
+                "relation": rel_type.replace("_", " ").title(),
+                "status": node.get("status"),
+            })
+
+    # Parse recommendations
+    recommendations = []
+    rec_nodes = (media.get("recommendations") or {}).get("nodes") or []
+    for node in rec_nodes:
+        rec_media = node.get("mediaRecommendation")
+        if rec_media:
+            title_en = (rec_media.get("title") or {}).get("english") or (rec_media.get("title") or {}).get("romaji", "")
+            img = (rec_media.get("coverImage") or {}).get("large", "")
+            recommendations.append({
+                "id": rec_media.get("id"),
+                "title": title_en,
+                "thumbnail": img,
+                "type": rec_media.get("type"),
+            })
+
+    # Clean description from HTML tags
+    desc = media.get("description") or ""
+    import re
+    desc = re.sub(r"<[^>]+>", "", desc)
+
+    title_en = (media.get("title") or {}).get("english") or (media.get("title") or {}).get("romaji", "")
+    title_rom = (media.get("title") or {}).get("romaji", "")
+    title_nat = (media.get("title") or {}).get("native", "")
+
+    studio_list = (media.get("studios") or {}).get("nodes") or []
+    studio = studio_list[0].get("name") if studio_list else "Unknown"
+
+    score = media.get("averageScore")
+    if score:
+        score = round(score / 10, 1)
+
+    return {
+        "id": media.get("id"),
+        "title": title_en,
+        "title_romaji": title_rom,
+        "title_native": title_nat,
+        "banner": media.get("bannerImage") or "",
+        "cover": (media.get("coverImage") or {}).get("extraLarge") or (media.get("coverImage") or {}).get("large") or "",
+        "description": desc,
+        "status": media.get("status"),
+        "episodes": media.get("episodes"),
+        "duration": media.get("duration"),
+        "score": score,
+        "genres": media.get("genres") or [],
+        "studio": studio,
+        "year": media.get("seasonYear") or (media.get("startDate") or {}).get("year"),
+        "season": media.get("season"),
+        "relations": relations,
+        "recommendations": recommendations,
+    }
+
