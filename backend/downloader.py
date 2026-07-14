@@ -77,11 +77,53 @@ async def start_download(req: DownloadRequest):
 
     def run_download():
         target_url = req.url
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+
+        # 1. Resolve Anikoto url
         if target_url.startswith("anikoto:"):
-            if req.download_id in active_downloads:
-                active_downloads[req.download_id]["status"] = "error"
-                active_downloads[req.download_id]["error"] = "Anikoto streams are protected and cannot be downloaded directly. Please use the Watch feature."
-            return
+            try:
+                from scrapers.anikoto import resolve_stream as anikoto_resolve
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                data_ids = target_url.split("anikoto:")[1]
+                res = loop.run_until_complete(anikoto_resolve(data_ids))
+                loop.close()
+
+                if "url" in res:
+                    target_url = res["url"]
+                    headers["Referer"] = "https://anikototv.to/"
+                else:
+                    raise Exception(res.get("error", "Failed to resolve stream link"))
+            except Exception as e:
+                if req.download_id in active_downloads:
+                    active_downloads[req.download_id]["status"] = "error"
+                    active_downloads[req.download_id]["error"] = f"Anikoto resolver failed: {str(e)}"
+                return
+
+        # 2. Resolve KissAnime url
+        elif "kissanime.com.vc" in target_url or target_url.startswith("kissanime:"):
+            try:
+                from scrapers.kissanime import resolve_stream as kiss_resolve
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                res = loop.run_until_complete(kiss_resolve(target_url))
+                loop.close()
+
+                if "url" in res:
+                    target_url = res["url"]
+                    headers["Referer"] = "https://kissanime.com.vc/"
+                else:
+                    raise Exception(res.get("error", "Failed to resolve stream link"))
+            except Exception as e:
+                if req.download_id in active_downloads:
+                    active_downloads[req.download_id]["status"] = "error"
+                    active_downloads[req.download_id]["error"] = f"KissAnime resolver failed: {str(e)}"
+                return
+
+        elif req.source == "animetake":
+            headers["Referer"] = "https://animetake.tv/"
 
         ydl_opts = {
             "format": get_format_selector(req.quality),
@@ -89,6 +131,8 @@ async def start_download(req: DownloadRequest):
             "progress_hooks": [progress_hook],
             "noplaylist": True,
             "quiet": True,
+            "http_headers": headers,
+            "nocheckcertificate": True,
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

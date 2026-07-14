@@ -124,9 +124,7 @@ export default function EpisodeModal() {
     setWatching(false)
   }
 
-  const isAnikoto = episodeModal.source === 'anikoto'
-  const isKissanime = episodeModal.source === 'kissanime'
-  const isDownloadDisabled = isAnikoto || isKissanime
+  const isDownloadDisabled = false
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setEpisodeModal(null)}>
