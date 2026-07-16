@@ -38,6 +38,11 @@ GENRE_MAP = {
     "isekai": "Adventure",
 }
 
+TITLE_REPLACEMENTS = {
+    "demon slayer": "Kimetsu no Yaiba",
+    "demon slayer: kimetsu no yaiba": "Kimetsu no Yaiba",
+}
+
 MEDIA_FRAGMENT = """
   id
   title { english romaji }
@@ -120,6 +125,8 @@ async def get_by_genre(genre: str, page: int = 1):
 
 @router.get("/search")
 async def search_jikan(q: str, page: int = 1):
+    q_lower = q.lower().strip() if q else ""
+    search_q = TITLE_REPLACEMENTS.get(q_lower, q)
     query = """
     query ($search: String, $page: Int) {
       Page(page: $page, perPage: 20) {
@@ -129,7 +136,7 @@ async def search_jikan(q: str, page: int = 1):
       }
     }
     """
-    result = await anilist_post(query, {"search": q, "page": page})
+    result = await anilist_post(query, {"search": search_q, "page": page})
     anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
     return {"results": [parse_media(a) for a in anime_list], "source": "jikan"}
 
@@ -362,7 +369,8 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
     if id:
         variables["id"] = id
     else:
-        variables["search"] = title
+        title_lower = title.lower().strip() if title else ""
+        variables["search"] = TITLE_REPLACEMENTS.get(title_lower, title)
 
     result = await anilist_post(query, variables)
     errors = result.get("errors")

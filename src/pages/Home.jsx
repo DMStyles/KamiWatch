@@ -29,7 +29,7 @@ const GENRE_TAGS = ['Action','Adventure','Comedy','Drama','Ecchi','Fantasy','Mys
 
 const TRENDING = [
   { title: 'Solo Leveling', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx151807-it355ZgzquUd.png', ep: 12, type: 'TV' },
-  { title: 'Demon Slayer', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21612-d5zrx9CWkxNl.png', ep: 26, type: 'TV' },
+  { title: 'Demon Slayer', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-K245749oX8r6.jpg', ep: 26, type: 'TV' },
   { title: 'Grand Blue', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx100922-uxEhaCsqMMp3.png', ep: 12, type: 'TV' },
   { title: 'One Piece', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx21-ELSYx3yMPcKM.jpg', ep: 1000, type: 'TV' },
   { title: 'Jujutsu Kaisen', thumbnail: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx113415-LHBAeoZDIsnF.jpg', ep: 24, type: 'TV' },
