@@ -51,6 +51,7 @@ export default function Home() {
   const [activeGenre, setActiveGenre] = useState(null)
   const [follows, setFollows] = useState([])
   const [airingEpisodes, setAiringEpisodes] = useState([])
+  const [latestEpisodes, setLatestEpisodes] = useState([])
   const [heroSlides, setHeroSlides] = useState(HERO_SLIDES)
   const navigate = useNavigate()
   const { setEpisodeModal } = useContext(AppContext)
@@ -59,6 +60,7 @@ export default function Home() {
     fetchFollows()
     fetchAiring()
     fetchHeroSlides()
+    fetchLatestEpisodes()
   }, [])
 
   useEffect(() => {
@@ -79,6 +81,14 @@ export default function Home() {
       const res = await fetch(`${API}/jikan/airing?limit=20`)
       const data = await res.json()
       setAiringEpisodes(data.results || [])
+    } catch {}
+  }
+
+  const fetchLatestEpisodes = async () => {
+    try {
+      const res = await fetch(`${API}/anikoto/latest`)
+      const data = await res.json()
+      setLatestEpisodes(data.results || [])
     } catch {}
   }
 
@@ -173,6 +183,42 @@ export default function Home() {
                 </div>
                 <div className="anime-card-info">
                   <p className="anime-card-title">{item.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Latest Episodes (AniKoto Scraper) */}
+      {latestEpisodes.length > 0 && (
+        <section className="home-section">
+          <div className="section-header">
+            <span className="section-title">📺 Latest Episodes</span>
+          </div>
+          <div className="horizontal-scroll">
+            {latestEpisodes.map((item, i) => (
+              <div
+                key={i}
+                className="anime-card"
+                onClick={() => navigate('/anime/0', { state: { searchQuery: item.title } })}
+              >
+                <div className="anime-card-img">
+                  <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
+                  <div className="anime-card-overlay">
+                    <button className="card-play-btn">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                  </div>
+                  <span className="anime-card-badge" style={{background:'var(--accent)'}}>
+                    {item.sub_episodes !== '0' ? `Sub ${item.sub_episodes}` : ''}
+                    {item.sub_episodes !== '0' && item.dub_episodes !== '0' ? ' | ' : ''}
+                    {item.dub_episodes !== '0' ? `Dub ${item.dub_episodes}` : ''}
+                  </span>
+                </div>
+                <div className="anime-card-info">
+                  <p className="anime-card-title">{item.title}</p>
+                  <p className="anime-card-ep" style={{color:'var(--accent-light)', fontSize:12}}>{item.type}</p>
                 </div>
               </div>
             ))}

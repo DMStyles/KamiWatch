@@ -143,3 +143,37 @@ async def resolve_stream(data_ids: str):
     embed_url = res_data.get("result", {}).get("url")
     return {"url": embed_url}
 
+
+@router.get("/latest")
+async def get_latest_episodes():
+    url = f"{BASE_URL}/home"
+    headers = {"User-Agent": HEADERS["User-Agent"]}
+    try:
+        async with httpx.AsyncClient(headers=headers, timeout=15) as client:
+            resp = await client.get(url)
+        if resp.status_code != 200:
+            return {"results": [], "error": f"HTTP {resp.status_code}"}
+            
+        soup = BeautifulSoup(resp.text, "html.parser")
+        results = []
+        for item in soup.select(".ani.items .item")[:24]:
+            a = item.select_one("a[href]")
+            img = item.select_one("img")
+            name = item.select_one(".name")
+            sub_ep = item.select_one(".ep-status.sub span")
+            dub_ep = item.select_one(".ep-status.dub span")
+            type_el = item.select_one(".meta .right")
+            if a and name:
+                results.append({
+                    "title": name.get_text(strip=True),
+                    "url": BASE_URL + a["href"] if a["href"].startswith("/") else a["href"],
+                    "thumbnail": img["src"] if img else "",
+                    "sub_episodes": sub_ep.get_text(strip=True) if sub_ep else "0",
+                    "dub_episodes": dub_ep.get_text(strip=True) if dub_ep else "0",
+                    "type": type_el.get_text(strip=True) if type_el else "TV",
+                    "source": "anikoto",
+                })
+        return {"results": results, "source": "anikoto"}
+    except Exception as e:
+        return {"results": [], "error": str(e)}
+
