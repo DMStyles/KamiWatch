@@ -293,22 +293,6 @@ export default function Details() {
               <span className="badge badge-source">{anime.status}</span>
               {anime.studio && <span className="badge badge-source">{anime.studio}</span>}
             </div>
-            
-            <div style={{marginTop:16, display:'flex', alignItems:'center', gap:10}}>
-              <span style={{fontSize:13, color:'var(--text-muted)', fontWeight:600}}>Watchlist Status:</span>
-              <select
-                className="settings-select"
-                style={{minWidth:160, background:'var(--bg-secondary)', borderColor:'var(--border-hover)'}}
-                value={watchlistStatus}
-                onChange={(e) => handleWatchlistChange(e.target.value)}
-              >
-                <option value="">➕ Add to List...</option>
-                <option value="watching">👀 Watching</option>
-                <option value="plan">📅 Plan to Watch</option>
-                <option value="completed">✅ Completed</option>
-                <option value="favorite">💖 Favorite</option>
-              </select>
-            </div>
           </div>
         </div>
       </div>
@@ -320,6 +304,31 @@ export default function Details() {
         <div className="details-col-left">
           <div className="cover-art-container">
             <img src={anime.cover} alt={anime.title} className="details-cover-img" />
+          </div>
+
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10
+          }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Watchlist:</span>
+            <select
+              className="settings-select"
+              style={{ minWidth: 140, background: 'var(--bg-secondary)', borderColor: 'var(--border-hover)' }}
+              value={watchlistStatus}
+              onChange={(e) => handleWatchlistChange(e.target.value)}
+            >
+              <option value="">➕ Add to List...</option>
+              <option value="watching">👀 Watching</option>
+              <option value="plan">📅 Plan to Watch</option>
+              <option value="completed">✅ Completed</option>
+              <option value="favorite">💖 Favorite</option>
+            </select>
           </div>
 
           <div className="details-metadata-card">
