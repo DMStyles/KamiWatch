@@ -4,6 +4,16 @@ const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 const http = require('http');
 
+// Global crash protection handlers
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception]', err.stack || err.message || err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Unhandled Rejection]', reason?.stack || reason?.message || reason || 'Unknown rejection');
+});
+
+
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow;
 let backendProcess;
@@ -93,7 +103,7 @@ function startBackend() {
 
   backendProcess = spawn(backendCmd, backendArgs, {
     stdio: ['pipe', 'pipe', 'pipe'],
-    detached: false,
+    detached: true,
   });
 
   backendProcess.stdout?.on('data', (data) => {

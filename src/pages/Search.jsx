@@ -352,6 +352,9 @@ export default function Search() {
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                       </button>
                     </div>
+                    {item.type && (
+                      <span className="anime-card-badge">{item.type}</span>
+                    )}
                     <div className="result-badges">
                       {item.score && <span className="badge badge-sub">⭐ {item.score}</span>}
                       {!item.score && item.sub_episodes !== '0' && <span className="badge badge-sub">SUB</span>}
@@ -422,6 +425,9 @@ export default function Search() {
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                           </button>
                         </div>
+                        {item.type && (
+                          <span className="anime-card-badge">{item.type}</span>
+                        )}
                         <div className="result-badges">
                           {item.score && <span className="badge badge-sub">⭐ {item.score}</span>}
                         </div>
