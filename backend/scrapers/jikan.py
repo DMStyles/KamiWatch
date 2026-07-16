@@ -548,3 +548,85 @@ async def get_watch_order(id: int):
 
     return {"watch_order": franchise}
 
+
+@router.get("/recommendations")
+async def get_history_recommendations(ids: Optional[str] = None):
+    """Fetch recommendations from AniList based on a comma-separated list of media IDs."""
+    if not ids:
+        # Fall back to trending anime if no IDs are supplied
+        query = """
+        query {
+          Page(perPage: 12) {
+            media(type: ANIME, sort: TRENDING_DESC, isAdult: false) {
+              """ + MEDIA_FRAGMENT + """
+            }
+          }
+        }
+        """
+        result = await anilist_post(query)
+        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+        return {"results": [parse_media(a) for a in anime_list]}
+
+    id_list = []
+    for x in ids.split(","):
+        try:
+            if x.strip() and x.strip() != '0':
+                id_list.append(int(x.strip()))
+        except ValueError:
+            continue
+
+    if not id_list:
+        # Fall back
+        query = """
+        query {
+          Page(perPage: 12) {
+            media(type: ANIME, sort: TRENDING_DESC, isAdult: false) {
+              """ + MEDIA_FRAGMENT + """
+            }
+          }
+        }
+        """
+        result = await anilist_post(query)
+        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+        return {"results": [parse_media(a) for a in anime_list]}
+
+    # Fetch recommendations for each ID concurrently
+    query = """
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        recommendations(perPage: 6) {
+          nodes {
+            mediaRecommendation {
+              """ + MEDIA_FRAGMENT + """
+            }
+          }
+        }
+      }
+    }
+    """
+    
+    tasks = [anilist_post(query, {"id": anime_id}) for anime_id in id_list[:4]]
+    responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+    recommended_map = {}
+    for resp in responses:
+        if isinstance(resp, Exception) or not resp:
+            continue
+        media = (resp.get("data") or {}).get("Media") or {}
+        nodes = (media.get("recommendations") or {}).get("nodes") or []
+        for node in nodes:
+            rec_media = node.get("mediaRecommendation")
+            if rec_media and rec_media.get("id"):
+                rec_id = rec_media.get("id")
+                # Avoid recommending any of the input seed IDs
+                if rec_id in id_list:
+                    continue
+                recommended_map[rec_id] = parse_media(rec_media)
+
+    # Convert map to list and sort by popularity / score (or keep order)
+    results = list(recommended_map.values())
+    # Shuffle or limit to 15
+    import random
+    random.shuffle(results)
+    return {"results": results[:15]}
+

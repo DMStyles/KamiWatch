@@ -21,6 +21,7 @@ export default function Details() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [watchOrder, setWatchOrder] = useState(null)
+  const [watchlistStatus, setWatchlistStatus] = useState('')
 
   // Scraper Source States
   const [activeSource, setActiveSource] = useState(SOURCES[0].id)
@@ -60,6 +61,7 @@ export default function Details() {
     setSearchResults([])
     setSelectedEpisodes(new Set())
     setWatchOrder(null)
+    setWatchlistStatus('')
 
     try {
       const searchTitle = location.state?.searchQuery
@@ -74,6 +76,12 @@ export default function Details() {
         setError(data.error)
       } else {
         setAnime(data)
+        // Load watchlist status
+        try {
+          const savedList = JSON.parse(localStorage.getItem('anivault-watchlist') || '{}')
+          setWatchlistStatus(savedList[data.title]?.status || '')
+        } catch {}
+
         // Immediately start searching sources for matching title
         searchSourceScraper(data.title, activeSource)
         if (data.id) {
@@ -84,6 +92,29 @@ export default function Details() {
       setError('Failed to fetch anime details')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleWatchlistChange = (status) => {
+    setWatchlistStatus(status)
+    try {
+      const savedList = JSON.parse(localStorage.getItem('anivault-watchlist') || '{}')
+      if (!status) {
+        delete savedList[anime.title]
+      } else {
+        savedList[anime.title] = {
+          title: anime.title,
+          id: anime.id,
+          thumbnail: anime.cover,
+          type: anime.type,
+          year: anime.year,
+          status: status,
+          timestamp: Date.now()
+        }
+      }
+      localStorage.setItem('anivault-watchlist', JSON.stringify(savedList))
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -261,6 +292,22 @@ export default function Details() {
               {anime.year && <span className="badge badge-source">{anime.season} {anime.year}</span>}
               <span className="badge badge-source">{anime.status}</span>
               {anime.studio && <span className="badge badge-source">{anime.studio}</span>}
+            </div>
+            
+            <div style={{marginTop:16, display:'flex', alignItems:'center', gap:10}}>
+              <span style={{fontSize:13, color:'var(--text-muted)', fontWeight:600}}>Watchlist Status:</span>
+              <select
+                className="settings-select"
+                style={{minWidth:160, background:'var(--bg-secondary)', borderColor:'var(--border-hover)'}}
+                value={watchlistStatus}
+                onChange={(e) => handleWatchlistChange(e.target.value)}
+              >
+                <option value="">➕ Add to List...</option>
+                <option value="watching">👀 Watching</option>
+                <option value="plan">📅 Plan to Watch</option>
+                <option value="completed">✅ Completed</option>
+                <option value="favorite">💖 Favorite</option>
+              </select>
             </div>
           </div>
         </div>

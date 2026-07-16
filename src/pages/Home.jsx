@@ -53,6 +53,7 @@ export default function Home() {
   const [airingEpisodes, setAiringEpisodes] = useState([])
   const [latestEpisodes, setLatestEpisodes] = useState([])
   const [history, setHistory] = useState([])
+  const [recommendations, setRecommendations] = useState([])
   const [heroSlides, setHeroSlides] = useState(HERO_SLIDES)
   const navigate = useNavigate()
   const { setEpisodeModal } = useContext(AppContext)
@@ -63,6 +64,7 @@ export default function Home() {
     fetchHeroSlides()
     fetchLatestEpisodes()
     loadHistory()
+    fetchRecommendations()
   }, [])
 
   useEffect(() => {
@@ -93,6 +95,22 @@ export default function Home() {
     } catch {
       setHistory([])
     }
+  }
+
+  const fetchRecommendations = async () => {
+    try {
+      const historyStr = localStorage.getItem('anivault-history') || '[]'
+      const historyItems = JSON.parse(historyStr)
+      const ids = historyItems
+        .map(h => h.animeId)
+        .filter(id => id && id !== 0 && id !== '0')
+        .slice(0, 4)
+        .join(',')
+      
+      const res = await fetch(`${API}/jikan/recommendations?ids=${ids}`)
+      const data = await res.json()
+      setRecommendations(data.results || [])
+    } catch {}
   }
 
   const fetchLatestEpisodes = async () => {
@@ -266,6 +284,38 @@ export default function Home() {
                 <div className="anime-card-info">
                   <p className="anime-card-title">{item.title}</p>
                   <p className="anime-card-ep" style={{color:'var(--accent-light)', fontSize:12}}>{item.type}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recommended for You */}
+      {recommendations.length > 0 && (
+        <section className="home-section">
+          <div className="section-header">
+            <span className="section-title">✨ Recommended for You</span>
+          </div>
+          <div className="horizontal-scroll">
+            {recommendations.map((item, i) => (
+              <div
+                key={i}
+                className="anime-card"
+                onClick={() => navigate(item.mal_id ? `/anime/${item.mal_id}` : '/anime/0', { state: { searchQuery: item.title } })}
+              >
+                <div className="anime-card-img">
+                  <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
+                  <div className="anime-card-overlay">
+                    <button className="card-play-btn">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                  </div>
+                  {item.type && <span className="anime-card-badge">{item.type}</span>}
+                </div>
+                <div className="anime-card-info">
+                  <p className="anime-card-title">{item.title}</p>
+                  <p className="anime-card-ep">{item.year ? `${item.year}` : ''}</p>
                 </div>
               </div>
             ))}
