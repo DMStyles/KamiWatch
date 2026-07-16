@@ -52,6 +52,7 @@ export default function Home() {
   const [follows, setFollows] = useState([])
   const [airingEpisodes, setAiringEpisodes] = useState([])
   const [latestEpisodes, setLatestEpisodes] = useState([])
+  const [history, setHistory] = useState([])
   const [heroSlides, setHeroSlides] = useState(HERO_SLIDES)
   const navigate = useNavigate()
   const { setEpisodeModal } = useContext(AppContext)
@@ -61,6 +62,7 @@ export default function Home() {
     fetchAiring()
     fetchHeroSlides()
     fetchLatestEpisodes()
+    loadHistory()
   }, [])
 
   useEffect(() => {
@@ -82,6 +84,15 @@ export default function Home() {
       const data = await res.json()
       setAiringEpisodes(data.results || [])
     } catch {}
+  }
+
+  const loadHistory = () => {
+    try {
+      const historyStr = localStorage.getItem('anivault-history') || '[]'
+      setHistory(JSON.parse(historyStr))
+    } catch {
+      setHistory([])
+    }
   }
 
   const fetchLatestEpisodes = async () => {
@@ -158,6 +169,41 @@ export default function Home() {
           </button>
         ))}
       </div>
+
+      {/* Continue Watching */}
+      {history.length > 0 && (
+        <section className="home-section">
+          <div className="section-header">
+            <span className="section-title">🕒 Continue Watching</span>
+            <button className="btn btn-ghost" style={{fontSize:12, color:'var(--text-muted)'}} onClick={() => { localStorage.removeItem('anivault-history'); setHistory([]); }}>Clear All</button>
+          </div>
+          <div className="horizontal-scroll">
+            {history.map((item, i) => (
+              <div
+                key={i}
+                className="anime-card"
+                onClick={() => navigate(item.animeId && item.animeId !== 0 && item.animeId !== '0' ? `/anime/${item.animeId}` : '/anime/0', { state: { searchQuery: item.animeTitle } })}
+              >
+                <div className="anime-card-img">
+                  <img src={item.thumbnail} alt={item.animeTitle} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
+                  <div className="anime-card-overlay">
+                    <button className="card-play-btn">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                  </div>
+                  <span className="anime-card-badge" style={{background:'var(--accent)'}}>
+                    Ep {item.episodeNumber}
+                  </span>
+                </div>
+                <div className="anime-card-info">
+                  <p className="anime-card-title">{item.animeTitle}</p>
+                  <p className="anime-card-ep" style={{color:'var(--text-muted)'}}>Last watched: {item.episodeTitle}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* My Follow List */}
       {follows.length > 0 && (

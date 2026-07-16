@@ -194,6 +194,25 @@ export default function Details() {
         if (data.url) finalUrl = data.url
       }
       setPlayerModal({ title: `${anime.title} - Episode ${ep.number}`, url: finalUrl })
+      try {
+        const historyStr = localStorage.getItem('anivault-history') || '[]'
+        let history = JSON.parse(historyStr)
+        history = history.filter(item => item.animeTitle !== anime.title)
+        history.unshift({
+          animeTitle: anime.title,
+          animeId: anime.id,
+          episodeNumber: ep.number,
+          episodeTitle: ep.title,
+          thumbnail: anime.cover,
+          url: ep.url,
+          source: activeSource,
+          timestamp: Date.now()
+        })
+        if (history.length > 15) history = history.slice(0, 15)
+        localStorage.setItem('anivault-history', JSON.stringify(history))
+      } catch (e) {
+        console.error('Failed to save to continue watching:', e)
+      }
     } catch {}
     setWatchingEp(null)
   }
