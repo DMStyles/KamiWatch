@@ -405,8 +405,8 @@ export default function Home() {
       {/* Recently Released Anime - LIVE from Jikan */}
       <section className="home-section">
         <div className="section-header">
-          <span className="section-title">🕒 Recently Released Anime</span>
-          <button className="btn btn-ghost" style={{fontSize:13}} onClick={() => navigate('/search', { state: { tab: 'browse' } })}>See all →</button>
+          <span className="section-title">🕒 Airing This Season</span>
+          <button className="btn btn-ghost" style={{fontSize:13}} onClick={() => navigate('/search', { state: { showAiring: true } })}>See all →</button>
         </div>
         <div className="horizontal-scroll">
           {(airingEpisodes.length > 0 ? airingEpisodes : Array(8).fill(null)).map((item, i) => (

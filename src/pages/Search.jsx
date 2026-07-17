@@ -44,6 +44,12 @@ export default function Search() {
       setGenreMode(null)
       setQuery('')
       fetchLatestScraperEpisodes()
+    } else if (location.state?.showAiring) {
+      setTab('browse')
+      setGenreMode('Airing This Season')
+      setQuery('')
+      setBrowseResults([])
+      browseAiring()
     } else if (location.state?.genre) {
       // Genre filter mode — use Jikan API
       setTab('browse')
@@ -64,6 +70,23 @@ export default function Search() {
       fetchBrowse(1, null)
     }
   }, [tab])
+
+  const browseAiring = async () => {
+    setBrowseLoading(true)
+    setBrowseError('')
+    setBrowseResults([])
+    try {
+      const res = await fetch(`${API}/jikan/airing?limit=100`)
+      const data = await res.json()
+      const items = data.results || []
+      setBrowseResults(items)
+      if (items.length === 0) setBrowseError("No currently airing anime found.")
+    } catch {
+      setBrowseError('Failed to load airing anime. Make sure the backend is running.')
+    } finally {
+      setBrowseLoading(false)
+    }
+  }
 
   const browseGenre = async (genre) => {
     setBrowseLoading(true)
@@ -235,10 +258,14 @@ export default function Search() {
               </button>
             </div>
             <h1 className="search-heading">
-              <span style={{color:'var(--text-muted)', fontWeight:400, fontSize:'0.6em', letterSpacing:2, textTransform:'uppercase', display:'block', marginBottom:4}}>Browsing Genre</span>
-              {genreMode}
-            </h1>
-            <p className="search-sub">Top-rated anime in this genre · powered by MyAnimeList</p>
+               <span style={{color:'var(--text-muted)', fontWeight:400, fontSize:'0.6em', letterSpacing:2, textTransform:'uppercase', display:'block', marginBottom:4}}>
+                 {genreMode === 'Airing This Season' ? 'Current Season' : 'Browsing Genre'}
+               </span>
+               {genreMode}
+             </h1>
+             <p className="search-sub">
+               {genreMode === 'Airing This Season' ? 'Popular anime currently airing this season · powered by MyAnimeList' : 'Top-rated anime in this genre · powered by MyAnimeList'}
+             </p>
           </>
         ) : tab === 'browse' ? (
           <>

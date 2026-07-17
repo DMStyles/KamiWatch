@@ -276,24 +276,10 @@ export default function Details() {
         style={{ backgroundImage: anime.banner ? `url(${anime.banner})` : `url(${anime.cover})` }}
       >
         <div className="details-hero-overlay" />
-        <div className="details-hero-content">
+        <div className="details-hero-content" style={{ justifyContent: 'center' }}>
           <button className="btn btn-secondary back-btn" onClick={() => navigate(-1)}>
             ← Back
           </button>
-          
-          <div className="details-main-info">
-            <h1 className="details-title">{anime.title}</h1>
-            {anime.title_romaji && anime.title_romaji !== anime.title && (
-              <p className="details-subtitle-romaji">🇯🇵 {anime.title_romaji}</p>
-            )}
-            <div className="details-badges">
-              {anime.score && <span className="badge badge-sub">⭐ {anime.score} Score</span>}
-              <span className="badge badge-type">{anime.type}</span>
-              {anime.year && <span className="badge badge-source">{anime.season} {anime.year}</span>}
-              <span className="badge badge-source">{anime.status}</span>
-              {anime.studio && <span className="badge badge-source">{anime.studio}</span>}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -409,6 +395,20 @@ export default function Details() {
 
         {/* Right Column: Sources & Episodes */}
         <div className="details-col-right">
+          <div className="details-header-card">
+            <h1 className="details-title-main">{anime.title}</h1>
+            {anime.title_romaji && anime.title_romaji !== anime.title && (
+              <p className="details-subtitle-romaji-main">🇯🇵 {anime.title_romaji}</p>
+            )}
+            <div className="details-badges-main">
+              {anime.score && <span className="badge badge-sub">⭐ {anime.score} Score</span>}
+              <span className="badge badge-type">{anime.type}</span>
+              {anime.year && <span className="badge badge-source">{anime.season} {anime.year}</span>}
+              <span className="badge badge-source">{anime.status}</span>
+              {anime.studio && <span className="badge badge-source">{anime.studio}</span>}
+            </div>
+          </div>
+
           <div className="details-scraper-card">
             <div className="scraper-header">
               <h3>Watch & Download</h3>
