@@ -149,12 +149,26 @@ img { display: block; max-width: 100%; }
 
 .horizontal-scroll {
   display: flex;
-  gap: 14px;
+  gap: 16px;
   overflow-x: auto;
-  padding: 0 24px 12px;
-  scrollbar-width: none;
+  padding: 0 24px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
-.horizontal-scroll::-webkit-scrollbar { display: none; }
+.horizontal-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.horizontal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.horizontal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  transition: background var(--transition);
+}
+.horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 
 .spinner {
   width: 20px; height: 20px;

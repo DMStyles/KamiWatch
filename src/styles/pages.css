@@ -118,7 +118,7 @@
 
 .anime-card {
   flex-shrink: 0;
-  width: 140px;
+  width: 170px;
   cursor: pointer;
   transition: transform var(--transition);
 }
@@ -126,8 +126,8 @@
 
 .anime-card-img {
   position: relative;
-  width: 140px;
-  height: 200px;
+  width: 170px;
+  height: 245px;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--bg-card);

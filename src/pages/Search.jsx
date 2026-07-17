@@ -6,7 +6,7 @@ const API = 'http://localhost:8642'
 const LETTERS = ['#', 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
 
 export default function Search() {
-  const [tab, setTab] = useState('scrapers') // 'scrapers' or 'browse'
+  const [tab, setTab] = useState('browse') // 'browse' or 'latest'
   
   // Scraper search states
   const [query, setQuery] = useState('')
@@ -32,7 +32,7 @@ export default function Search() {
 
   useEffect(() => {
     if (location.state?.tab) {
-      setTab(location.state.tab)
+      setTab(location.state.tab === 'scrapers' ? 'latest' : location.state.tab)
       setGenreMode(null)
       setQuery('')
       if (location.state.tab === 'browse') {
@@ -40,7 +40,7 @@ export default function Search() {
         fetchBrowse(1, null)
       }
     } else if (location.state?.showLatest) {
-      setTab('scrapers')
+      setTab('latest')
       setGenreMode(null)
       setQuery('')
       fetchLatestScraperEpisodes()
@@ -52,13 +52,10 @@ export default function Search() {
       setBrowseResults([])
       browseGenre(location.state.genre)
     } else if (location.state?.searchQuery) {
+      setTab('browse')
       setGenreMode(null)
       setQuery(location.state.searchQuery)
-      if (tab === 'browse') {
-        fetchBrowse(1, null, location.state.searchQuery)
-      } else {
-        search(location.state.searchQuery)
-      }
+      fetchBrowse(1, null, location.state.searchQuery)
     }
   }, [location.state])
 
@@ -210,18 +207,18 @@ export default function Search() {
       {/* Sub tabs to toggle between scraper search and alphabetical MAL browse */}
       <div style={{display:'flex', gap:10, marginBottom:20, borderBottom:'1px solid var(--border)', paddingBottom:12}}>
         <button 
-          className={`btn ${tab === 'scrapers' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{fontSize:13, padding:'6px 14px', borderRadius:20}}
-          onClick={() => { setTab('scrapers'); setGenreMode(null); setQuery(''); setResults([]); setError(''); }}
-        >
-          🔍 Streaming Search
-        </button>
-        <button 
           className={`btn ${tab === 'browse' ? 'btn-primary' : 'btn-secondary'}`}
           style={{fontSize:13, padding:'6px 14px', borderRadius:20}}
           onClick={() => { setTab('browse'); setGenreMode(null); setQuery(''); setBrowseResults([]); setBrowseError(''); }}
         >
           🗂️ Anime Index (A-Z)
+        </button>
+        <button 
+          className={`btn ${tab === 'latest' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{fontSize:13, padding:'6px 14px', borderRadius:20}}
+          onClick={() => { setTab('latest'); setGenreMode(null); setQuery(''); setResults([]); setError(''); fetchLatestScraperEpisodes(); }}
+        >
+          🕒 Recently Released
         </button>
       </div>
 
@@ -250,40 +247,38 @@ export default function Search() {
           </>
         ) : (
           <>
-            <h1 className="search-heading">Search Anime</h1>
-            <p className="search-sub">Search across Anikoto, Kissanime &amp; AnimeTake simultaneously</p>
+            <h1 className="search-heading">Recently Released</h1>
+            <p className="search-sub">Latest updated episodes from streaming servers</p>
           </>
         )}
 
-        <div className="search-input-wrap">
-          <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input
-            ref={inputRef}
-            className="search-input"
-            type="text"
-            placeholder={tab === 'browse' ? "Search all anime index by title..." : "Search for an anime series..."}
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={handleKey}
-            autoFocus={!genreMode}
-          />
-          {query && (
-            <button className="search-clear" onClick={() => {
-              setQuery('');
-              setGenreMode(null);
-              if (tab === 'browse') {
+        {tab === 'browse' && (
+          <div className="search-input-wrap">
+            <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              ref={inputRef}
+              className="search-input"
+              type="text"
+              placeholder="Search all anime index by title..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleKey}
+              autoFocus={!genreMode}
+            />
+            {query && (
+              <button className="search-clear" onClick={() => {
+                setQuery('');
+                setGenreMode(null);
                 setActiveLetter(null);
                 fetchBrowse(1, null);
-              } else {
-                setResults([]);
-              }
-              inputRef.current?.focus();
-            }}>✕</button>
-          )}
-          <button className="btn btn-primary search-btn" onClick={handleSearchClick} disabled={loading || browseLoading}>
-            {loading || browseLoading ? <span className="spinner" /> : 'Search'}
-          </button>
-        </div>
+                inputRef.current?.focus();
+              }}>✕</button>
+            )}
+            <button className="btn btn-primary search-btn" onClick={handleSearchClick} disabled={browseLoading}>
+              {browseLoading ? <span className="spinner" /> : 'Search'}
+            </button>
+          </div>
+        )}
 
         {tab === 'browse' && !genreMode && (
           <div className="alphabet-bar" style={{marginTop: 14, marginBottom: 14}}>
@@ -299,7 +294,7 @@ export default function Search() {
           </div>
         )}
 
-        {tab === 'scrapers' && !genreMode && results.length > 0 && (
+        {tab === 'latest' && !genreMode && results.length > 0 && (
           <div className="source-tabs">
             {sourceKeys.map(s => (
               <button
@@ -323,7 +318,7 @@ export default function Search() {
       <div className="search-results">
         
         {/* Render Scraper Search Mode */}
-        {tab === 'scrapers' && (
+        {tab === 'latest' && (
           <>
             {error && (
               <div className="search-empty">
