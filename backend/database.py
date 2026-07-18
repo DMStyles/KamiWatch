@@ -39,8 +39,35 @@ def init_db():
             english TEXT
         )
     ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS config (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
     conn.commit()
     conn.close()
+
+def get_config(key, default=None):
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT value FROM config WHERE key = ?", (key,))
+        row = c.fetchone()
+        conn.close()
+        return row[0] if row else default
+    except Exception:
+        return default
+
+def set_config(key, value):
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", (key, value))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 def add_to_library(title, episode, file_path, thumbnail, source, file_size=0):
     conn = get_conn()
@@ -94,3 +121,23 @@ def save_translation(romaji, english):
     c.execute("INSERT OR REPLACE INTO translations (romaji, english) VALUES (?, ?)", (romaji, english))
     conn.commit()
     conn.close()
+
+class DynamicBaseURL:
+    def __init__(self, key, default):
+        self.key = key
+        self.default = default
+        
+    def __str__(self):
+        val = get_config(self.key, self.default)
+        if val.endswith("/"):
+            val = val[:-1]
+        return val
+
+    def __add__(self, other):
+        return str(self) + other
+
+    def __radd__(self, other):
+        return other + str(self)
+        
+    def __getattr__(self, name):
+        return getattr(str(self), name)

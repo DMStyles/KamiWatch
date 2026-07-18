@@ -31,11 +31,55 @@ export default function App() {
     theme: 'dark',
     maxConcurrent: 3,
     titleLanguage: 'english',
+    anikotoDomain: 'https://anikototv.to',
+    animetakeDomain: 'https://animetake.tv',
+    kissanimeDomain: 'https://kissanime.com.vc',
+    scheduleDomain: 'https://animeschedule.net',
   })
 
   useEffect(() => {
     const savedSettings = localStorage.getItem('anivault-settings')
-    if (savedSettings) setSettings(JSON.parse(savedSettings))
+    let currentSettings = settings
+    if (savedSettings) {
+      try {
+        currentSettings = JSON.parse(savedSettings)
+        setSettings(currentSettings)
+      } catch (e) {
+        console.error('Failed to parse settings', e)
+      }
+    }
+
+    // Sync settings domains to backend on startup
+    const syncBackend = async () => {
+      try {
+        const API = 'http://localhost:8642'
+        await Promise.all([
+          fetch(`${API}/library/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'anikoto_domain', value: currentSettings.anikotoDomain || 'https://anikototv.to' })
+          }),
+          fetch(`${API}/library/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'animetake_domain', value: currentSettings.animetakeDomain || 'https://animetake.tv' })
+          }),
+          fetch(`${API}/library/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'kissanime_domain', value: currentSettings.kissanimeDomain || 'https://kissanime.com.vc' })
+          }),
+          fetch(`${API}/library/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: 'schedule_domain', value: currentSettings.scheduleDomain || 'https://animeschedule.net' })
+          })
+        ])
+      } catch (e) {
+        console.error('Failed to sync scraper domains to backend database.', e)
+      }
+    }
+    syncBackend()
 
     if (window.electronAPI) {
       window.electronAPI.onUpdateAvailable(() => setUpdateAvailable(true))

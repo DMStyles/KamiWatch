@@ -8,10 +8,37 @@ export default function Settings() {
   const [updateStatus, setUpdateStatus] = useState('')
 
   const set = (key, val) => setLocal(s => ({ ...s, [key]: val }))
-  const save = () => {
+  const save = async () => {
     saveSettings(local)
-    setUpdateStatus('✅ Settings saved!')
-    setTimeout(() => setUpdateStatus(''), 2000)
+    setUpdateStatus('Saving settings...')
+    try {
+      await Promise.all([
+        fetch(`${API}/library/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'anikoto_domain', value: local.anikotoDomain || 'https://anikototv.to' })
+        }),
+        fetch(`${API}/library/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'animetake_domain', value: local.animetakeDomain || 'https://animetake.tv' })
+        }),
+        fetch(`${API}/library/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'kissanime_domain', value: local.kissanimeDomain || 'https://kissanime.com.vc' })
+        }),
+        fetch(`${API}/library/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'schedule_domain', value: local.scheduleDomain || 'https://animeschedule.net' })
+        })
+      ])
+      setUpdateStatus('✅ Settings saved & synced!')
+    } catch (e) {
+      setUpdateStatus('⚠️ Saved locally, but failed to sync backend.')
+    }
+    setTimeout(() => setUpdateStatus(''), 3000)
   }
 
   const pickFolder = async () => {
@@ -122,6 +149,98 @@ export default function Settings() {
                 </button>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Source Domains */}
+        <section className="settings-section">
+          <h2 className="settings-section-title">Source Domains</h2>
+          <p className="settings-section-desc" style={{padding:'0 24px', fontSize:12, color:'var(--text-muted)', marginBottom:12}}>
+            Configure customized streaming and metadata domains. If a website changes its domain, you can update it here.
+          </p>
+          <div className="settings-row">
+            <div>
+              <label className="settings-label">AniKoto Domain</label>
+              <p className="settings-desc">Base URL for search and episode scraping</p>
+            </div>
+            <input 
+              type="text" 
+              className="settings-input-text" 
+              style={{
+                background:'rgba(255,255,255,0.05)',
+                border:'1px solid var(--border)',
+                borderRadius:'var(--radius-sm)',
+                padding:'6px 12px',
+                color:'var(--text-primary)',
+                width:'280px',
+                fontSize:13
+              }}
+              value={local.anikotoDomain || ''} 
+              onChange={e => set('anikotoDomain', e.target.value)} 
+            />
+          </div>
+          <div className="settings-row">
+            <div>
+              <label className="settings-label">AnimeTake Domain</label>
+              <p className="settings-desc">Base URL for AnimeTake scraper</p>
+            </div>
+            <input 
+              type="text" 
+              className="settings-input-text" 
+              style={{
+                background:'rgba(255,255,255,0.05)',
+                border:'1px solid var(--border)',
+                borderRadius:'var(--radius-sm)',
+                padding:'6px 12px',
+                color:'var(--text-primary)',
+                width:'280px',
+                fontSize:13
+              }}
+              value={local.animetakeDomain || ''} 
+              onChange={e => set('animetakeDomain', e.target.value)} 
+            />
+          </div>
+          <div className="settings-row">
+            <div>
+              <label className="settings-label">KissAnime Domain</label>
+              <p className="settings-desc">Base URL for KissAnime scraper</p>
+            </div>
+            <input 
+              type="text" 
+              className="settings-input-text" 
+              style={{
+                background:'rgba(255,255,255,0.05)',
+                border:'1px solid var(--border)',
+                borderRadius:'var(--radius-sm)',
+                padding:'6px 12px',
+                color:'var(--text-primary)',
+                width:'280px',
+                fontSize:13
+              }}
+              value={local.kissanimeDomain || ''} 
+              onChange={e => set('kissanimeDomain', e.target.value)} 
+            />
+          </div>
+          <div className="settings-row">
+            <div>
+              <label className="settings-label">AnimeSchedule Domain</label>
+              <p className="settings-desc">Base URL for schedule API</p>
+            </div>
+            <input 
+              type="text" 
+              className="settings-input-text" 
+              style={{
+                background:'rgba(255,255,255,0.05)',
+                border:'1px solid var(--border)',
+                borderRadius:'var(--radius-sm)',
+                padding:'6px 12px',
+                color:'var(--text-primary)',
+                width:'280px',
+                fontSize:13
+              }}
+              value={local.scheduleDomain || ''} 
+              onChange={e => set('scheduleDomain', e.target.value)} 
+            />
           </div>
         </section>
 

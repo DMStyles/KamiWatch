@@ -6,9 +6,11 @@ from fastapi import APIRouter
 from bs4 import BeautifulSoup
 from typing import List
 
-from database import get_translation, save_translation
+from database import get_translation, save_translation, DynamicBaseURL
 
 router = APIRouter()
+
+BASE_URL = DynamicBaseURL("schedule_domain", "https://animeschedule.net")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -50,7 +52,7 @@ async def get_timetables(weeksAfter: int = 0):
     year = dt.year
     week = dt.isocalendar()[1]
 
-    url = f"https://animeschedule.net/?year={year}&week={week}"
+    url = f"{BASE_URL}/?year={year}&week={week}"
 
     async with httpx.AsyncClient(headers=HEADERS, timeout=15) as client:
         resp = await client.get(url)
@@ -179,7 +181,7 @@ async def translate_titles(titles: List[str]):
 
 @router.get("/anime/{slug}")
 async def get_anime(slug: str):
-    url = f"https://animeschedule.net/api/v3/anime/{slug}"
+    url = f"{BASE_URL}/api/v3/anime/{slug}"
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get(url)
     if resp.status_code == 200:

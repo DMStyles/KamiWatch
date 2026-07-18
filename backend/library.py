@@ -1,8 +1,22 @@
 from fastapi import APIRouter
-from database import get_library, get_follows, add_follow
+from database import get_library, get_follows, add_follow, get_config, set_config
+from pydantic import BaseModel
 import sqlite3
 
+class ConfigItem(BaseModel):
+    key: str
+    value: str
+
 router = APIRouter()
+
+@router.get("/config/{key}")
+def get_configuration(key: str):
+    return {"value": get_config(key)}
+
+@router.post("/config")
+def save_configuration(item: ConfigItem):
+    set_config(item.key, item.value)
+    return {"status": "ok"}
 
 @router.get("")
 def library():

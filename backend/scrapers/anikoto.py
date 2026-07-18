@@ -4,10 +4,14 @@ import urllib.parse
 from fastapi import APIRouter
 from bs4 import BeautifulSoup
 from typing import Optional
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from database import DynamicBaseURL
 
 router = APIRouter()
 
-BASE_URL = "https://anikototv.to"
+BASE_URL = DynamicBaseURL("anikoto_domain", "https://anikototv.to")
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "X-Requested-With": "XMLHttpRequest"
