@@ -133,56 +133,54 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
     html = data.get("result", "")
     soup = BeautifulSoup(html, "html.parser")
     
-    # Try to find servers matching the user's sub/dub preference first
     target_type = "dub" if sub_dub == "dub" else "sub"
     type_block = soup.select_one(f'.servers .type[data-type="{target_type}"]')
-    
     if not type_block:
-        # Fallback to any type block found
         type_block = soup.select_one(".servers .type")
     
     if not type_block:
         return {"error": "No servers found"}
     
-    # Prefer megaplay.buzz (HD-1, Vidstream-2) over vidtube.site (VidPlay) because
-    # vidtube.site ignores the /sub /dub path suffix and always defaults to DUB audio.
-    # megaplay.buzz uses distinct stream IDs per language so sub/dub is truly separate.
     candidates = type_block.select("li[data-link-id]")
-    li = None
-    
-    # Try preferred servers first (exclude VidPlay/vidtube which ignores language)
-    preferred_names = ["HD-1", "Vidstream-2", "VidCloud-1"]
-    for pref in preferred_names:
-        for c in candidates:
-            if pref.lower() in c.text.strip().lower():
-                li = c
-                break
-        if li:
-            break
-    
-    # Fallback to any server in the target block
-    if not li and candidates:
-        li = candidates[0]
-    
-    # Final fallback: any server anywhere
-    if not li:
-        li = soup.select_one(".servers li[data-link-id]")
-        
-    if not li:
+    if not candidates:
         return {"error": "No servers found"}
-        
-    link_id = li.get("data-link-id")
-    source_url = f"{BASE_URL}/ajax/server?get={link_id}"
-    
+
+    # Resolve all candidates concurrently
+    async def resolve_single(li):
+        link_id = li.get("data-link-id")
+        name = li.text.strip()
+        source_url = f"{BASE_URL}/ajax/server?get={link_id}"
+        try:
+            r = await client.get(source_url)
+            if r.status_code == 200:
+                url = r.json().get("result", {}).get("url")
+                if url: return {"name": name, "url": url}
+        except: pass
+        return None
+
     async with httpx.AsyncClient(headers=headers, timeout=15) as client:
-        resp2 = await client.get(source_url)
-        
-    if resp2.status_code != 200:
-        return {"error": "Failed to resolve server"}
-        
-    res_data = resp2.json()
-    embed_url = res_data.get("result", {}).get("url")
-    return {"url": embed_url}
+        results = await asyncio.gather(*(resolve_single(c) for c in candidates))
+    
+    valid_servers = [r for r in results if r]
+    if not valid_servers:
+        return {"error": "Failed to resolve any servers"}
+
+    # Determine preferred server (HD-1, Vidstream-2, etc. over VidPlay to fix audio)
+    preferred = valid_servers[0]
+    for pref_name in ["HD-1", "Vidstream-2", "VidCloud-1"]:
+        for srv in valid_servers:
+            if pref_name.lower() in srv["name"].lower():
+                preferred = srv
+                break
+        else:
+            continue
+        break
+
+    return {
+        "url": preferred["url"],
+        "name": preferred["name"],
+        "alternatives": valid_servers
+    }
 
 
 import asyncio
