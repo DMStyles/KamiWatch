@@ -7,6 +7,10 @@ from bs4 import BeautifulSoup
 from typing import List
 
 from database import get_translation, save_translation, DynamicBaseURL
+from client import SharedClientContext
+
+# Monkey-patch httpx.AsyncClient to enable connection pooling
+httpx.AsyncClient = SharedClientContext
 
 router = APIRouter()
 

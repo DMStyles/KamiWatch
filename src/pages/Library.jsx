@@ -223,7 +223,7 @@ export default function Library() {
                       <button
                         className="btn btn-primary"
                         style={{ fontSize: 11, padding: '4px 10px', flex: 1 }}
-                        onClick={() => setPlayerModal({ url: item.file_path, title: `${item.title} - ${item.episode}` })}
+                        onClick={() => setPlayerModal({ url: `${API}/library/stream?path=${encodeURIComponent(item.file_path)}`, title: `${item.title} - ${item.episode}` })}
                       >
                         ▶ Play
                       </button>

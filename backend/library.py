@@ -1,7 +1,9 @@
 from fastapi import APIRouter
+from fastapi.responses import FileResponse
 from database import get_library, get_follows, add_follow, get_config, set_config
 from pydantic import BaseModel
 import sqlite3
+import os
 
 class ConfigItem(BaseModel):
     key: str
@@ -40,3 +42,9 @@ def unfollow_show(id: int):
     conn.commit()
     conn.close()
     return {"status": "ok"}
+
+@router.get("/stream")
+def stream_file(path: str):
+    if os.path.exists(path):
+        return FileResponse(path)
+    return {"error": "File not found"}
