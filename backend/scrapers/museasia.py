@@ -52,9 +52,10 @@ async def search_museasia(q: str):
             title = playlist["title"]["simpleText"] if "simpleText" in playlist["title"] else playlist["title"]["runs"][0]["text"]
             playlist_id = playlist["playlistId"]
             channel_runs = playlist.get("shortBylineText", {}).get("runs", [])
-            channel_name = channel_runs[0]["text"] if channel_runs else "Unknown"
+            channel_name = channel_runs[0]["text"] if channel_runs else ""
             
-            if "muse" in channel_name.lower() or "asia" in channel_name.lower():
+            # For playlists, accept if channel is empty or matches Muse Asia
+            if not channel_name or "muse" in channel_name.lower() or "asia" in channel_name.lower():
                 results.append({
                     "title": title,
                     "url": f"https://www.youtube.com/playlist?list={playlist_id}",
@@ -70,9 +71,9 @@ async def search_museasia(q: str):
         if video:
             title = video["title"]["runs"][0]["text"]
             video_id = video["videoId"]
-            channel_name = video["ownerText"]["runs"][0]["text"]
+            channel_name = video["ownerText"]["runs"][0]["text"] if video.get("ownerText") else ""
             
-            if "muse" in channel_name.lower() or "asia" in channel_name.lower():
+            if not channel_name or "muse" in channel_name.lower() or "asia" in channel_name.lower():
                 results.append({
                     "title": title,
                     "url": f"https://www.youtube.com/watch?v={video_id}",
@@ -98,7 +99,14 @@ async def search_museasia(q: str):
                     if "muse" in text_content.lower() or "asia" in text_content.lower():
                         channel_name = text_content
             
-            if "muse" in channel_name.lower() or "asia" in channel_name.lower() or "muse" in title.lower():
+            # Relax check: accept all playlists from Muse Asia search, or if name matches
+            is_match = False
+            if content_type == "LOCKUP_CONTENT_TYPE_PLAYLIST":
+                is_match = True
+            elif not channel_name or "muse" in channel_name.lower() or "asia" in channel_name.lower() or "muse" in title.lower():
+                is_match = True
+                
+            if is_match:
                 if content_type == "LOCKUP_CONTENT_TYPE_PLAYLIST":
                     results.append({
                         "title": title,

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Notification, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Notification, shell, session } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
@@ -67,6 +67,15 @@ function createWindow() {
     }
     return { action: 'deny' };
   });
+
+  // Override Referer header for YouTube requests to bypass embed restriction errors (e.g. Muse Asia Error 153)
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*'] },
+    (details, callback) => {
+      details.requestHeaders['Referer'] = 'https://www.youtube.com/';
+      callback({ requestHeaders: details.requestHeaders });
+    }
+  );
 
   mainWindow.on('closed', () => { mainWindow = null; });
 }

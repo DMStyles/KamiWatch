@@ -119,7 +119,7 @@ async def get_episodes(url: str):
     return {"title": title, "thumbnail": thumbnail, "episodes": episodes, "source": "anikoto"}
 
 @router.get("/resolve")
-async def resolve_stream(data_ids: str):
+async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
     server_list_url = f"{BASE_URL}/ajax/server/list?servers={data_ids}"
     headers = {"User-Agent": HEADERS["User-Agent"], "X-Requested-With": "XMLHttpRequest"}
     
@@ -133,8 +133,14 @@ async def resolve_stream(data_ids: str):
     html = data.get("result", "")
     soup = BeautifulSoup(html, "html.parser")
     
-    # Just grab the first server link-id
-    li = soup.select_one(".servers li[data-link-id]")
+    # Try to find servers matching the user's sub/dub preference first
+    target_type = "dub" if sub_dub == "dub" else "sub"
+    li = soup.select_one(f'.servers .type[data-type="{target_type}"] li[data-link-id]')
+    
+    if not li:
+        # Fallback to any server found
+        li = soup.select_one(".servers li[data-link-id]")
+        
     if not li:
         return {"error": "No servers found"}
         

@@ -200,6 +200,7 @@ export default function Details() {
             download_id: dlId,
             thumbnail: anime.cover,
             source: activeSource,
+            sub_dub: subDub,
           }),
         })
       } catch {}
@@ -217,7 +218,7 @@ export default function Details() {
       let finalUrl = ep.url
       if (finalUrl.startsWith('anikoto:')) {
         const dataIds = finalUrl.split('anikoto:')[1]
-        const res = await fetch(`${API}/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}`)
+        const res = await fetch(`${API}/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}&sub_dub=${subDub}`)
         const data = await res.json()
         if (data.url) finalUrl = data.url
       } else if (finalUrl.startsWith('kissanime:') || finalUrl.includes('kissanime.com.vc')) {

@@ -23,6 +23,7 @@ class DownloadRequest(BaseModel):
     download_id: str
     thumbnail: Optional[str] = ""
     source: Optional[str] = ""
+    sub_dub: Optional[str] = "sub"
 
 def get_format_selector(quality: str) -> str:
     quality_map = {
@@ -134,7 +135,7 @@ async def start_download(req: DownloadRequest):
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 data_ids = target_url.split("anikoto:")[1]
-                res = loop.run_until_complete(anikoto_resolve(data_ids))
+                res = loop.run_until_complete(anikoto_resolve(data_ids, req.sub_dub))
                 
                 if "url" in res:
                     embed_url = res["url"]
