@@ -6,7 +6,8 @@ const API = 'http://localhost:8642'
 const SOURCES = [
   { id: 'anikoto', name: 'AniKoto (Fast, Multi-Server)' },
   { id: 'kissanime', name: 'KissAnime (Backup)' },
-  { id: 'animetake', name: 'AnimeTake (Dub/Sub)' }
+  { id: 'animetake', name: 'AnimeTake (Dub/Sub)' },
+  { id: 'museasia', name: 'Muse Asia (Official YouTube)' }
 ]
 
 export default function Details() {
@@ -221,6 +222,10 @@ export default function Details() {
         if (data.url) finalUrl = data.url
       } else if (finalUrl.startsWith('kissanime:') || finalUrl.includes('kissanime.com.vc')) {
         const res = await fetch(`${API}/kissanime/resolve?url=${encodeURIComponent(finalUrl)}`)
+        const data = await res.json()
+        if (data.url) finalUrl = data.url
+      } else if (activeSource === 'museasia' || finalUrl.includes('youtube.com') || finalUrl.includes('youtu.be')) {
+        const res = await fetch(`${API}/museasia/resolve?url=${encodeURIComponent(finalUrl)}`)
         const data = await res.json()
         if (data.url) finalUrl = data.url
       }

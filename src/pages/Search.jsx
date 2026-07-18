@@ -142,15 +142,17 @@ export default function Search() {
     setError('')
     setResults([])
     try {
-      const [r1, r2, r3] = await Promise.allSettled([
+      const [r1, r2, r3, r4] = await Promise.allSettled([
         fetch(`${API}/anikoto/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
         fetch(`${API}/animetake/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
         fetch(`${API}/kissanime/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
+        fetch(`${API}/museasia/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
       ])
       const merged = [
         ...(r1.status === 'fulfilled' ? r1.value.results || [] : []),
         ...(r2.status === 'fulfilled' ? r2.value.results || [] : []),
         ...(r3.status === 'fulfilled' ? r3.value.results || [] : []),
+        ...(r4.status === 'fulfilled' ? r4.value.results || [] : []),
       ]
       setResults(merged)
       if (merged.length === 0) setError('No results found. Try a different search term.')
@@ -234,7 +236,7 @@ export default function Search() {
   // Sources available based on mode (Recently Released does not filter by scraper source)
   const sourceKeys = (genreMode || tab === 'latest')
     ? []
-    : ['all', 'anikoto', 'kissanime', 'animetake']
+    : ['all', 'anikoto', 'kissanime', 'animetake', 'museasia']
 
   return (
     <div className="search-page" style={{padding:'24px'}}>
@@ -347,7 +349,9 @@ export default function Search() {
                   ? `Anikoto (${results.filter(r=>r.source==='anikoto').length})`
                   : s === 'kissanime'
                   ? `Kissanime (${results.filter(r=>r.source==='kissanime').length})`
-                  : `AnimeTake (${results.filter(r=>r.source==='animetake').length})`}
+                  : s === 'animetake'
+                  ? `AnimeTake (${results.filter(r=>r.source==='animetake').length})`
+                  : `Muse Asia (${results.filter(r=>r.source==='museasia').length})`}
               </button>
             ))}
           </div>

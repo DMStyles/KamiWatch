@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from scrapers.anikoto import router as anikoto_router
 from scrapers.animetake import router as animetake_router
 from scrapers.kissanime import router as kissanime_router
+from scrapers.museasia import router as museasia_router
 from scrapers.jikan import router as jikan_router
 from scrapers.schedule_api import router as schedule_router
 from downloader import router as download_router
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(anikoto_router, prefix="/anikoto", tags=["Anikoto"])
 app.include_router(animetake_router, prefix="/animetake", tags=["AnimeTake"])
 app.include_router(kissanime_router, prefix="/kissanime", tags=["Kissanime"])
+app.include_router(museasia_router, prefix="/museasia", tags=["MuseAsia"])
 app.include_router(jikan_router, prefix="/jikan", tags=["Jikan"])
 app.include_router(schedule_router, prefix="/schedule", tags=["Schedule"])
 app.include_router(download_router, prefix="/download", tags=["Download"])
