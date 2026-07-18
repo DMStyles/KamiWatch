@@ -26,6 +26,7 @@ export default function Details() {
 
   // Scraper Source States
   const [activeSource, setActiveSource] = useState(SOURCES[0].id)
+  const activeSourceRef = React.useRef(SOURCES[0].id) // ref to avoid stale closure in async callbacks
   const [searchResults, setSearchResults] = useState([])
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [searchingSource, setSearchingSource] = useState(false)
@@ -90,7 +91,8 @@ export default function Details() {
         } catch {}
 
         // Immediately start searching sources for matching title
-        searchSourceScraper(data.title, activeSource)
+        // Use activeSourceRef to avoid stale closure capturing initial value
+        searchSourceScraper(data.title, activeSourceRef.current)
         if (data.id) {
           fetchWatchOrder(data.id)
         }
@@ -167,6 +169,7 @@ export default function Details() {
 
   const handleSourceChange = (sourceId) => {
     setActiveSource(sourceId)
+    activeSourceRef.current = sourceId
     if (anime) {
       searchSourceScraper(anime.title, sourceId)
     }

@@ -135,10 +135,37 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
     
     # Try to find servers matching the user's sub/dub preference first
     target_type = "dub" if sub_dub == "dub" else "sub"
-    li = soup.select_one(f'.servers .type[data-type="{target_type}"] li[data-link-id]')
+    type_block = soup.select_one(f'.servers .type[data-type="{target_type}"]')
     
+    if not type_block:
+        # Fallback to any type block found
+        type_block = soup.select_one(".servers .type")
+    
+    if not type_block:
+        return {"error": "No servers found"}
+    
+    # Prefer megaplay.buzz (HD-1, Vidstream-2) over vidtube.site (VidPlay) because
+    # vidtube.site ignores the /sub /dub path suffix and always defaults to DUB audio.
+    # megaplay.buzz uses distinct stream IDs per language so sub/dub is truly separate.
+    candidates = type_block.select("li[data-link-id]")
+    li = None
+    
+    # Try preferred servers first (exclude VidPlay/vidtube which ignores language)
+    preferred_names = ["HD-1", "Vidstream-2", "VidCloud-1"]
+    for pref in preferred_names:
+        for c in candidates:
+            if pref.lower() in c.text.strip().lower():
+                li = c
+                break
+        if li:
+            break
+    
+    # Fallback to any server in the target block
+    if not li and candidates:
+        li = candidates[0]
+    
+    # Final fallback: any server anywhere
     if not li:
-        # Fallback to any server found
         li = soup.select_one(".servers li[data-link-id]")
         
     if not li:
