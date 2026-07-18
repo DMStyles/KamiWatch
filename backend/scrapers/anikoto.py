@@ -76,7 +76,7 @@ async def get_episodes(url: str):
         resp = await client.get(url)
     soup = BeautifulSoup(resp.text, "html.parser")
     
-    title_el = soup.select_one(".anisc-detail .film-name")
+    title_el = soup.select_one(".anisc-detail .film-name, h1.title.d-title, h1.d-title, h1")
     title = title_el.get_text(strip=True) if title_el else "Unknown"
     thumb_el = soup.select_one(".film-poster img")
     thumbnail = thumb_el.get("src", "") if thumb_el else ""
