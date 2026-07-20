@@ -1,6 +1,6 @@
 {
   "name": "kamiwatch",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "description": "KamiWatch — Anime & Manga Desktop App",
   "main": "electron/main.js",
   "homepage": "https://github.com/DMStyles/KamiWatch",

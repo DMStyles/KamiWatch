@@ -230,8 +230,7 @@ export default function Manga() {
           overflowX: 'auto', 
           paddingBottom: '12px',
           marginTop: '24px', 
-          maxWidth: '800px', 
-          margin: '24px auto 0',
+          width: '100%', 
           WebkitMaskImage: 'linear-gradient(to right, transparent, black 2%, black 98%, transparent)',
           maskImage: 'linear-gradient(to right, transparent, black 2%, black 98%, transparent)'
         }}>
