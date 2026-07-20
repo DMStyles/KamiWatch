@@ -14,6 +14,7 @@ export default function Manga() {
   const [searched, setSearched] = useState(false)
   const [trending, setTrending] = useState([])
   const [activeGenre, setActiveGenre] = useState(null)
+  const [scrolled, setScrolled] = useState(false)
 
   const GENRES = [
     { label: 'Action', tag: '391b0423-d847-456f-aff0-8b0cfc03066b' },
@@ -176,18 +177,25 @@ export default function Manga() {
 
   const displayResults = searched ? results : trending
 
-  return (
-    <div className="manga-page">
-      {/* Hero Search Bar */}
-      <div className="manga-hero-bar">
-        <div className="manga-hero-eyebrow">
-          <span className="manga-hero-icon">📚</span>
-          <span className="manga-hero-label">Manga Reader</span>
-        </div>
-        <h1 className="manga-hero-title">Read Manga Online</h1>
-        <p className="manga-hero-sub">Search millions of titles across MangaDex and more</p>
+  const handleScroll = (e) => {
+    setScrolled(e.target.scrollTop > 50)
+  }
 
-        <form className="manga-search-bar" onSubmit={handleSearch}>
+  return (
+    <div className="manga-page" onScroll={handleScroll}>
+      {/* Hero Search Bar */}
+      <div className={`manga-hero-bar ${scrolled ? 'scrolled' : ''}`}>
+        <div className="manga-hero-content-wrapper">
+          <div>
+            <div className="manga-hero-eyebrow">
+              <span className="manga-hero-icon">📚</span>
+              <span className="manga-hero-label">Manga Reader</span>
+            </div>
+            <h1 className="manga-hero-title">Read Manga Online</h1>
+            <p className="manga-hero-sub">Search millions of titles across MangaDex and more</p>
+          </div>
+
+          <form className="manga-search-bar" onSubmit={handleSearch}>
           <input
             className="manga-search-input"
             type="text"
@@ -207,6 +215,7 @@ export default function Manga() {
             )}
           </button>
         </form>
+        </div>
 
         <div className="manga-source-tabs">
           {[
@@ -224,22 +233,35 @@ export default function Manga() {
           ))}
         </div>
 
-        <div className="manga-genre-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '24px', maxWidth: '800px', margin: '24px auto 0' }}>
+        <div className="manga-genre-tags hide-scroll" style={{ 
+          display: 'flex', 
+          flexWrap: 'nowrap', 
+          gap: '8px', 
+          overflowX: 'auto', 
+          paddingBottom: '12px',
+          marginTop: '24px', 
+          maxWidth: '800px', 
+          margin: '24px auto 0',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, black 2%, black 98%, transparent)',
+          maskImage: 'linear-gradient(to right, transparent, black 2%, black 98%, transparent)'
+        }}>
           {GENRES.map(g => (
             <button 
               key={g.label}
               className={`manga-tag-btn ${activeGenre === g.label ? 'active' : ''}`}
               onClick={() => handleGenre(g)}
               style={{
+                flexShrink: 0,
                 background: activeGenre === g.label ? 'var(--manga-primary)' : 'rgba(255,255,255,0.05)',
                 color: activeGenre === g.label ? '#000' : 'var(--text-muted)',
                 border: '1px solid rgba(217, 119, 6, 0.2)',
-                padding: '6px 12px',
+                padding: '6px 14px',
                 borderRadius: '16px',
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: activeGenre === g.label ? 'bold' : 'normal',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap'
               }}
             >
               {g.label}
@@ -249,7 +271,7 @@ export default function Manga() {
       </div>
 
       {/* Results Grid */}
-      <div className="manga-results-section">
+      <div className="manga-results-section" style={{ overflowY: 'visible', flex: 'none', paddingBottom: 60 }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
             <span className="spinner" style={{ width: 36, height: 36 }} />

@@ -21,18 +21,50 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  position: relative;
 }
 
 .manga-hero-bar {
   padding: 32px 28px 24px;
-  background: linear-gradient(
-    160deg,
-    rgba(30, 20, 5, 0.95) 0%,
-    rgba(15, 12, 5, 0.98) 100%
-  );
+  background: linear-gradient(160deg, rgba(30, 20, 5, 0.95) 0%, rgba(15, 12, 5, 0.98) 100%);
   border-bottom: 1px solid rgba(217, 119, 6, 0.2);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+
+.manga-hero-bar.scrolled {
+  background: rgba(15, 10, 5, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  padding: 16px 28px 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border-bottom: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.manga-hero-bar.scrolled .manga-hero-eyebrow,
+.manga-hero-bar.scrolled .manga-hero-sub {
+  display: none;
+}
+.manga-hero-bar.scrolled .manga-hero-title {
+  font-size: 20px;
+  margin-bottom: 0;
+  margin-right: 20px;
+}
+.manga-hero-bar.scrolled .manga-search-bar {
+  max-width: 400px;
+}
+.manga-hero-bar.scrolled .manga-hero-content-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.manga-hero-bar.scrolled .manga-source-tabs,
+.manga-hero-bar.scrolled .manga-genre-tags {
+  display: none !important;
 }
 
 .manga-hero-eyebrow {
