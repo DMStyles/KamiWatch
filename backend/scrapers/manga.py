@@ -71,7 +71,7 @@ async def mangadex_chapters(manga_id: str) -> list:
         "manga": manga_id,
         "translatedLanguage[]": ["en"],
         "order[chapter]": "asc",
-        "limit": 500,
+        "limit": 100,
         "includes[]": ["scanlation_group"],
         "contentRating[]": ["safe", "suggestive", "erotica"],
     }
@@ -222,6 +222,54 @@ async def search_manga(q: str, source: str = "auto"):
             results = await mangakakalot_search(q)
 
     return {"results": results, "query": q}
+
+@router.get("/genre")
+async def browse_genre(genre_id: str, demographic: str = None):
+    """Browse MangaDex by genre tag or demographic."""
+    url = f"{MANGADEX_API}/manga"
+    params = {
+        "limit": 20,
+        "contentRating[]": ["safe", "suggestive", "erotica"],
+        "includes[]": ["cover_art"],
+        "order[relevance]": "desc",
+    }
+    if genre_id:
+        params["includedTags[]"] = [genre_id]
+    if demographic:
+        params["publicationDemographic[]"] = [demographic]
+        
+    try:
+        async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
+            r = await client.get(url, params=params)
+            data = r.json()
+            results = []
+            for item in data.get("data", []):
+                attrs = item.get("attributes", {})
+                title = (attrs.get("title") or {}).get("en") or next(iter((attrs.get("title") or {}).values()), "Unknown")
+                
+                cover_id = None
+                for rel in item.get("relationships", []):
+                    if rel["type"] == "cover_art":
+                        cover_id = rel.get("attributes", {}).get("fileName")
+                
+                if cover_id:
+                    cover_url = f"{MANGADEX_IMG}/covers/{item['id']}/{cover_id}.256.jpg"
+                else:
+                    cover_url = ""
+
+                results.append({
+                    "id": f"mdex:{item['id']}",
+                    "title": title,
+                    "cover": cover_url,
+                    "source": "mangadex",
+                    "status": attrs.get("status", "unknown"),
+                    "year": attrs.get("year"),
+                    "description": (attrs.get("description") or {}).get("en", "")
+                })
+            return {"results": results, "genre_id": genre_id}
+    except Exception as e:
+        print(f"[MangaDex genre error] {e}")
+        return {"results": []}
 
 
 @router.get("/chapters")

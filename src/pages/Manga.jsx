@@ -1,16 +1,43 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const API = 'http://localhost:8642'
 
 export default function Manga() {
   const navigate = useNavigate()
-  const [query, setQuery] = useState('')
-  const [source, setSource] = useState('auto')
+  const location = useLocation()
+  
+  const [query, setQuery] = useState(location.state?.query || '')
+  const [source, setSource] = useState(location.state?.forceSource || 'auto')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [trending, setTrending] = useState([])
+  const [activeGenre, setActiveGenre] = useState(null)
+
+  const GENRES = [
+    { label: 'Action', tag: '391b0423-d847-456f-aff0-8b0cfc03066b' },
+    { label: 'Adventure', tag: '87cc87cd-a395-47af-b27a-93258283bbc6' },
+    { label: 'Comedy', tag: '4d32cc48-9f00-4cca-9b5a-a839f0764984' },
+    { label: 'Drama', tag: 'b9af3a63-f058-46de-a9a0-e0c13906197a' },
+    { label: 'Fantasy', tag: 'cdc58593-87dd-415e-bbc0-2ec27bf404cc' },
+    { label: 'Horror', tag: 'cdad7e68-1419-41dd-bdce-27753074a640' },
+    { label: 'Romance', tag: '423e2eae-a7a2-4a8b-ac03-a8351462d71d' },
+    { label: 'Sci-Fi', tag: '256c8bd9-4904-4360-bf4f-508a76d67183' },
+    { label: 'Slice of Life', tag: 'e5301a23-ebd9-49dd-a0cb-2add944c7fe9' },
+    { label: 'Mystery', tag: 'ee968100-4191-4968-93d3-f82d72be7e46' },
+    { label: 'Supernatural', tag: 'eabc5b4c-6aff-42f3-b657-3e90cbd00b75' },
+    { label: 'Sports', tag: '69964a64-2f90-4d33-beeb-f3ed2875eb4c' },
+    { label: 'Mecha', tag: '50880a9d-5440-4732-9afb-8f457127e836' },
+    { label: 'School Life', tag: 'caaa44eb-cd40-4177-b930-79d3ef2afe87' },
+    { label: 'Psychological', tag: '3b60b75c-a2d7-4860-ab56-05f391bb889c' },
+    { label: 'Martial Arts', tag: '799c202e-7daa-44eb-9cf7-8a3c0441531e' },
+    { label: 'Isekai', tag: 'ace04997-f6bd-436e-b261-779182193d3d' },
+    { label: 'Shounen', demo: 'shounen' },
+    { label: 'Seinen', demo: 'seinen' },
+    { label: 'Shoujo', demo: 'shoujo' },
+    { label: 'Josei', demo: 'josei' },
+  ]
 
   // Apply manga-mode class to body for amber theme
   useEffect(() => {
@@ -32,21 +59,48 @@ export default function Manga() {
       } catch {}
     }
     loadTrending()
+    
+    // Auto trigger search if navigated with state
+    if (location.state?.query) {
+      handleSearch(null, location.state.query, location.state.forceSource || 'auto')
+    }
   }, [])
 
-  const handleSearch = async (e) => {
+  const handleSearch = async (e, forceQuery, forceSource) => {
     e?.preventDefault()
-    if (!query.trim()) return
+    const q = forceQuery || query
+    const s = forceSource || source
+    if (!q.trim()) return
     setLoading(true)
     setSearched(true)
     try {
-      const r = await fetch(`${API}/manga/search?q=${encodeURIComponent(query.trim())}&source=${source}`)
+      const r = await fetch(`${API}/manga/search?q=${encodeURIComponent(q.trim())}&source=${s}`)
+      const data = await r.json()
+      setResults(data.results || [])
+      setActiveGenre(null)
+    } catch {
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGenre = async (genre) => {
+    setLoading(true)
+    setSearched(true)
+    setActiveGenre(genre.label)
+    try {
+      let url = `${API}/manga/genre?`
+      if (genre.tag) url += `genre_id=${genre.tag}`
+      if (genre.demo) url += `demographic=${genre.demo}`
+      const r = await fetch(url)
       const data = await r.json()
       setResults(data.results || [])
     } catch {
       setResults([])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const displayResults = searched ? results : trending
@@ -98,6 +152,29 @@ export default function Manga() {
             </button>
           ))}
         </div>
+
+        <div className="manga-genre-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '24px', maxWidth: '800px', margin: '24px auto 0' }}>
+          {GENRES.map(g => (
+            <button 
+              key={g.label}
+              className={`manga-tag-btn ${activeGenre === g.label ? 'active' : ''}`}
+              onClick={() => handleGenre(g)}
+              style={{
+                background: activeGenre === g.label ? 'var(--manga-primary)' : 'rgba(255,255,255,0.05)',
+                color: activeGenre === g.label ? '#000' : 'var(--text-muted)',
+                border: '1px solid rgba(217, 119, 6, 0.2)',
+                padding: '6px 12px',
+                borderRadius: '16px',
+                fontSize: '12px',
+                fontWeight: activeGenre === g.label ? 'bold' : 'normal',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Results Grid */}
@@ -110,13 +187,13 @@ export default function Manga() {
           <>
             <div className="manga-results-label">
               {searched
-                ? `${displayResults.length} results for "${query}"`
+                ? (activeGenre ? `🔥 Popular in ${activeGenre}` : `${displayResults.length} results for "${query}"`)
                 : '📈 Popular Titles'}
             </div>
             {displayResults.length === 0 && searched ? (
               <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
                 <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-                <p>No manga found for "{query}".</p>
+                <p>No manga found for "{activeGenre || query}".</p>
                 <p style={{ fontSize: 12, marginTop: 6 }}>Try a different source or spelling.</p>
               </div>
             ) : (

@@ -157,7 +157,16 @@ export default function MangaDetails() {
           </div>
         ) : chapters.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-            No chapters found in English.
+            <p style={{ marginBottom: 12 }}>No chapters found in English on this source.</p>
+            {details?.source === 'mangadex' && (
+              <button 
+                className="btn btn-primary" 
+                style={{ padding: '8px 16px', background: 'var(--manga-primary)', color: '#000', fontWeight: 'bold' }}
+                onClick={() => navigate('/manga', { state: { query: details.title, forceSource: 'mangakakalot' } })}
+              >
+                Search on MangaKakalot instead
+              </button>
+            )}
           </div>
         ) : (
           <div className="manga-chapters-list">
