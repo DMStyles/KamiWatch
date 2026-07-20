@@ -158,10 +158,23 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (backendProcess) {
-    backendProcess.kill('SIGTERM');
-  }
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('before-quit', () => {
+  if (backendProcess) {
+    console.log('[Backend] Terminating on app quit...');
+    try {
+      if (process.platform === 'win32') {
+        const { execSync } = require('child_process');
+        execSync(`taskkill /pid ${backendProcess.pid} /t /f`);
+      } else {
+        process.kill(-backendProcess.pid);
+      }
+    } catch (e) {
+      console.error('[Backend] Error terminating:', e.message);
+    }
+  }
 });
 
 // ─── IPC Handlers ────────────────────────────────────────
