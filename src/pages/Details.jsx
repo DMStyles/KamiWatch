@@ -23,6 +23,7 @@ export default function Details() {
   const [error, setError] = useState('')
   const [watchOrder, setWatchOrder] = useState(null)
   const [watchlistStatus, setWatchlistStatus] = useState('')
+  const [mangaMatch, setMangaMatch] = useState(null)
 
   // Scraper Source States
   const [activeSource, setActiveSource] = useState(SOURCES[0].id)
@@ -61,6 +62,22 @@ export default function Details() {
     }
   }
 
+  const fetchMangaMatch = async (title) => {
+    try {
+      // Strip season suffixes for a cleaner search
+      const cleanTitle = title
+        .replace(/\s+season\s+\d+/i, '')
+        .replace(/\s+s\d+$/i, '')
+        .replace(/\s+part\s+\d+/i, '')
+        .trim()
+      const res = await fetch(`${API}/manga/search?q=${encodeURIComponent(cleanTitle)}&source=mangadex`)
+      const data = await res.json()
+      if (data.results && data.results.length > 0) {
+        setMangaMatch(data.results[0])
+      }
+    } catch {}
+  }
+
   const fetchAnimeDetails = async () => {
     setLoading(true)
     setError('')
@@ -97,6 +114,8 @@ export default function Details() {
         if (data.id) {
           fetchWatchOrder(data.id)
         }
+        // Search for manga adaptation
+        fetchMangaMatch(data.title)
       }
     } catch {
       setError('Failed to fetch anime details')
@@ -367,6 +386,44 @@ export default function Details() {
               ))}
             </div>
           </div>
+
+          {/* Manga Adaptation Shortcut */}
+          {mangaMatch && (
+            <div
+              className="details-metadata-card"
+              style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+              onClick={() => navigate(`/manga/${encodeURIComponent(mangaMatch.id)}`, { state: { manga: mangaMatch } })}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--manga-primary, #d97706)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = ''}
+            >
+              <h3 style={{ marginBottom: 10 }}>📚 Read the Manga</h3>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                {mangaMatch.cover && (
+                  <img
+                    src={mangaMatch.cover}
+                    alt={mangaMatch.title}
+                    style={{ width: 52, height: 72, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }}
+                    onError={e => e.target.style.display = 'none'}
+                  />
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {mangaMatch.title}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'capitalize' }}>
+                    {mangaMatch.status} · {mangaMatch.year || 'Manga'} · MangaDex
+                  </p>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 11, padding: '5px 14px', background: 'var(--manga-primary, #d97706)', color: '#000', fontWeight: 'bold', borderRadius: 8 }}
+                    onClick={e => { e.stopPropagation(); navigate(`/manga/${encodeURIComponent(mangaMatch.id)}`, { state: { manga: mangaMatch } }) }}
+                  >
+                    📖 Start Reading
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Franchise Watch Order */}
           {watchOrder && watchOrder.length > 1 && (
