@@ -97,6 +97,7 @@ async def mangadex_chapters(manga_id: str) -> list:
                         "pages": attrs.get("pages", 0),
                         "publishAt": attrs.get("publishAt", ""),
                         "source": "mangadex",
+                        "externalUrl": attrs.get("externalUrl")
                     })
                 total = data.get("total", 0)
                 offset += len(batch)

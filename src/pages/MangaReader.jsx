@@ -172,15 +172,48 @@ export default function MangaReader() {
         </div>
       ) : pages.length === 0 ? (
         <div className="manga-reader-loading">
-          <div style={{ fontSize: 48 }}>😞</div>
-          <span>No pages found for this chapter.</span>
-          <button
-            className="manga-reader-back-btn"
-            onClick={() => navigate(-1)}
-            style={{ marginTop: 12 }}
-          >
-            Go Back
-          </button>
+          {chapter?.externalUrl ? (
+            <>
+              <div style={{ fontSize: 48, marginBottom: 15 }}>🔗</div>
+              <span style={{ fontSize: 16, marginBottom: 12 }}>This chapter is hosted on an external site.</span>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 20, maxWidth: 400, textAlign: 'center' }}>
+                MangaDex redirects to official publishers (like MangaPlus) for this chapter.
+              </p>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  className="manga-read-btn"
+                  onClick={() => {
+                    if (window.electronAPI) {
+                      window.electronAPI.openExternal(chapter.externalUrl)
+                    } else {
+                      window.open(chapter.externalUrl, '_blank')
+                    }
+                  }}
+                  style={{ background: 'var(--manga-primary)', color: '#000' }}
+                >
+                  🌐 Open Official Source
+                </button>
+                <button
+                  className="manga-reader-back-btn"
+                  onClick={() => navigate(-1)}
+                >
+                  Go Back
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 48 }}>😞</div>
+              <span>No pages found for this chapter.</span>
+              <button
+                className="manga-reader-back-btn"
+                onClick={() => navigate(-1)}
+                style={{ marginTop: 12 }}
+              >
+                Go Back
+              </button>
+            </>
+          )}
         </div>
       ) : mode === 'strip' ? (
         /* Long-strip mode */

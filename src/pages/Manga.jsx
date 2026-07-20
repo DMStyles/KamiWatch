@@ -49,13 +49,32 @@ export default function Manga() {
   useEffect(() => {
     const loadTrending = async () => {
       try {
-        const r = await fetch(`${API}/manga/search?q=one+piece&source=mangadex`)
-        const data = await r.json()
-        // Just use a variety of popular searches to fill the grid
-        const r2 = await fetch(`${API}/manga/search?q=naruto&source=mangadex`)
-        const data2 = await r2.json()
-        const combined = [...(data.results || []).slice(0, 6), ...(data2.results || []).slice(0, 6)]
-        setTrending(combined)
+        const MDEX = 'https://api.mangadex.org'
+        const MDEX_IMG = 'https://uploads.mangadex.org'
+        const params = new URLSearchParams({
+          limit: '60',
+          'order[followedCount]': 'desc',
+          'contentRating[]': 'safe',
+          'includes[]': 'cover_art'
+        })
+        const r = await fetch(`${MDEX}/manga?${params}&contentRating[]=suggestive`)
+        const raw = await r.json()
+        const items = (raw.data || []).map(item => {
+          const attrs = item.attributes || {}
+          const title = (attrs.title || {}).en || Object.values(attrs.title || {})[0] || 'Unknown'
+          const coverRel = (item.relationships || []).find(r => r.type === 'cover_art')
+          const fileName = coverRel?.attributes?.fileName
+          const cover = fileName ? `${MDEX_IMG}/covers/${item.id}/${fileName}.256.jpg` : ''
+          return {
+            id: `mdex:${item.id}`,
+            title,
+            cover,
+            source: 'mangadex',
+            status: attrs.status || 'unknown',
+            year: attrs.year,
+          }
+        })
+        setTrending(items)
       } catch {}
     }
     loadTrending()
@@ -109,7 +128,7 @@ export default function Manga() {
         const MDEX = 'https://api.mangadex.org'
         const MDEX_IMG = 'https://uploads.mangadex.org'
         const params = new URLSearchParams({
-          limit: '20',
+          limit: '100',
           'order[followedCount]': 'desc',
         })
         params.append('contentRating[]', 'safe')

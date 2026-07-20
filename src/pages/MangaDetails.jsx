@@ -143,12 +143,22 @@ export default function MangaDetails() {
           <span className="manga-chapters-title">
             📋 Chapters {!loadingChapters && `(${chapters.length})`}
           </span>
-          <button
-            className="manga-chapters-sort-btn"
-            onClick={() => setSortAsc(a => !a)}
-          >
-            {sortAsc ? '↑ Oldest First' : '↓ Newest First'}
-          </button>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              className="manga-chapters-sort-btn"
+              onClick={() => navigate('/manga', { state: { query: details?.title, forceSource: details?.source === 'mangadex' ? 'mangakakalot' : 'mangadex' } })}
+              style={{ background: 'rgba(217,119,6,0.1)', color: 'var(--manga-primary)', border: '1px solid rgba(217,119,6,0.3)' }}
+              title="If chapters are missing, try switching source"
+            >
+              🔄 Try {details?.source === 'mangadex' ? 'MangaKakalot' : 'MangaDex'}
+            </button>
+            <button
+              className="manga-chapters-sort-btn"
+              onClick={() => setSortAsc(a => !a)}
+            >
+              {sortAsc ? '↑ Oldest First' : '↓ Newest First'}
+            </button>
+          </div>
         </div>
 
         {loadingChapters ? (
@@ -156,17 +166,16 @@ export default function MangaDetails() {
             <span className="spinner" style={{ width: 28, height: 28 }} />
           </div>
         ) : chapters.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-            <p style={{ marginBottom: 12 }}>No chapters found in English on this source.</p>
-            {details?.source === 'mangadex' && (
-              <button 
-                className="btn btn-primary" 
-                style={{ padding: '8px 16px', background: 'var(--manga-primary)', color: '#000', fontWeight: 'bold' }}
-                onClick={() => navigate('/manga', { state: { query: details.title, forceSource: 'mangakakalot' } })}
-              >
-                Search on MangaKakalot instead
-              </button>
-            )}
+          <div className="manga-empty-chapters" style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <div style={{ fontSize: 40, marginBottom: 15 }}>😕</div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>No chapters found in English on this source.</p>
+            <button 
+              className="manga-read-btn"
+              style={{ margin: '0 auto', display: 'inline-block' }}
+              onClick={() => navigate('/manga', { state: { query: details?.title, forceSource: details?.source === 'mangadex' ? 'mangakakalot' : 'mangadex' } })}
+            >
+              🔍 Search on {details?.source === 'mangadex' ? 'MangaKakalot' : 'MangaDex'} instead
+            </button>
           </div>
         ) : (
           <div className="manga-chapters-list">
