@@ -119,7 +119,7 @@ async def get_episodes(url: str):
     return {"title": title, "thumbnail": thumbnail, "episodes": episodes, "source": "anikoto"}
 
 @router.get("/resolve")
-async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
+async def resolve_stream(data_ids: str, sub_dub: str = "sub", server: Optional[str] = None):
     server_list_url = f"{BASE_URL}/ajax/server/list?servers={data_ids}"
     headers = {"User-Agent": HEADERS["User-Agent"], "X-Requested-With": "XMLHttpRequest"}
     probe_headers = {"User-Agent": HEADERS["User-Agent"], "Referer": BASE_URL + "/"}
@@ -146,7 +146,7 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
     if not candidates:
         return {"error": "No servers found"}
 
-    # Step 1: Resolve servers sequentially to avoid triggering rate-limits (which caused missing alternatives)
+    # Step 1: Resolve servers sequentially to avoid triggering rate-limits
     valid_servers = []
     async with httpx.AsyncClient(headers=headers, timeout=10) as client:
         for c in candidates:
@@ -173,32 +173,37 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
             if "megaplay" in srv["url"] or "vidwish" in srv["url"]:
                 try:
                     r = await client.get(srv["url"])
-                    # The HTML itself returns 200 OK, but contains the 410 error text if the video is deleted
                     if "Error Code: 410" in r.text or "deleted" in r.text.lower():
                         is_alive = False
                 except:
-                    pass # assume alive if probe fails
+                    pass
             
             if is_alive:
                 alive_servers.append(srv)
 
     server_pool = alive_servers if alive_servers else valid_servers
 
-    # Step 3: Prefer megaplay if alive, otherwise vidplay
+    # Step 3: Choose server based on requested server name, otherwise auto fallback
     preferred = server_pool[0]
-    for pref_name in ["HD-1", "Vidstream-2", "VidCloud-1"]:
-        for srv in server_pool:
-            if pref_name.lower() in srv["name"].lower():
+    if server and server != "auto":
+        for srv in valid_servers: # Check all valid_servers if user requested explicit server
+            if server.lower() in srv["name"].lower():
                 preferred = srv
                 break
-        else:
-            continue
-        break
+    else:
+        for pref_name in ["HD-1", "Vidstream-2", "VidCloud-1"]:
+            for srv in server_pool:
+                if pref_name.lower() in srv["name"].lower():
+                    preferred = srv
+                    break
+            else:
+                continue
+            break
 
     return {
         "url": preferred["url"],
         "name": preferred["name"],
-        "alternatives": valid_servers # ALWAYS include all valid_servers so dropdown works
+        "alternatives": valid_servers
     }
 
 

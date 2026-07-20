@@ -37,6 +37,7 @@ export default function Details() {
   const [selectedEpisodes, setSelectedEpisodes] = useState(new Set())
   const [quality, setQuality] = useState(settings.quality || 'best')
   const [subDub, setSubDub] = useState(settings.subDub || 'sub')
+  const [preferredServer, setPreferredServer] = useState('auto')
   const [queuing, setQueuing] = useState(false)
   const [watchingEp, setWatchingEp] = useState(null) // Ep number being resolved for watch
 
@@ -247,11 +248,13 @@ export default function Details() {
     setWatchingEp(epNum)
     try {
       let finalUrl = ep.url
+      let alternatives = null
       if (finalUrl.startsWith('anikoto:')) {
         const dataIds = finalUrl.split('anikoto:')[1]
-        const res = await fetch(`${API}/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}&sub_dub=${subDub}`)
+        const res = await fetch(`${API}/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}&sub_dub=${subDub}&server=${preferredServer}`)
         const data = await res.json()
         if (data.url) finalUrl = data.url
+        if (data.alternatives) alternatives = data.alternatives
       } else if (finalUrl.startsWith('kissanime:') || finalUrl.includes('kissanime.com.vc')) {
         const res = await fetch(`${API}/kissanime/resolve?url=${encodeURIComponent(finalUrl)}`)
         const data = await res.json()
@@ -261,7 +264,7 @@ export default function Details() {
         const data = await res.json()
         if (data.url) finalUrl = data.url
       }
-      setPlayerModal({ title: `${anime.title} - Episode ${ep.number}`, url: finalUrl })
+      setPlayerModal({ title: `${anime.title} - Episode ${ep.number}`, url: finalUrl, alternatives })
       try {
         const historyStr = localStorage.getItem('anivault-history') || '[]'
         let history = JSON.parse(historyStr)
@@ -502,17 +505,32 @@ export default function Details() {
 
                   <div className="episodes-right-actions">
                     {activeSource === 'anikoto' && (
-                      <div className="subdub-toggle" title="Switch between Subtitled and Dubbed audio">
-                        {['sub', 'dub'].map(v => (
-                          <button
-                            key={v}
-                            className={`subdub-btn${subDub === v ? ' active' : ''}`}
-                            onClick={() => setSubDub(v)}
-                          >
-                            {v === 'sub' ? '🔤 SUB' : '🎙️ DUB'}
-                          </button>
-                        ))}
-                      </div>
+                      <>
+                        <select 
+                          className="settings-select" 
+                          value={preferredServer} 
+                          onChange={e => setPreferredServer(e.target.value)}
+                          title="Select Preferred AniKoto Stream Server"
+                          style={{ borderColor: preferredServer !== 'auto' ? 'var(--accent)' : undefined }}
+                        >
+                          <option value="auto">⚡ Server: Auto</option>
+                          <option value="HD-1">Server: HD-1</option>
+                          <option value="Vidstream-2">Server: Vidstream-2</option>
+                          <option value="VidCloud-1">Server: VidCloud-1</option>
+                          <option value="VidPlay">Server: VidPlay</option>
+                        </select>
+                        <div className="subdub-toggle" title="Switch between Subtitled and Dubbed audio">
+                          {['sub', 'dub'].map(v => (
+                            <button
+                              key={v}
+                              className={`subdub-btn${subDub === v ? ' active' : ''}`}
+                              onClick={() => setSubDub(v)}
+                            >
+                              {v === 'sub' ? '🔤 SUB' : '🎙️ DUB'}
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
                     <select className="settings-select" value={quality} onChange={e => setQuality(e.target.value)}>
                       <option value="best">Best Quality</option>

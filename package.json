@@ -1,6 +1,6 @@
 {
   "name": "anivault",
-  "version": "1.0.61",
+  "version": "1.0.62",
   "description": "AniVault — Anime & Media Downloader",
   "main": "electron/main.js",
   "homepage": "https://github.com/DMStyles/AniVault",
