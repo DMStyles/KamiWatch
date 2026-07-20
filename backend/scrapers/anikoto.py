@@ -146,49 +146,45 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
     if not candidates:
         return {"error": "No servers found"}
 
-    # Step 1: Resolve all server embed URLs concurrently
-    async def resolve_single(li):
-        link_id = li.get("data-link-id")
-        name = li.text.strip()
-        source_url = f"{BASE_URL}/ajax/server?get={link_id}"
-        try:
-            async with httpx.AsyncClient(headers=headers, timeout=10) as c:
-                r = await c.get(source_url)
+    # Step 1: Resolve servers sequentially to avoid triggering rate-limits (which caused missing alternatives)
+    valid_servers = []
+    async with httpx.AsyncClient(headers=headers, timeout=10) as client:
+        for c in candidates:
+            link_id = c.get("data-link-id")
+            name = c.text.strip()
+            source_url = f"{BASE_URL}/ajax/server?get={link_id}"
+            try:
+                r = await client.get(source_url)
                 if r.status_code == 200:
                     url = r.json().get("result", {}).get("url")
                     if url:
-                        return {"name": name, "url": url}
-        except:
-            pass
-        return None
+                        valid_servers.append({"name": name, "url": url})
+            except:
+                pass
 
-    resolved = await asyncio.gather(*(resolve_single(c) for c in candidates))
-    valid_servers = [r for r in resolved if r]
-    
     if not valid_servers:
         return {"error": "Failed to resolve any servers"}
 
-    # Step 2: Probe each embed URL to detect 410 (deleted content)
-    # VidPlay (vidtube.site) always returns 200 even when video is gone (it shows its own error page)
-    # Megaplay (megaplay.buzz) returns 410 when video file has been deleted
-    # So we skip any server that returns 410, and return the first alive one
-    async def probe_url(srv):
-        try:
-            async with httpx.AsyncClient(headers=probe_headers, timeout=8, follow_redirects=True) as c:
-                r = await c.head(srv["url"])
-                return r.status_code != 410
-        except:
-            return True  # assume alive if probe fails
+    # Step 2: Probe Megaplay servers for the 410 Error by checking the actual HTML
+    alive_servers = []
+    async with httpx.AsyncClient(headers=probe_headers, timeout=8, follow_redirects=True) as client:
+        for srv in valid_servers:
+            is_alive = True
+            if "megaplay" in srv["url"] or "vidwish" in srv["url"]:
+                try:
+                    r = await client.get(srv["url"])
+                    # The HTML itself returns 200 OK, but contains the 410 error text if the video is deleted
+                    if "Error Code: 410" in r.text or "deleted" in r.text.lower():
+                        is_alive = False
+                except:
+                    pass # assume alive if probe fails
+            
+            if is_alive:
+                alive_servers.append(srv)
 
-    alive_flags = await asyncio.gather(*(probe_url(s) for s in valid_servers))
-    alive_servers = [s for s, alive in zip(valid_servers, alive_flags) if alive]
-
-    # Use alive servers if any, otherwise fall back to all servers (let frontend handle)
     server_pool = alive_servers if alive_servers else valid_servers
 
-    # Step 3: Among alive servers, prefer megaplay (HD-1, Vidstream-2, VidCloud-1) 
-    # over vidtube (VidPlay) because megaplay correctly separates sub/dub audio tracks.
-    # VidPlay is always a viable fallback since it at least plays something.
+    # Step 3: Prefer megaplay if alive, otherwise vidplay
     preferred = server_pool[0]
     for pref_name in ["HD-1", "Vidstream-2", "VidCloud-1"]:
         for srv in server_pool:
@@ -202,7 +198,7 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub"):
     return {
         "url": preferred["url"],
         "name": preferred["name"],
-        "alternatives": valid_servers  # include all (alive + dead) for manual switching
+        "alternatives": valid_servers # ALWAYS include all valid_servers so dropdown works
     }
 
 
