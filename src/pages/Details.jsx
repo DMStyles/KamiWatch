@@ -134,14 +134,36 @@ export default function Details() {
     setEpisodes([])
     setSelectedMatch(null)
     try {
-      const res = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(title)}`)
-      const data = await res.json()
-      const results = data.results || []
+      let res = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(title)}`)
+      let data = await res.json()
+      let results = data.results || []
+
+      // Fallback 1: Try romaji/japanese title if initial English search gave 0 results
+      if (results.length === 0 && anime?.title_japanese && anime.title_japanese !== title) {
+        try {
+          const res2 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(anime.title_japanese)}`)
+          const data2 = await res2.json()
+          if (data2.results && data2.results.length > 0) results = data2.results
+        } catch {}
+      }
+
+      // Fallback 2: Try base title before colon (e.g. "Mushoku Tensei: Jobless Reincarnation Season 3" -> "Mushoku Tensei")
+      if (results.length === 0 && title.includes(':')) {
+        try {
+          const baseTitle = title.split(':')[0].trim()
+          const res3 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(baseTitle)}`)
+          const data3 = await res3.json()
+          if (data3.results && data3.results.length > 0) results = data3.results
+        } catch {}
+      }
+
       setSearchResults(results)
 
       if (results.length > 0) {
-        // Find best match (exact or containing title)
-        const best = results.find(r => r.title.toLowerCase() === title.toLowerCase()) || results[0]
+        // Find best match (exact match, romaji match, or first result)
+        const best = results.find(r => r.title.toLowerCase() === title.toLowerCase()) ||
+                     results.find(r => anime?.title_japanese && r.title.toLowerCase() === anime.title_japanese.toLowerCase()) ||
+                     results[0]
         setSelectedMatch(best)
         fetchSourceEpisodes(best.url, sourceId)
       }

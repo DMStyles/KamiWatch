@@ -23,17 +23,35 @@ export default function PlayerModal() {
           <span style={{fontWeight:700,fontSize:14, flex:1}}>{playerModal.title}</span>
           
           {playerModal.alternatives && playerModal.alternatives.length > 1 && (
-            <select 
-              className="settings-select" 
-              style={{padding: '4px 8px', fontSize: 12, height: 28, width: 'auto'}}
-              value={currentUrl}
-              onChange={(e) => setCurrentUrl(e.target.value)}
-              title="Change Server (If current server is broken/deleted)"
-            >
-              {playerModal.alternatives.map((alt, i) => (
-                <option key={i} value={alt.url}>{alt.name}</option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11, color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>Server:</span>
+              {playerModal.alternatives.map((alt, i) => {
+                const isActive = currentUrl === alt.url
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentUrl(alt.url)}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: 11,
+                      fontWeight: isActive ? 700 : 500,
+                      borderRadius: 6,
+                      border: '1px solid ' + (isActive ? 'var(--accent, #6366f1)' : 'rgba(255,255,255,0.15)'),
+                      background: isActive ? 'var(--accent, #6366f1)' : 'rgba(255,255,255,0.05)',
+                      color: isActive ? '#fff' : '#ccc',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                  >
+                    <span style={{ fontSize: 8, color: isActive ? '#fff' : '#888' }}>●</span>
+                    {alt.name}
+                  </button>
+                )
+              })}
+            </div>
           )}
 
           <button className="modal-close" onClick={() => setPlayerModal(null)}>✕</button>
