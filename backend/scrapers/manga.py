@@ -17,8 +17,8 @@ router = APIRouter()
 MANGADEX_API = "https://api.mangadex.org"
 MANGADEX_IMG = "https://uploads.mangadex.org"
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+MANGADEX_HEADERS = {
+    "User-Agent": "KamiWatch/2.0.0",
     "Accept": "application/json",
 }
 
@@ -36,7 +36,7 @@ async def mangadex_search(query: str) -> list:
         "order[relevance]": "desc",
     }
     try:
-        async with httpx.AsyncClient(timeout=15, headers=HEADERS) as client:
+        async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
             r = await client.get(url, params=params)
             data = r.json()
             results = []
@@ -76,7 +76,7 @@ async def mangadex_chapters(manga_id: str) -> list:
         "contentRating[]": ["safe", "suggestive", "erotica"],
     }
     try:
-        async with httpx.AsyncClient(timeout=20, headers=HEADERS) as client:
+        async with httpx.AsyncClient(timeout=20, headers=MANGADEX_HEADERS) as client:
             chapters = []
             offset = 0
             while True:
@@ -112,7 +112,7 @@ async def mangadex_chapters(manga_id: str) -> list:
 async def mangadex_pages(chapter_id: str) -> list:
     """Get page image URLs for a MangaDex chapter."""
     try:
-        async with httpx.AsyncClient(timeout=15, headers=HEADERS) as client:
+        async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
             r = await client.get(f"{MANGADEX_API}/at-home/server/{chapter_id}")
             data = r.json()
             base = data.get("baseUrl", MANGADEX_IMG)
@@ -264,7 +264,7 @@ async def get_manga_details(id: str):
             "includes[]": ["cover_art", "author", "artist"],
         }
         try:
-            async with httpx.AsyncClient(timeout=15, headers=HEADERS) as client:
+            async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
                 r = await client.get(f"{MANGADEX_API}/manga/{manga_id}", params=params)
                 data = r.json().get("data", {})
                 attrs = data.get("attributes", {})
