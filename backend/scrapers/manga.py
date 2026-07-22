@@ -417,12 +417,12 @@ async def get_pages(id: str):
     elif id.startswith("webtoons:"):
         ch_id = id[9:]
         pages = await webtoons_pages(ch_id)
-        # We rewrite the webtoons pages to use our local proxy
-        pages = [f"/manga/proxy?url={httpx.URL(p)}" for p in pages]
     else:
         pages = []
 
-    return {"pages": pages, "total": len(pages)}
+    # Proxy all pages through local backend to prevent CORS/Referer block on Electron
+    proxied_pages = [f"/manga/proxy?url={httpx.URL(p)}" for p in pages if p]
+    return {"pages": proxied_pages, "total": len(proxied_pages)}
 
 
 @router.get("/details")
@@ -466,19 +466,27 @@ async def get_manga_details(id: str):
 
 @router.get("/proxy")
 async def proxy_image(url: str):
-    """Proxy image requests to bypass Referer restrictions (used for Webtoons)."""
+    """Proxy image requests to bypass Referer/CORS restrictions across all sources."""
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": "https://www.webtoons.com/"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     }
+    if "webtoons.com" in url:
+        headers["Referer"] = "https://www.webtoons.com/"
+    elif "mangadex" in url:
+        headers["Referer"] = "https://mangadex.org/"
+    elif "mangakakalot" in url or "manganelo" in url:
+        headers["Referer"] = "https://mangakakalot.com/"
+    elif "mangaddict" in url:
+        headers["Referer"] = "https://www.mangaddict.com/"
     
-    # We use httpx to stream the response
-    client = httpx.AsyncClient()
+    client = httpx.AsyncClient(timeout=20, follow_redirects=True)
     
     async def generate():
-        async with client.stream("GET", url, headers=headers) as response:
-            async for chunk in response.aiter_bytes():
-                yield chunk
+        try:
+            async with client.stream("GET", url, headers=headers) as response:
+                async for chunk in response.aiter_bytes():
+                    yield chunk
+        except Exception as e:
+            print(f"[Proxy error] {e}")
                 
-    # Content type is usually image/jpeg or image/png, but we'll let the client figure it out
     return StreamingResponse(generate(), media_type="image/jpeg")
