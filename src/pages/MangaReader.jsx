@@ -221,7 +221,7 @@ export default function MangaReader() {
           {pages.map((src, i) => (
             <img
               key={i}
-              src={src}
+              src={src.startsWith('/') ? `${API}${src}` : src}
               alt={`Page ${i + 1}`}
               loading="lazy"
               referrerPolicy="no-referrer"
@@ -259,7 +259,7 @@ export default function MangaReader() {
 
           <img
             className="manga-reader-paged-img"
-            src={pages[currentPage]}
+            src={pages[currentPage]?.startsWith('/') ? `${API}${pages[currentPage]}` : pages[currentPage]}
             alt={`Page ${currentPage + 1}`}
             referrerPolicy="no-referrer"
           />

@@ -11,6 +11,10 @@ from fastapi import APIRouter
 from bs4 import BeautifulSoup
 import asyncio
 import re
+import math
+from fastapi.responses import StreamingResponse
+from .mangaddict import mangaddict_search, mangaddict_chapters, mangaddict_pages
+from .webtoons import webtoons_search, webtoons_chapters, webtoons_pages
 
 router = APIRouter()
 
@@ -26,11 +30,14 @@ MANGADEX_HEADERS = {
 # MangaDex Source (Primary – official free API)
 # =============================================
 
-async def mangadex_search(query: str) -> list:
+async def mangadex_search(query: str, page: int = 1) -> dict:
     url = f"{MANGADEX_API}/manga"
+    limit = 20
+    offset = (page - 1) * limit
     params = {
         "title": query,
-        "limit": 20,
+        "limit": limit,
+        "offset": offset,
         "contentRating[]": ["safe", "suggestive", "erotica"],
         "includes[]": ["cover_art"],
         "order[relevance]": "desc",
@@ -39,12 +46,13 @@ async def mangadex_search(query: str) -> list:
         async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
             r = await client.get(url, params=params)
             data = r.json()
+            total = data.get("total", 0)
+            total_pages = math.ceil(total / limit) if total else 1
             results = []
             for item in data.get("data", []):
                 mid = item["id"]
                 attrs = item.get("attributes", {})
                 title = (attrs.get("title") or {}).get("en") or next(iter((attrs.get("title") or {}).values()), "Unknown")
-                # Get cover
                 cover_rel = next((r for r in item.get("relationships", []) if r["type"] == "cover_art"), None)
                 cover = ""
                 if cover_rel:
@@ -59,10 +67,10 @@ async def mangadex_search(query: str) -> list:
                     "year": attrs.get("year"),
                     "description": (attrs.get("description") or {}).get("en", ""),
                 })
-            return results
+            return {"results": results, "totalPages": total_pages, "total": total}
     except Exception as e:
         print(f"[MangaDex search error] {e}")
-        return []
+        return {"results": [], "totalPages": 1, "total": 0}
 
 
 async def mangadex_chapters(manga_id: str) -> list:
@@ -130,9 +138,9 @@ async def mangadex_pages(chapter_id: str) -> list:
 # MangaKakalot Source (Backup)
 # =============================================
 
-async def mangakakalot_search(query: str) -> list:
+async def mangakakalot_search(query: str, page: int = 1) -> list:
     q = query.replace(" ", "_").lower()
-    url = f"https://mangakakalot.com/search/story/{q}"
+    url = f"https://mangakakalot.com/search/story/{q}?page={page}"
     try:
         async with httpx.AsyncClient(timeout=15, follow_redirects=True, headers={
             "User-Agent": HEADERS["User-Agent"],
@@ -210,19 +218,39 @@ async def mangakakalot_pages(chapter_url: str) -> list:
 # =============================================
 
 @router.get("/search")
-async def search_manga(q: str, source: str = "auto"):
-    """Search manga across all sources."""
+async def search_manga(q: str, source: str = "auto", page: int = 1):
+    """Search manga across all sources with pagination."""
+    total_pages = 1
+    results = []
     if source == "mangadex":
-        results = await mangadex_search(q)
+        res = await mangadex_search(q, page=page)
+        results = res.get("results", [])
+        total_pages = res.get("totalPages", 1)
     elif source == "mangakakalot":
-        results = await mangakakalot_search(q)
+        results = await mangakakalot_search(q, page=page)
+        total_pages = 10 if len(results) >= 15 else page
+    elif source == "mangaddict":
+        results = await mangaddict_search(q, page=page)
+        total_pages = 10 if len(results) >= 10 else page
+    elif source == "webtoons":
+        results = await webtoons_search(q, page=page)
+        total_pages = 5 if len(results) >= 10 else page
     else:
-        # Auto: try MangaDex first (best quality), fallback to Mangakakalot
-        results = await mangadex_search(q)
+        # Auto: try MangaDex first
+        res = await mangadex_search(q, page=page)
+        results = res.get("results", [])
+        total_pages = res.get("totalPages", 1)
         if not results:
-            results = await mangakakalot_search(q)
+            results = await mangakakalot_search(q, page=page)
+            total_pages = 10 if len(results) >= 15 else page
+        if not results:
+            results = await mangaddict_search(q, page=page)
+            total_pages = 10 if len(results) >= 10 else page
+        if not results:
+            results = await webtoons_search(q, page=page)
+            total_pages = 5 if len(results) >= 10 else page
 
-    return {"results": results, "query": q}
+    return {"results": results, "query": q, "totalPages": total_pages, "currentPage": page}
 
 
 def _parse_mdex_items(data: dict) -> list:
@@ -302,11 +330,14 @@ async def popular_new_manga():
         return {"results": []}
 
 @router.get("/genre")
-async def browse_genre(genre_id: str = None, demographic: str = None):
-    """Browse MangaDex by genre tag or demographic."""
+async def browse_genre(genre_id: str = None, demographic: str = None, page: int = 1):
+    """Browse MangaDex by genre tag or demographic with pagination."""
     url = f"{MANGADEX_API}/manga"
+    limit = 20
+    offset = (page - 1) * limit
     params = {
-        "limit": 20,
+        "limit": limit,
+        "offset": offset,
         "contentRating[]": ["safe", "suggestive", "erotica"],
         "includes[]": ["cover_art"],
         "order[relevance]": "desc",
@@ -320,6 +351,8 @@ async def browse_genre(genre_id: str = None, demographic: str = None):
         async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
             r = await client.get(url, params=params)
             data = r.json()
+            total = data.get("total", 0)
+            total_pages = math.ceil(total / limit) if total else 1
             results = []
             for item in data.get("data", []):
                 attrs = item.get("attributes", {})
@@ -330,10 +363,7 @@ async def browse_genre(genre_id: str = None, demographic: str = None):
                     if rel["type"] == "cover_art":
                         cover_id = rel.get("attributes", {}).get("fileName")
                 
-                if cover_id:
-                    cover_url = f"{MANGADEX_IMG}/covers/{item['id']}/{cover_id}.256.jpg"
-                else:
-                    cover_url = ""
+                cover_url = f"{MANGADEX_IMG}/covers/{item['id']}/{cover_id}.256.jpg" if cover_id else ""
 
                 results.append({
                     "id": f"mdex:{item['id']}",
@@ -344,10 +374,10 @@ async def browse_genre(genre_id: str = None, demographic: str = None):
                     "year": attrs.get("year"),
                     "description": (attrs.get("description") or {}).get("en", "")
                 })
-            return {"results": results, "genre_id": genre_id}
+            return {"results": results, "genre_id": genre_id, "totalPages": total_pages, "currentPage": page}
     except Exception as e:
         print(f"[MangaDex genre error] {e}")
-        return {"results": []}
+        return {"results": [], "totalPages": 1, "currentPage": 1}
 
 
 @router.get("/chapters")
@@ -359,6 +389,12 @@ async def get_chapters(id: str):
     elif id.startswith("kakalot:"):
         url = id[8:]
         chapters = await mangakakalot_chapters(url)
+    elif id.startswith("mangaddict:"):
+        slug = id[11:]
+        chapters = await mangaddict_chapters(slug)
+    elif id.startswith("webtoons:"):
+        mid = id[9:]
+        chapters = await webtoons_chapters(mid)
     else:
         # Try as raw MangaDex UUID
         chapters = await mangadex_chapters(id)
@@ -375,6 +411,14 @@ async def get_pages(id: str):
     elif id.startswith("kakalot:"):
         url = id[8:]
         pages = await mangakakalot_pages(url)
+    elif id.startswith("mangaddict:"):
+        ch_id = id[11:]
+        pages = await mangaddict_pages(ch_id)
+    elif id.startswith("webtoons:"):
+        ch_id = id[9:]
+        pages = await webtoons_pages(ch_id)
+        # We rewrite the webtoons pages to use our local proxy
+        pages = [f"/manga/proxy?url={httpx.URL(p)}" for p in pages]
     else:
         pages = []
 
@@ -419,3 +463,22 @@ async def get_manga_details(id: str):
         except Exception as e:
             return {"error": str(e)}
     return {"error": "Unknown manga source"}
+
+@router.get("/proxy")
+async def proxy_image(url: str):
+    """Proxy image requests to bypass Referer restrictions (used for Webtoons)."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://www.webtoons.com/"
+    }
+    
+    # We use httpx to stream the response
+    client = httpx.AsyncClient()
+    
+    async def generate():
+        async with client.stream("GET", url, headers=headers) as response:
+            async for chunk in response.aiter_bytes():
+                yield chunk
+                
+    # Content type is usually image/jpeg or image/png, but we'll let the client figure it out
+    return StreamingResponse(generate(), media_type="image/jpeg")

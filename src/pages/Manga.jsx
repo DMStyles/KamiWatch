@@ -129,19 +129,19 @@ export default function Manga() {
     return () => clearInterval(timer)
   }, [])
 
-  const handleSearch = async (e, forceQuery, forceSource) => {
+  const handleSearch = async (e, forceQuery, forceSource, page = 1) => {
     e?.preventDefault()
     const q = forceQuery || query
     const s = forceSource || source
     if (!q.trim()) return
     setLoading(true)
     setSearched(true)
-    setCurrentPage(1)
-    setTotalPages(1)
     try {
-      const r = await fetch(`${API}/manga/search?q=${encodeURIComponent(q.trim())}&source=${s}`)
+      const r = await fetch(`${API}/manga/search?q=${encodeURIComponent(q.trim())}&source=${s}&page=${page}`)
       const data = await r.json()
       setResults(data.results || [])
+      setTotalPages(data.totalPages || 1)
+      setCurrentPage(data.currentPage || page)
       setActiveGenre(null)
     } catch {
       setResults([])
@@ -155,44 +155,18 @@ export default function Manga() {
     setSearched(true)
     setActiveGenre(genre.label)
     try {
-      const MDEX = 'https://api.mangadex.org'
-      const MDEX_IMG = 'https://uploads.mangadex.org'
-      const params = new URLSearchParams({
-        limit: '60',
-        offset: String((page - 1) * 60),
-        'order[followedCount]': 'desc',
-      })
-      params.append('contentRating[]', 'safe')
-      params.append('contentRating[]', 'suggestive')
-      params.append('includes[]', 'cover_art')
-      if (genre.tag) params.append('includedTags[]', genre.tag)
-      if (genre.demo) params.append('publicationDemographic[]', genre.demo)
-
-      const r = await fetch(`${MDEX}/manga?${params}`)
-      const raw = await r.json()
-      
-      const items = (raw.data || []).map(item => {
-        const attrs = item.attributes || {}
-        const title = (attrs.title || {}).en || Object.values(attrs.title || {})[0] || 'Unknown'
-        const coverRel = (item.relationships || []).find(r => r.type === 'cover_art')
-        const fileName = coverRel?.attributes?.fileName
-        const cover = fileName ? `${MDEX_IMG}/covers/${item.id}/${fileName}.256.jpg` : ''
-        return {
-          id: `mdex:${item.id}`,
-          title,
-          cover,
-          source: 'mangadex',
-          status: attrs.status || 'unknown',
-          year: attrs.year,
-        }
-      })
-      setResults(items)
-      setTotalPages(Math.ceil((raw.total || 0) / 60))
-      setCurrentPage(page)
+      const genreId = genre.tag || ''
+      const demo = genre.demo || ''
+      const r = await fetch(`${API}/manga/genre?genre_id=${genreId}&demographic=${demo}&page=${page}`)
+      const data = await r.json()
+      setResults(data.results || [])
+      setTotalPages(data.totalPages || 1)
+      setCurrentPage(data.currentPage || page)
     } catch {
       setResults([])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const displayResults = searched ? results : trending
@@ -244,12 +218,33 @@ export default function Manga() {
           </button>
         </form>
         </div>
+        
+        {!scrolled && (
+          <div className="hero-dots" style={{ position: 'absolute', bottom: '24px', right: '32px', zIndex: 2, display: 'flex', gap: '6px' }}>
+            {MANGA_HERO_SLIDES.map((_, i) => (
+              <div 
+                key={i}
+                style={{
+                  width: i === heroIdx ? '20px' : '6px',
+                  height: '6px',
+                  borderRadius: '3px',
+                  background: i === heroIdx ? 'var(--manga-primary)' : 'rgba(255,255,255,0.3)',
+                  transition: 'all 0.3s'
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
+      <div style={{ padding: '0 28px' }}>
         <div className="manga-source-tabs">
           {[
             { id: 'auto', label: '⚡ Auto (Best)' },
             { id: 'mangadex', label: '📖 MangaDex' },
             { id: 'mangakakalot', label: '🔄 MangaKakalot' },
+            { id: 'mangaddict', label: '📙 MangaDict' },
+            { id: 'webtoons', label: '💚 Webtoons' },
           ].map(s => (
             <button
               key={s.id}
@@ -267,7 +262,7 @@ export default function Manga() {
           gap: '8px', 
           overflowX: 'auto', 
           paddingBottom: '12px',
-          marginTop: '24px', 
+          marginTop: '16px', 
           width: '100%', 
           WebkitMaskImage: 'linear-gradient(to right, transparent, black 2%, black 98%, transparent)',
           maskImage: 'linear-gradient(to right, transparent, black 2%, black 98%, transparent)'
@@ -295,28 +290,6 @@ export default function Manga() {
             </button>
           ))}
         </div>
-
-        {!scrolled && (
-          <div className="hero-dots" style={{ position: 'absolute', bottom: '24px', right: '32px', zIndex: 2, display: 'flex', gap: '6px' }}>
-            {MANGA_HERO_SLIDES.map((_, i) => (
-              <button
-                key={i}
-                className={`hero-dot${i === heroIdx ? ' active' : ''}`}
-                onClick={() => setHeroIdx(i)}
-                style={{
-                  width: i === heroIdx ? '18px' : '6px',
-                  height: '6px',
-                  borderRadius: i === heroIdx ? '4px' : '50%',
-                  background: i === heroIdx ? 'var(--accent-light)' : 'rgba(255,255,255,0.3)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  padding: 0
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Results Grid */}
@@ -370,30 +343,65 @@ export default function Manga() {
         )}
 
         {/* Pagination Controls */}
-        {!loading && activeGenre && totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '40px' }}>
+        {!loading && searched && totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '40px', flexWrap: 'wrap' }}>
             <button 
-              onClick={() => handleGenre(GENRES.find(g => g.label === activeGenre), currentPage - 1)}
+              onClick={() => {
+                const nextP = currentPage - 1
+                if (activeGenre) handleGenre(GENRES.find(g => g.label === activeGenre), nextP)
+                else handleSearch(null, query, source, nextP)
+              }}
               disabled={currentPage === 1}
               style={{
-                padding: '8px 16px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: '8px',
-                cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1
+                padding: '8px 16px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.4 : 1, fontSize: '13px', fontWeight: '600'
               }}
             >
-              Previous
+              ← Prev
             </button>
-            <span style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '0 12px' }}>
-              Page {currentPage} of {totalPages > 100 ? '100+' : totalPages}
-            </span>
+
+            {/* Render Page Numbers */}
+            {Array.from({ length: Math.min(totalPages, 10) }, (_, idx) => {
+              let pageNum = idx + 1
+              if (totalPages > 10) {
+                if (currentPage > 5) pageNum = currentPage - 5 + idx
+                if (pageNum > totalPages) pageNum = totalPages - (9 - idx)
+              }
+              if (pageNum <= 0) return null
+              const isActive = pageNum === currentPage
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => {
+                    if (activeGenre) handleGenre(GENRES.find(g => g.label === activeGenre), pageNum)
+                    else handleSearch(null, query, source, pageNum)
+                  }}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '8px', border: 'none',
+                    background: isActive ? 'var(--manga-primary)' : 'rgba(255,255,255,0.05)',
+                    color: isActive ? '#000' : 'var(--text-primary)',
+                    fontWeight: isActive ? 'bold' : 'normal',
+                    cursor: 'pointer', fontSize: '13px', transition: 'all 0.15s'
+                  }}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+
             <button 
-              onClick={() => handleGenre(GENRES.find(g => g.label === activeGenre), currentPage + 1)}
+              onClick={() => {
+                const nextP = currentPage + 1
+                if (activeGenre) handleGenre(GENRES.find(g => g.label === activeGenre), nextP)
+                else handleSearch(null, query, source, nextP)
+              }}
               disabled={currentPage === totalPages}
               style={{
                 padding: '8px 16px', background: 'var(--manga-primary)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold',
-                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.4 : 1, fontSize: '13px'
               }}
             >
-              Next Page
+              Next →
             </button>
           </div>
         )}
