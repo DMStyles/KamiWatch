@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
 
 const API = 'http://localhost:8642'
 
 export default function EpisodeModal() {
+  const navigate = useNavigate()
   const { episodeModal, setEpisodeModal, setDownloads, settings, setPlayerModal } = useContext(AppContext)
   const [episodes, setEpisodes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -133,30 +135,51 @@ export default function EpisodeModal() {
   }
 
   const isDownloadDisabled = false
+  const modalTitle = episodeModal?.title || episodeModal?.animeTitle || 'Unknown'
+  const modalThumb = episodeModal?.thumbnail || episodeModal?.cover || ''
+  const targetId = episodeModal?.id || episodeModal?.animeId || episodeModal?.malId
+
+  const handleGoToDetails = () => {
+    setEpisodeModal(null)
+    if (targetId && String(targetId).match(/^\d+$/)) {
+      navigate(`/anime/${targetId}`)
+    } else if (modalTitle && modalTitle !== 'Unknown') {
+      navigate('/search', { state: { searchQuery: modalTitle } })
+    }
+  }
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setEpisodeModal(null)}>
       <div className="modal-panel">
         <div className="modal-header">
           <div style={{display:'flex',gap:14,alignItems:'flex-start'}}>
-            {episodeModal.thumbnail && (
-              <img src={episodeModal.thumbnail} alt={episodeModal.title} className="modal-thumb" />
+            {modalThumb && (
+              <img src={modalThumb} alt={modalTitle} className="modal-thumb" />
             )}
             <div>
-              <h2 className="modal-title">{episodeModal.title}</h2>
+              <h2 className="modal-title">{modalTitle}</h2>
               <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}>
-                <span className="badge badge-source" style={{textTransform:'capitalize'}}>{episodeModal.source}</span>
-                <span className="badge badge-type">{episodeModal.type}</span>
+                {episodeModal.source && <span className="badge badge-source" style={{textTransform:'capitalize'}}>{episodeModal.source}</span>}
+                {episodeModal.type && <span className="badge badge-type">{episodeModal.type}</span>}
                 {episodeModal.sub_episodes !== '0' && <span className="badge badge-sub">SUB</span>}
                 {episodeModal.dub_episodes !== '0' && <span className="badge badge-dub">DUB</span>}
               </div>
-              <button
-                className={`btn ${isFollowed ? 'btn-secondary' : 'btn-primary'}`}
-                style={{marginTop: 8, padding: '4px 10px', fontSize: 11}}
-                onClick={toggleFollow}
-              >
-                {isFollowed ? '❤️ Followed' : '🤍 Follow Series'}
-              </button>
+              <div style={{display:'flex',gap:6,marginTop:8}}>
+                <button
+                  className={`btn ${isFollowed ? 'btn-secondary' : 'btn-primary'}`}
+                  style={{padding: '4px 10px', fontSize: 11}}
+                  onClick={toggleFollow}
+                >
+                  {isFollowed ? '❤️ Followed' : '🤍 Follow Series'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{padding: '4px 10px', fontSize: 11}}
+                  onClick={handleGoToDetails}
+                >
+                  📖 View Details
+                </button>
+              </div>
             </div>
           </div>
           <button className="modal-close" onClick={() => setEpisodeModal(null)}>✕</button>

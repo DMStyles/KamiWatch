@@ -7,7 +7,7 @@ import { AppContext } from '../App'
  * Used across Home, Search, Browse, and Schedule pages.
  *
  * Props:
- *   anime    — { id, title, cover/image, score, type, episodes, subEpisodes, dubEpisodes }
+ *   anime    — { id, animeId, malId, title, animeTitle, cover, thumbnail, image, score, type, episodes, subEpisodes, dubEpisodes, episodeNumber }
  *   onClick  — override default navigation (optional)
  *   progress — 0–100 watched progress (optional)
  *   badge    — string badge text (optional)
@@ -20,20 +20,32 @@ export default function AnimeCard({ anime, onClick, progress, badge, wide = fals
 
   if (!anime) return null
 
-  const title = anime.title || anime.titleEnglish || anime.name || 'Unknown'
-  const cover  = anime.cover || anime.image || anime.thumbnail || anime.coverImage?.large || ''
-  const score  = anime.score || anime.averageScore
-  const type   = anime.type || anime.format || ''
+  // Fallbacks to support both standard API objects and history items
+  const title = anime.title || anime.animeTitle || anime.titleEnglish || anime.name || 'Unknown'
+  const cover = anime.cover || anime.thumbnail || anime.image || anime.coverImage?.large || ''
+  const score = anime.score || anime.averageScore
+  const type = anime.type || anime.format || ''
   const epCount = anime.episodes || anime.subEpisodes
+  const targetId = anime.id || anime.animeId || anime.malId
+  const displayBadge = badge || (anime.episodeNumber ? `EP ${anime.episodeNumber}` : null)
 
-  const handleClick = () => {
+  const handleClick = (e) => {
     if (onClick) { onClick(anime); return }
-    if (anime.id && String(anime.id).match(/^\d+$/)) {
-      navigate(`/anime/${anime.id}`)
-    } else if (anime.malId) {
-      navigate(`/anime/${anime.malId}`)
-    } else if (anime.url) {
-      setEpisodeModal({ title, url: anime.url, thumbnail: cover, source: anime.source })
+    if (targetId && String(targetId).match(/^\d+$/)) {
+      navigate(`/anime/${targetId}`)
+    } else if (anime.url && !anime.url.startsWith('anikoto:')) {
+      setEpisodeModal({ title, url: anime.url, thumbnail: cover, source: anime.source || 'anikoto', id: targetId })
+    } else if (title && title !== 'Unknown') {
+      navigate('/search', { state: { searchQuery: title } })
+    }
+  }
+
+  const handleGoToDetails = (e) => {
+    e.stopPropagation()
+    if (targetId && String(targetId).match(/^\d+$/)) {
+      navigate(`/anime/${targetId}`)
+    } else {
+      navigate('/search', { state: { searchQuery: title } })
     }
   }
 
@@ -76,11 +88,39 @@ export default function AnimeCard({ anime, onClick, progress, badge, wide = fals
 
         {/* Hover overlay */}
         <div className="anime-card-overlay">
-          <div className="card-play-btn">
+          <div className="card-play-btn" title="View Details / Watch">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           </div>
+
+          {/* Quick Details Button */}
+          <button
+            onClick={handleGoToDetails}
+            title="Anime Details Page"
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'rgba(7,7,15,0.85)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: '#fff',
+              borderRadius: 6,
+              padding: '4px 8px',
+              fontSize: 10,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(7,7,15,0.85)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}
+          >
+            ℹ️ Details
+          </button>
         </div>
 
         {/* Score badge */}
@@ -122,7 +162,7 @@ export default function AnimeCard({ anime, onClick, progress, badge, wide = fals
         )}
 
         {/* Custom badge (e.g. NEW, EP 5) */}
-        {badge && (
+        {displayBadge && (
           <div style={{
             position: 'absolute', bottom: 7, left: 7,
             background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
@@ -132,7 +172,7 @@ export default function AnimeCard({ anime, onClick, progress, badge, wide = fals
             fontWeight: 700,
             color: '#fff',
           }}>
-            {badge}
+            {displayBadge}
           </div>
         )}
 

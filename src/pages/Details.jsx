@@ -301,12 +301,16 @@ export default function Details() {
       try {
         const historyStr = localStorage.getItem('kamiwatch-history') || '[]'
         let history = JSON.parse(historyStr)
-        history = history.filter(item => item.animeTitle !== anime.title)
+        history = history.filter(item => (item.animeTitle || item.title) !== anime.title)
         history.unshift({
+          title: anime.title,
           animeTitle: anime.title,
+          id: anime.id,
           animeId: anime.id,
+          malId: anime.id,
           episodeNumber: ep.number,
           episodeTitle: ep.title,
+          cover: anime.cover,
           thumbnail: anime.cover,
           url: ep.url,
           source: activeSource,

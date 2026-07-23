@@ -272,10 +272,16 @@ export default function Home() {
       return []
     }
 
-    // Load watch history
+    // Load watch history & normalize
     try {
       const h = JSON.parse(localStorage.getItem('kamiwatch-history') || '[]')
-      setHistory(h.slice(0, 12))
+      const normalized = h.map(item => ({
+        ...item,
+        title: item.title || item.animeTitle || 'Unknown',
+        id: item.id || item.animeId || item.malId,
+        cover: item.cover || item.thumbnail || '',
+      }))
+      setHistory(normalized.slice(0, 12))
     } catch {}
     try {
       const mh = JSON.parse(localStorage.getItem('kamiwatch-manga-history') || '[]')
