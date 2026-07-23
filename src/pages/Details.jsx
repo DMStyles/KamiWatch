@@ -154,6 +154,12 @@ export default function Details() {
     }
   }
 
+  const [customSearchQuery, setCustomSearchQuery] = useState('')
+
+  const handleRefreshAll = () => {
+    fetchAnimeDetails()
+  }
+
   // Trigger search on selected source when it changes or anime loads
   const searchSourceScraper = async (title, sourceId, currentAnime = anime) => {
     if (!title) return
@@ -184,6 +190,31 @@ export default function Details() {
         } catch {}
       }
 
+      // Fallback 3: Strip Season/Part/Suffixes (e.g. "Oh Boy, Was I Wrong About Her Season 2" -> "Oh Boy, Was I Wrong About Her")
+      if (results.length === 0) {
+        try {
+          const cleaned = title.replace(/\s*(Season\s*\d+.*|Part\s*\d+.*|S\d+.*|\d+(st|nd|rd|th)\s*Season.*|Movie|Special|OVA|ONA|Dub|Sub)$/i, '').trim()
+          if (cleaned && cleaned !== title) {
+            const res4 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(cleaned)}`)
+            const data4 = await res4.json()
+            if (data4.results && data4.results.length > 0) results = data4.results
+          }
+        } catch {}
+      }
+
+      // Fallback 4: First 2-3 words of title (e.g. "Oh Boy, Was I Wrong About Her" -> "Oh Boy, Was")
+      if (results.length === 0) {
+        try {
+          const words = title.split(' ')
+          if (words.length >= 2) {
+            const shortQuery = words.slice(0, 3).join(' ').replace(/[:,.-]$/, '').trim()
+            const res5 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(shortQuery)}`)
+            const data5 = await res5.json()
+            if (data5.results && data5.results.length > 0) results = data5.results
+          }
+        } catch {}
+      }
+
       setSearchResults(results)
 
       if (results.length > 0) {
@@ -193,6 +224,28 @@ export default function Details() {
                      results[0]
         setSelectedMatch(best)
         fetchSourceEpisodes(best.url, sourceId)
+      }
+    } catch {
+      setSearchResults([])
+    } finally {
+      setSearchingSource(false)
+    }
+  }
+
+  const handleCustomSourceSearch = async (queryText = customSearchQuery) => {
+    const q = queryText || anime?.title || ''
+    if (!q.trim()) return
+    setSearchingSource(true)
+    setEpisodes([])
+    setSelectedMatch(null)
+    try {
+      const res = await fetch(`${API}/${activeSource}/search?q=${encodeURIComponent(q.trim())}`)
+      const data = await res.json()
+      const results = data.results || []
+      setSearchResults(results)
+      if (results.length > 0) {
+        setSelectedMatch(results[0])
+        fetchSourceEpisodes(results[0].url, activeSource)
       }
     } catch {
       setSearchResults([])
@@ -389,23 +442,39 @@ export default function Details() {
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,7,15,0.3) 0%, rgba(7,7,15,0.7) 70%, var(--bg-primary) 100%)' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(7,7,15,0.6) 0%, transparent 60%)' }} />
 
-        {/* Back button */}
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            position: 'absolute', top: 16, left: 24,
-            background: 'rgba(7,7,15,0.6)', backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#fff', borderRadius: 8, padding: '7px 16px',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.25)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(7,7,15,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
-          Back
-        </button>
+        {/* Top Action Buttons (Back + Refresh) */}
+        <div style={{ position: 'absolute', top: 16, left: 24, display: 'flex', gap: 10, zIndex: 20 }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              background: 'rgba(7,7,15,0.6)', backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', borderRadius: 8, padding: '7px 16px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.25)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(7,7,15,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+          </button>
+          <button
+            onClick={handleRefreshAll}
+            title="Reload details and search episodes again"
+            style={{
+              background: 'rgba(7,7,15,0.6)', backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', borderRadius: 8, padding: '7px 16px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,58,237,0.25)'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.5)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(7,7,15,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+          >
+            🔄 Refresh Page
+          </button>
+        </div>
       </div>
 
       {/* =========================================================
@@ -632,9 +701,44 @@ export default function Details() {
                 <p className="scraper-tip">⚠️ If the episodes look incorrect, try choosing a different Linked Title Match above.</p>
               </div>
             ) : (
-              <div className="source-no-results">
-                <p>❌ No matching title found on {SOURCES.find(s => s.id === activeSource)?.name}.</p>
-                <p>This anime may not be available on this server. Try switching the Stream Source above.</p>
+              <div className="source-no-results" style={{ textAlign: 'center', padding: '24px 16px' }}>
+                <p style={{ color: '#f87171', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
+                  ❌ No matching title found on {SOURCES.find(s => s.id === activeSource)?.name}.
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                  This anime may be named differently on this server. Try searching custom keywords or click Try Again.
+                </p>
+
+                {/* Custom Keyword Search */}
+                <div style={{ display: 'flex', gap: 8, maxWidth: 460, margin: '0 auto 16px' }}>
+                  <input
+                    value={customSearchQuery}
+                    onChange={e => setCustomSearchQuery(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCustomSourceSearch()}
+                    placeholder="Type title (e.g. Oh Boy or Tenkousaki)..."
+                    style={{
+                      flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)',
+                      borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 12, outline: 'none'
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleCustomSourceSearch()}
+                    style={{ fontSize: 12, padding: '8px 16px', whiteSpace: 'nowrap' }}
+                  >
+                    🔍 Search Source
+                  </button>
+                </div>
+
+                {/* Retry / Refresh Action Buttons */}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <button className="btn btn-secondary" onClick={() => searchSourceScraper(anime.title, activeSource)}>
+                    🔄 Try Again
+                  </button>
+                  <button className="btn btn-ghost" onClick={handleRefreshAll}>
+                    ⚡ Full Refresh Page
+                  </button>
+                </div>
               </div>
             )}
 
