@@ -11,27 +11,30 @@ const HERO_SLIDES = [
     id: 21,
     title: 'One Piece',
     synopsis: 'Monkey D. Luffy sets off on an adventure with his pirate crew to find the greatest treasure known as the "One Piece" and become the Pirate King.',
-    backdrop: 'https://img1.ak.crunchyroll.com/i/spire1-tmb/bfd6034d4b5af2c8cde78c8a4abf8c0c1380605476_full.jpg',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
     genre: ['Action', 'Adventure', 'Fantasy'],
     score: '8.7',
     type: 'TV',
   },
   {
-    id: 2,
-    title: 'Attack on Titan',
-    synopsis: 'In a world where humanity lives behind walls to protect themselves from man-eating giants called Titans, young Eren Yeager vows to destroy them all.',
-    backdrop: 'https://wallpapercave.com/wp/wp7564053.jpg',
-    genre: ['Action', 'Drama', 'Dark Fantasy'],
-    score: '9.0',
+    id: 101922,
+    title: 'Demon Slayer',
+    synopsis: "Tanjiro Kamado's peaceful life is shattered when a demon slaughters his family. He trains to become a Demon Slayer to avenge them and cure his sister Nezuko.",
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-YfZhKgD9GIWK.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-YfZhKgD9GIWK.jpg',
+    genre: ['Action', 'Supernatural', 'Historical'],
+    score: '8.6',
     type: 'TV',
   },
   {
-    id: 38000,
-    title: 'Demon Slayer',
-    synopsis: "Tanjiro Kamado's peaceful life is shattered when a demon slaughters his family. He trains to become a Demon Slayer to avenge them and cure his sister Nezuko.",
-    backdrop: 'https://wallpapercave.com/wp/wp10007742.jpg',
-    genre: ['Action', 'Supernatural', 'Historical'],
-    score: '8.6',
+    id: 16498,
+    title: 'Attack on Titan',
+    synopsis: 'In a world where humanity lives behind walls to protect themselves from man-eating giants called Titans, young Eren Yeager vows to destroy them all.',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498-85f1cT89d4lC.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498-85f1cT89d4lC.jpg',
+    genre: ['Action', 'Drama', 'Dark Fantasy'],
+    score: '9.0',
     type: 'TV',
   },
 ]
@@ -86,7 +89,7 @@ function HeroSection({ slides }) {
       <div
         style={{
           position: 'absolute', inset: 0,
-          backgroundImage: `url(${slide.backdrop})`,
+          backgroundImage: `url(${slide.backdrop || slide.image || slide.bannerImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center top',
           transition: 'opacity 0.4s ease',
@@ -219,6 +222,7 @@ function HeroSection({ slides }) {
 }
 
 function Row({ title, items = [], loading = false, onSeeAll, renderCard, skeletonCount = 8 }) {
+  if (!loading && items.length === 0) return null
   return (
     <div style={{ marginBottom: 32 }}>
       <div className="section-header">
@@ -242,6 +246,8 @@ export default function Home() {
   const [heroLoading, setHeroLoading] = useState(true)
   const [activeGenre, setActiveGenre] = useState('All')
   const [follows, setFollows] = useState([])
+  const [trendingAnime, setTrendingAnime] = useState([])
+  const [trendingLoading, setTrendingLoading] = useState(true)
   const [airingEpisodes, setAiringEpisodes] = useState([])
   const [airingLoading, setAiringLoading] = useState(true)
   const [latestEpisodes, setLatestEpisodes] = useState([])
@@ -256,6 +262,16 @@ export default function Home() {
   const [mangaHistory, setMangaHistory] = useState([])
 
   useEffect(() => {
+    // Helper to safely extract array from any API response object
+    const toArray = (d, key = 'results') => {
+      if (!d) return []
+      if (Array.isArray(d)) return d
+      if (Array.isArray(d[key])) return d[key]
+      if (Array.isArray(d.data)) return d.data
+      if (Array.isArray(d.slides)) return d.slides
+      return []
+    }
+
     // Load watch history
     try {
       const h = JSON.parse(localStorage.getItem('kamiwatch-history') || '[]')
@@ -268,34 +284,41 @@ export default function Home() {
 
     // Fetch hero slides
     fetch(`${API}/jikan/hero-slides`).then(r => r.json()).then(data => {
-      if (Array.isArray(data) && data.length >= 3) setHeroSlides(data)
+      const slides = toArray(data, 'slides')
+      if (slides.length >= 3) setHeroSlides(slides)
     }).catch(() => {}).finally(() => setHeroLoading(false))
 
     // Fetch follows
-    fetch(`${API}/library/follows`).then(r => r.json()).then(d => setFollows(d || [])).catch(() => {})
+    fetch(`${API}/library/follows`).then(r => r.json()).then(d => setFollows(toArray(d))).catch(() => {})
+
+    // Popular / Trending Anime
+    fetch(`${API}/jikan/all?page=1`).then(r => r.json()).then(d => {
+      setTrendingAnime(toArray(d).slice(0, 20))
+      setTrendingLoading(false)
+    }).catch(() => setTrendingLoading(false))
 
     // Airing
     fetch(`${API}/jikan/airing?limit=20`).then(r => r.json()).then(d => {
-      setAiringEpisodes((d.data || d || []).slice(0, 20))
+      setAiringEpisodes(toArray(d).slice(0, 20))
       setAiringLoading(false)
     }).catch(() => setAiringLoading(false))
 
     // Latest episodes
     fetch(`${API}/anikoto/latest`).then(r => r.json()).then(d => {
-      setLatestEpisodes((d || []).slice(0, 20))
+      setLatestEpisodes(toArray(d).slice(0, 20))
       setLatestLoading(false)
     }).catch(() => setLatestLoading(false))
 
     // Upcoming
     fetch(`${API}/anikoto/upcoming`).then(r => r.json()).then(d => {
-      setUpcomingAnime((d || []).slice(0, 20))
+      setUpcomingAnime(toArray(d).slice(0, 20))
       setUpcomingLoading(false)
     }).catch(() => setUpcomingLoading(false))
 
     // Manga
-    fetch(`${API}/manga/trending`).then(r => r.json()).then(d => setMangaTrending((d || []).slice(0, 12))).catch(() => {})
-    fetch(`${API}/manga/new-releases`).then(r => r.json()).then(d => setMangaNew((d || []).slice(0, 12))).catch(() => {})
-    fetch(`${API}/manga/popular-new`).then(r => r.json()).then(d => setMangaPopular((d || []).slice(0, 12))).catch(() => {})
+    fetch(`${API}/manga/trending`).then(r => r.json()).then(d => setMangaTrending(toArray(d).slice(0, 12))).catch(() => {})
+    fetch(`${API}/manga/new-releases`).then(r => r.json()).then(d => setMangaNew(toArray(d).slice(0, 12))).catch(() => {})
+    fetch(`${API}/manga/popular-new`).then(r => r.json()).then(d => setMangaPopular(toArray(d).slice(0, 12))).catch(() => {})
 
     // Recommendations
     try {
@@ -304,7 +327,7 @@ export default function Home() {
       if (malIds.length > 0) {
         fetch(`${API}/jikan/recommendations?ids=${malIds.join(',')}`)
           .then(r => r.json())
-          .then(d => setRecommendations((d || []).slice(0, 16)))
+          .then(d => setRecommendations(toArray(d).slice(0, 16)))
           .catch(() => {})
       }
     } catch {}
@@ -424,6 +447,16 @@ export default function Home() {
             onClick={() => setEpisodeModal({ title: item.title, url: item.url, thumbnail: item.thumbnail || item.cover, source: item.source || 'anikoto' })}
           />
         )}
+      />
+
+      {/* === TRENDING & POPULAR ANIME === */}
+      <Row
+        title="Trending Anime"
+        items={trendingAnime}
+        loading={trendingLoading}
+        skeletonCount={10}
+        onSeeAll={() => navigate('/search')}
+        renderCard={(item, i) => <AnimeCard key={i} anime={item} />}
       />
 
       {/* === AIRING THIS SEASON === */}
