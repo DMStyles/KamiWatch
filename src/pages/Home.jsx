@@ -176,6 +176,7 @@ function HeroSection({ slides }) {
             style={{ fontSize: 14, padding: '10px 28px', borderRadius: 10 }}
             onClick={() => {
               if (slide.id) navigate(`/anime/${slide.id}`)
+              else if (slide.title) navigate('/anime/0', { state: { searchQuery: slide.title } })
             }}
           >
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -186,7 +187,10 @@ function HeroSection({ slides }) {
           <button
             className="btn btn-secondary"
             style={{ fontSize: 14, padding: '10px 24px', borderRadius: 10 }}
-            onClick={() => { if (slide.id) navigate(`/anime/${slide.id}`) }}
+            onClick={() => {
+              if (slide.id) navigate(`/anime/${slide.id}`)
+              else if (slide.title) navigate('/anime/0', { state: { searchQuery: slide.title } })
+            }}
           >
             More Info
           </button>

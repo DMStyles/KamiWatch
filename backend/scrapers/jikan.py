@@ -293,6 +293,7 @@ async def get_hero_slides():
         score = item.get("averageScore")
         episodes = item.get("episodes") or "?"
         slides.append({
+            "id": item.get("id"),
             "title": title_en,
             "synopsis": desc,
             "image": item.get("bannerImage") or (item.get("coverImage") or {}).get("extraLarge", ""),
