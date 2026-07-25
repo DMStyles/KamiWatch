@@ -7,7 +7,7 @@ export default function MangaReader() {
   const { id, chapterId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { chapter, manga, chapters = [] } = location.state || {}
+  const { chapter, manga, chapters = [], selectedSource } = location.state || {}
 
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -42,9 +42,16 @@ export default function MangaReader() {
     setLoading(true)
     setPages([])
     try {
-      const r = await fetch(`${API}/manga/pages?id=${encodeURIComponent(decodeURIComponent(chapterId))}`)
-      const data = await r.json()
-      setPages(data.pages || [])
+      if (selectedSource && selectedSource.startsWith('ext_')) {
+        const extId = selectedSource.replace('ext_', '')
+        const res = await window.electronAPI?.extensions?.callProvider(extId, 'findChapterPages', [chapterId])
+        const extPages = (res?.result || []).map(p => typeof p === 'string' ? p : p.url)
+        setPages(extPages)
+      } else {
+        const r = await fetch(`${API}/manga/pages?id=${encodeURIComponent(decodeURIComponent(chapterId))}`)
+        const data = await r.json()
+        setPages(data.pages || [])
+      }
 
       // Save to manga history
       if (manga && chapter) {

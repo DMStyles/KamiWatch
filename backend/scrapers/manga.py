@@ -379,15 +379,50 @@ async def browse_genre(genre_id: str = None, demographic: str = None, page: int 
         print(f"[MangaDex genre error] {e}")
         return {"results": [], "totalPages": 1, "currentPage": 1}
 
+async def resolve_id_to_title(id_str: str) -> str:
+    """Resolve numeric Anilist/MAL ID or raw ID to real manga title."""
+    if not id_str:
+        return ""
+    clean_id = id_str.replace("mdex:", "").replace("kakalot:", "").replace("mangaddict:", "")
+    if clean_id.isdigit():
+        query = '''
+        query ($id: Int) {
+          Media (id: $id, type: MANGA) {
+            title {
+              english
+              romaji
+            }
+          }
+        }
+        '''
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                r = await client.post('https://graphql.anilist.co', json={'query': query, 'variables': {'id': int(clean_id)}})
+                d = r.json()
+                media = d.get('data', {}).get('Media', {})
+                t = media.get('title', {})
+                return t.get('english') or t.get('romaji') or clean_id
+        except:
+            pass
+    return clean_id
+
 
 @router.get("/chapters")
 async def get_chapters(id: str):
-    """Fetch chapter list with automatic title search resolution fallback."""
+    """Fetch chapter list with automatic numeric ID and title search resolution fallback."""
     chapters = []
     
     if id.startswith("mdex:"):
         manga_id = id[5:]
-        chapters = await mangadex_chapters(manga_id)
+        if re.match(r'^[a-f0-9\-]{36}$', manga_id, re.I):
+            chapters = await mangadex_chapters(manga_id)
+        else:
+            search_title = await resolve_id_to_title(manga_id)
+            res = await mangadex_search(search_title, page=1)
+            results = res.get("results", [])
+            if results:
+                mdex_id = results[0]["id"].replace("mdex:", "")
+                chapters = await mangadex_chapters(mdex_id)
     elif id.startswith("kakalot:"):
         url = id[8:]
         chapters = await mangakakalot_chapters(url)
@@ -395,14 +430,16 @@ async def get_chapters(id: str):
         slug = id[11:]
         chapters = await mangaddict_chapters(slug)
     elif id.startswith("webtoons:"):
-        mid = id[9:]
-        chapters = await webtoons_chapters(mid)
+        slug = id[9:]
+        chapters = await webtoons_chapters(slug)
     elif re.match(r'^[a-f0-9\-]{36}$', id, re.I):
         chapters = await mangadex_chapters(id)
     else:
-        # Title or non-UUID string passed (e.g. from history or MAL)
+        # Title or numeric Anilist ID passed (e.g. 86399 from Continue Reading)
+        search_title = await resolve_id_to_title(id)
+        
         # 1. Search MangaDex
-        res = await mangadex_search(id, page=1)
+        res = await mangadex_search(search_title, page=1)
         results = res.get("results", [])
         if results:
             mdex_id = results[0]["id"].replace("mdex:", "")
@@ -410,14 +447,14 @@ async def get_chapters(id: str):
         
         # 2. Fallback to MangaKakalot
         if not chapters:
-            k_results = await mangakakalot_search(id, page=1)
+            k_results = await mangakakalot_search(search_title, page=1)
             if k_results:
                 url = k_results[0]["id"].replace("kakalot:", "")
                 chapters = await mangakakalot_chapters(url)
 
         # 3. Fallback to MangaAddict
         if not chapters:
-            ma_results = await mangaddict_search(id, page=1)
+            ma_results = await mangaddict_search(search_title, page=1)
             if ma_results:
                 slug = ma_results[0]["id"].replace("mangaddict:", "")
                 chapters = await mangaddict_chapters(slug)

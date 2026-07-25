@@ -13,20 +13,42 @@ export default function MangaDetails() {
   const [chapters, setChapters] = useState([])
   const [loadingChapters, setLoadingChapters] = useState(true)
   const [sortAsc, setSortAsc] = useState(true)
+  const [mangaSources, setMangaSources] = useState([
+    { id: 'auto', name: 'Auto (MangaDex / Kakalot)' }
+  ])
+  const [selectedSource, setSelectedSource] = useState('auto')
 
   // Apply manga theme
   useEffect(() => {
     document.body.classList.add('manga-mode')
+    loadMangaExtensions()
     return () => document.body.classList.remove('manga-mode')
   }, [])
+
+  const loadMangaExtensions = async () => {
+    try {
+      const list = await window.electronAPI?.extensions?.list() || []
+      const mangaExts = list
+        .filter(item => {
+          const type = (item.manifest?.type || '').toLowerCase()
+          return type.includes('manga') || type.includes('plugin')
+        })
+        .map(item => ({
+          id: `ext_${item.manifest.id}`,
+          name: `🧩 ${item.manifest.name} (Plugin)`,
+          extId: item.manifest.id
+        }))
+      setMangaSources([{ id: 'auto', name: 'Auto (MangaDex / Kakalot)' }, ...mangaExts])
+    } catch {}
+  }
 
   // Fetch full details if not passed via state
   useEffect(() => {
     if (!mangaFromState || !mangaFromState.description) {
       fetchDetails()
     }
-    fetchChapters()
-  }, [id])
+    fetchChapters(selectedSource)
+  }, [id, selectedSource])
 
   const fetchDetails = async () => {
     try {
@@ -36,12 +58,32 @@ export default function MangaDetails() {
     } catch {}
   }
 
-  const fetchChapters = async () => {
+  const fetchChapters = async (sourceId = selectedSource) => {
     setLoadingChapters(true)
+    setChapters([])
     try {
-      const r = await fetch(`${API}/manga/chapters?id=${encodeURIComponent(decodeURIComponent(id))}`)
-      const data = await r.json()
-      setChapters(data.chapters || [])
+      if (sourceId.startsWith('ext_')) {
+        const extId = sourceId.replace('ext_', '')
+        const title = details?.title || mangaFromState?.title || id
+        // 1. Search provider for manga ID
+        const searchRes = await window.electronAPI?.extensions?.callProvider(extId, 'search', [{ query: title }])
+        const firstMatch = searchRes?.result?.[0]
+        const mId = firstMatch?.id || firstMatch?.url || title
+        
+        // 2. Fetch chapters
+        const chRes = await window.electronAPI?.extensions?.callProvider(extId, 'findChapters', [mId])
+        const chList = (chRes?.result || []).map(c => ({
+          id: c.id || c.url,
+          title: c.title || `Chapter ${c.chapter || 1}`,
+          chapter: c.chapter || 1,
+          extId
+        }))
+        setChapters(chList)
+      } else {
+        const r = await fetch(`${API}/manga/chapters?id=${encodeURIComponent(decodeURIComponent(id))}`)
+        const data = await r.json()
+        setChapters(data.chapters || [])
+      }
     } catch {
       setChapters([])
     }
@@ -50,7 +92,7 @@ export default function MangaDetails() {
 
   const handleReadChapter = (chapter) => {
     navigate(`/manga/${id}/read/${encodeURIComponent(chapter.id)}`, {
-      state: { chapter, manga: details, chapters }
+      state: { chapter, manga: details, chapters, selectedSource }
     })
   }
 
@@ -95,11 +137,23 @@ export default function MangaDetails() {
             {details?.status && <span className="manga-badge">{details.status}</span>}
             {details?.year && <span className="manga-badge manga-badge-neutral">{details.year}</span>}
             {details?.author && <span className="manga-badge manga-badge-neutral">✍️ {details.author}</span>}
-            {details?.source && (
-              <span className="manga-badge manga-badge-neutral">
-                {details.source === 'mangadex' ? '📖 MangaDex' : '🔄 MangaKakalot'}
-              </span>
-            )}
+          </div>
+
+          {/* Manga Provider Selector */}
+          <div style={{ margin: '14px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Manga Source:</span>
+            <select
+              value={selectedSource}
+              onChange={e => setSelectedSource(e.target.value)}
+              style={{
+                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 12, outline: 'none'
+              }}
+            >
+              {mangaSources.map(s => (
+                <option key={s.id} value={s.id} style={{ background: '#0e0e16' }}>{s.name}</option>
+              ))}
+            </select>
           </div>
 
           {details?.description && (
@@ -138,67 +192,57 @@ export default function MangaDetails() {
       </div>
 
       {/* Chapter List */}
-      <div className="manga-chapters-section">
-        <div className="manga-chapters-header">
-          <span className="manga-chapters-title">
-            📋 Chapters {!loadingChapters && `(${chapters.length})`}
-          </span>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button
-              className="manga-chapters-sort-btn"
-              onClick={() => navigate('/manga', { state: { query: details?.title, forceSource: details?.source === 'mangadex' ? 'mangakakalot' : 'mangadex' } })}
-              style={{ background: 'rgba(217,119,6,0.1)', color: 'var(--manga-primary)', border: '1px solid rgba(217,119,6,0.3)' }}
-              title="If chapters are missing, try switching source"
-            >
-              🔄 Try {details?.source === 'mangadex' ? 'MangaKakalot' : 'MangaDex'}
-            </button>
-            <button
-              className="manga-chapters-sort-btn"
-              onClick={() => setSortAsc(a => !a)}
-            >
-              {sortAsc ? '↑ Oldest First' : '↓ Newest First'}
-            </button>
-          </div>
+      <div style={{ maxWidth: 1000, margin: '40px auto 0', padding: '0 24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>
+            Chapters ({chapters.length})
+          </h2>
+          <button
+            onClick={() => setSortAsc(!sortAsc)}
+            style={{
+              padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-secondary)',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer'
+            }}
+          >
+            {sortAsc ? '⬆️ Oldest First' : '⬇️ Newest First'}
+          </button>
         </div>
 
         {loadingChapters ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-            <span className="spinner" style={{ width: 28, height: 28 }} />
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+            <span className="spinner" style={{ width: 28, height: 28, margin: '0 auto 12px' }} />
+            <p style={{ fontSize: 13 }}>Fetching chapter list...</p>
           </div>
-        ) : chapters.length === 0 ? (
-          <div className="manga-empty-chapters" style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: 40, marginBottom: 15 }}>😕</div>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>No chapters found in English on this source.</p>
-            <button 
-              className="manga-read-btn"
-              style={{ margin: '0 auto', display: 'inline-block' }}
-              onClick={() => navigate('/manga', { state: { query: details?.title, forceSource: details?.source === 'mangadex' ? 'mangakakalot' : 'mangadex' } })}
-            >
-              🔍 Search on {details?.source === 'mangadex' ? 'MangaKakalot' : 'MangaDex'} instead
-            </button>
+        ) : displayedChapters.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+            <p style={{ fontSize: 14 }}>No chapters found for this manga source.</p>
           </div>
         ) : (
-          <div className="manga-chapters-list">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
             {displayedChapters.map((ch, i) => (
               <div
                 key={ch.id || i}
-                className="manga-chapter-row"
                 onClick={() => handleReadChapter(ch)}
+                style={{
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 10, padding: '12px 16px', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent-manga)'
+                  e.currentTarget.style.background = 'rgba(217, 119, 6, 0.08)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                }}
               >
-                <div className="manga-chapter-left">
-                  <span className="manga-chapter-num">Chapter {ch.number}</span>
-                  {ch.title && ch.title !== `Chapter ${ch.number}` && (
-                    <span className="manga-chapter-title">{ch.title}</span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {ch.pages > 0 && (
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ch.pages}p</span>
-                  )}
-                  <button className="manga-chapter-read-btn" onClick={e => { e.stopPropagation(); handleReadChapter(ch) }}>
-                    Read →
-                  </button>
-                </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {ch.title || `Chapter ${ch.chapter || i + 1}`}
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--accent-manga)' }}>Read →</span>
               </div>
             ))}
           </div>

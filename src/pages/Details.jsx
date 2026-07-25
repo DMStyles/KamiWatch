@@ -4,7 +4,7 @@ import { AppContext } from '../App'
 import SkeletonCard from '../components/SkeletonCard'
 
 const API = 'http://localhost:8642'
-const SOURCES = [
+const BASE_SOURCES = [
   { id: 'anikoto', name: 'AniKoto (Fast, Multi-Server)' },
   { id: 'kissanime', name: 'KissAnime (Backup)' },
   { id: 'animetake', name: 'AnimeTake (Dub/Sub)' },
@@ -17,6 +17,26 @@ export default function Details() {
   const location = useLocation()
   
   const { settings, playerModal, setPlayerModal, setDownloads } = useContext(AppContext)
+  const [sourcesList, setSourcesList] = useState(BASE_SOURCES)
+
+  useEffect(() => {
+    loadExtensionSources()
+  }, [])
+
+  const loadExtensionSources = async () => {
+    try {
+      const list = await window.electronAPI?.extensions?.list() || []
+      const extSources = list.map(item => {
+        const m = item.manifest || {}
+        return {
+          id: `ext_${m.id}`,
+          name: `🧩 ${m.name} (${m.author || 'Extension'})`,
+          extId: m.id
+        }
+      })
+      setSourcesList([...BASE_SOURCES, ...extSources])
+    } catch {}
+  }
 
   // Force progress bar update on modal close
   const [progressTick, setProgressTick] = useState(0)
@@ -232,52 +252,33 @@ export default function Details() {
     setEpisodes([])
     setSelectedMatch(null)
     try {
-      let res = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(title)}`)
-      let data = await res.json()
-      let results = data.results || []
+      let results = []
 
-      // Fallback 1: Try romaji/japanese title if initial English search gave 0 results
-      if (results.length === 0 && currentAnime?.title_japanese && currentAnime.title_japanese !== title) {
-        try {
-          const res2 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(currentAnime.title_japanese)}`)
-          const data2 = await res2.json()
-          if (data2.results && data2.results.length > 0) results = data2.results
-        } catch {}
-      }
+      if (sourceId.startsWith('ext_')) {
+        const extId = sourceId.replace('ext_', '')
+        const extRes = await window.electronAPI?.extensions?.callProvider(extId, 'search', [{
+          query: title,
+          dub: subDub === 'dub',
+          media: { id: currentAnime?.id || 0, title: title, romajiTitle: currentAnime?.title_japanese, englishTitle: currentAnime?.title }
+        }])
+        results = (extRes?.result || []).map(r => ({
+          title: r.title || title,
+          url: r.id || r.url || title,
+          id: r.id
+        }))
+      } else {
+        let res = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(title)}`)
+        let data = await res.json()
+        results = data.results || []
 
-      // Fallback 2: Try base title before colon (e.g. "Mushoku Tensei: Jobless Reincarnation Season 3" -> "Mushoku Tensei")
-      if (results.length === 0 && title.includes(':')) {
-        try {
-          const baseTitle = title.split(':')[0].trim()
-          const res3 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(baseTitle)}`)
-          const data3 = await res3.json()
-          if (data3.results && data3.results.length > 0) results = data3.results
-        } catch {}
-      }
-
-      // Fallback 3: Strip Season/Part/Suffixes (e.g. "Oh Boy, Was I Wrong About Her Season 2" -> "Oh Boy, Was I Wrong About Her")
-      if (results.length === 0) {
-        try {
-          const cleaned = title.replace(/\s*(Season\s*\d+.*|Part\s*\d+.*|S\d+.*|\d+(st|nd|rd|th)\s*Season.*|Movie|Special|OVA|ONA|Dub|Sub)$/i, '').trim()
-          if (cleaned && cleaned !== title) {
-            const res4 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(cleaned)}`)
-            const data4 = await res4.json()
-            if (data4.results && data4.results.length > 0) results = data4.results
-          }
-        } catch {}
-      }
-
-      // Fallback 4: First 2-3 words of title
-      if (results.length === 0) {
-        try {
-          const words = title.split(' ')
-          if (words.length >= 2) {
-            const shortQuery = words.slice(0, 3).join(' ').replace(/[:,.-]$/, '').trim()
-            const res5 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(shortQuery)}`)
-            const data5 = await res5.json()
-            if (data5.results && data5.results.length > 0) results = data5.results
-          }
-        } catch {}
+        // Fallback 1: Try romaji/japanese title if initial English search gave 0 results
+        if (results.length === 0 && currentAnime?.title_japanese && currentAnime.title_japanese !== title) {
+          try {
+            const res2 = await fetch(`${API}/${sourceId}/search?q=${encodeURIComponent(currentAnime.title_japanese)}`)
+            const data2 = await res2.json()
+            if (data2.results && data2.results.length > 0) results = data2.results
+          } catch {}
+        }
       }
 
       setSearchResults(results)
@@ -301,9 +302,24 @@ export default function Details() {
     setEpisodes([])
     setSelectedMatch(null)
     try {
-      const res = await fetch(`${API}/${activeSource}/search?q=${encodeURIComponent(q.trim())}`)
-      const data = await res.json()
-      const results = data.results || []
+      let results = []
+      if (activeSource.startsWith('ext_')) {
+        const extId = activeSource.replace('ext_', '')
+        const extRes = await window.electronAPI?.extensions?.callProvider(extId, 'search', [{
+          query: q.trim(),
+          dub: subDub === 'dub',
+          media: { id: anime?.id || 0, title: q.trim() }
+        }])
+        results = (extRes?.result || []).map(r => ({
+          title: r.title || q.trim(),
+          url: r.id || r.url || q.trim(),
+          id: r.id
+        }))
+      } else {
+        const res = await fetch(`${API}/${activeSource}/search?q=${encodeURIComponent(q.trim())}`)
+        const data = await res.json()
+        results = data.results || []
+      }
       setSearchResults(results)
       if (results.length > 0) {
         setSelectedMatch(results[0])
@@ -321,9 +337,21 @@ export default function Details() {
     setEpisodes([])
     setSelectedEpisodes(new Set())
     try {
-      const res = await fetch(`${API}/${sourceId}/episodes?url=${encodeURIComponent(url)}`)
-      const data = await res.json()
-      setEpisodes(data.episodes || [])
+      if (sourceId.startsWith('ext_')) {
+        const extId = sourceId.replace('ext_', '')
+        const epRes = await window.electronAPI?.extensions?.callProvider(extId, 'findEpisodes', [url])
+        const eps = (epRes?.result || []).map(e => ({
+          number: e.number || 1,
+          title: e.title || `Episode ${e.number || 1}`,
+          url: e.id || e.url || url,
+          id: e.id
+        }))
+        setEpisodes(eps)
+      } else {
+        const res = await fetch(`${API}/${sourceId}/episodes?url=${encodeURIComponent(url)}`)
+        const data = await res.json()
+        setEpisodes(data.episodes || [])
+      }
     } catch {
       setEpisodes([])
     } finally {
@@ -352,31 +380,48 @@ export default function Details() {
     })
   }
 
-  const selectAll = () => setSelectedEpisodes(new Set(episodes.map(e => e.number)))
-  const clearAll = () => setSelectedEpisodes(new Set())
+  const toggleAllEps = () => {
+    if (selectedEpisodes.size === episodes.length) {
+      setSelectedEpisodes(new Set())
+    } else {
+      setSelectedEpisodes(new Set(episodes.map(e => e.number)))
+    }
+  }
 
-  const startDownloads = async () => {
-    if (selectedEpisodes.size === 0 || !selectedMatch) return
+  const handleDownloadSelected = async () => {
+    if (selectedEpisodes.size === 0) return
     setQueuing(true)
-    const toDownload = episodes.filter(e => selectedEpisodes.has(e.number))
-    for (const ep of toDownload) {
-      const dlId = `${Date.now()}-${ep.number}`
+    const toQueue = episodes.filter(e => selectedEpisodes.has(e.number))
+    
+    for (const ep of toQueue) {
       try {
-        await fetch(`${API}/download/start`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: ep.url,
-            title: anime.title,
-            episode: `Episode ${ep.number}`,
-            quality,
-            download_id: dlId,
-            thumbnail: anime.cover,
-            source: activeSource,
-            sub_dub: subDub,
-          }),
-        })
-      } catch {}
+        let streamUrl = ep.url
+        if (activeSource.startsWith('ext_')) {
+          const extId = activeSource.replace('ext_', '')
+          const srvRes = await window.electronAPI?.extensions?.callProvider(extId, 'findEpisodeServer', [ep, 'Auto'])
+          const src = srvRes?.result?.videoSources?.[0]
+          if (src?.url) streamUrl = src.url
+        }
+
+        const newDownload = {
+          id: `${anime.id}-${ep.number}-${Date.now()}`,
+          animeId: anime.id,
+          animeTitle: anime.title,
+          episodeNumber: ep.number,
+          cover: anime.cover,
+          quality,
+          subDub,
+          status: 'queued',
+          progress: 0,
+          speed: '0 KB/s',
+          streamUrl
+        }
+        
+        setDownloads(d => [newDownload, ...d])
+        window.electronAPI?.downloadEpisode(newDownload)
+      } catch (err) {
+        console.error('Failed to queue episode:', err)
+      }
     }
     setQueuing(false)
     setSelectedEpisodes(new Set())
@@ -390,7 +435,13 @@ export default function Details() {
     try {
       let finalUrl = ep.url
       let alternatives = null
-      if (finalUrl.startsWith('anikoto:')) {
+
+      if (activeSource.startsWith('ext_')) {
+        const extId = activeSource.replace('ext_', '')
+        const srvRes = await window.electronAPI?.extensions?.callProvider(extId, 'findEpisodeServer', [ep, 'Auto'])
+        const src = srvRes?.result?.videoSources?.[0]
+        if (src?.url) finalUrl = src.url
+      } else if (finalUrl.startsWith('anikoto:')) {
         const dataIds = finalUrl.split('anikoto:')[1]
         const res = await fetch(`${API}/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}&sub_dub=${subDub}&server=${preferredServer}`)
         const data = await res.json()
