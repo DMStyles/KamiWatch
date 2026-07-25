@@ -1,46 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-const EXAMPLE_EXTENSION = `// === KamiWatch Extension Template ===
-// Copy this, fill in your scraping logic, and install!
-
-module.exports = {
-  manifest: {
-    id: "my-source",
-    name: "My Anime Source",
-    version: "1.0.0",
-    type: "anime",           // "anime" | "manga"
-    icon: "",                // URL to icon image
-    description: "My custom streaming source",
-    author: "YourName"
-  },
-
-  // Search for anime by title
-  async search(query) {
-    const res = await fetch(\`https://example.com/search?q=\${encodeURIComponent(query)}\`)
-    const html = await res.text()
-    // Parse results and return array of:
-    // [{ id, title, cover, url, type }]
-    return []
-  },
-
-  // Get episode list for an anime
-  async getEpisodes(url) {
-    const res = await fetch(url)
-    const html = await res.text()
-    // Return array of:
-    // [{ number, title, url }]
-    return []
-  },
-
-  // Resolve a playable stream URL
-  async getStreamUrl(episodeUrl) {
-    // Return a direct embed or stream URL string
-    return episodeUrl
-  }
-}`
+const MOCK_MARKETPLACE_PLUGINS = [
+  { id: 'aiostreams', name: 'AIOStreams', author: 'Viren07', lang: 'Javascript', description: 'Stream content from AIOStreams directly in KamiWatch. Supports all streams with URLs.', installed: true, icon: '⚡', type: 'anime' },
+  { id: 'alt-titles', name: 'Alternative Titles', author: 'nnotwen', lang: 'Typescript', description: 'Choose how anime and manga titles are displayed in their respective pages.', installed: false, icon: '🔤', type: 'anime' },
+  { id: 'anilist-disc', name: 'AniList Discussions', author: 'Bas1874', lang: 'Typescript', description: 'Read/Post AniList discussions inside KamiWatch.', installed: false, icon: '💬', type: 'anime' },
+  { id: 'anilist-notif', name: 'AniList Notifications', author: 'Pal', lang: 'Typescript', description: 'View your AniList notifications in real time.', installed: true, icon: '🔔', type: 'anime' },
+  { id: 'anilist-pause', name: 'AniList Autopause', author: 'nnotwen', lang: 'Typescript', description: 'Automatically pause your AniList entries when you stop watching for a set time.', installed: false, icon: '⏸️', type: 'anime' },
+  { id: 'anilist-favs', name: 'AniList Favorites', author: 'nnotwen', lang: 'Typescript', description: 'Add functionality to favorite anime/manga in AniList inside KamiWatch.', installed: false, icon: '❤️', type: 'anime' },
+  { id: 'anilist-order', name: 'AniList Watch Order', author: 'nnotwen', lang: 'Typescript', description: 'Get the AniList-recommended watch order within the anime page.', installed: false, icon: '🔢', type: 'anime' },
+  { id: 'anime-news', name: 'Anime News', author: 'SyntaxSama & Pal', lang: 'Typescript', description: 'Get anime news in your KamiWatch instance!', installed: false, icon: '📰', type: 'anime' },
+]
 
 export default function Extensions() {
+  const [activeTab, setActiveTab] = useState('Marketplace') // 'Installed' | 'Marketplace'
+  const [selectedType, setSelectedType] = useState('All Types')
   const [extensions, setExtensions] = useState([])
+  const [marketplacePlugins, setMarketplacePlugins] = useState(MOCK_MARKETPLACE_PLUGINS)
   const [loading, setLoading] = useState(true)
   const [installing, setInstalling] = useState(false)
   const [installUrl, setInstallUrl] = useState('')
@@ -48,7 +23,6 @@ export default function Extensions() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showCodeEditor, setShowCodeEditor] = useState(false)
-  const [showTemplate, setShowTemplate] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -65,6 +39,10 @@ export default function Extensions() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const toggleMarketplaceInstall = (id) => {
+    setMarketplacePlugins(prev => prev.map(p => p.id === id ? { ...p, installed: !p.installed } : p))
   }
 
   const handleInstallUrl = async () => {
@@ -88,310 +66,155 @@ export default function Extensions() {
     }
   }
 
-  const handleInstallCode = async () => {
-    if (!installCode.trim()) { setError('Please paste extension code'); return }
-    setInstalling(true)
-    setError('')
-    setSuccess('')
-    try {
-      const result = await window.electronAPI?.extensions?.install({ code: installCode.trim() })
-      if (result?.success) {
-        setSuccess(`✅ Extension "${result.manifest.name}" installed successfully!`)
-        setInstallCode('')
-        setShowCodeEditor(false)
-        await loadExtensions()
-      } else {
-        setError(result?.error || 'Failed to install extension')
-      }
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setInstalling(false)
-    }
-  }
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const code = await file.text()
-    setInstallCode(code)
-    setShowCodeEditor(true)
-    e.target.value = ''
-  }
-
-  const handleRemove = async (id, name) => {
-    if (!window.confirm(`Remove extension "${name}"?`)) return
-    try {
-      await window.electronAPI?.extensions?.remove(id)
-      setSuccess(`Extension "${name}" removed.`)
-      await loadExtensions()
-    } catch (e) {
-      setError(e.message)
-    }
-  }
-
-  const cardStyle = {
-    background: 'rgba(13,13,26,0.75)',
-    backdropFilter: 'blur(18px)',
-    border: '1px solid rgba(255,255,255,0.07)',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 20,
-  }
-
-  const sectionTitle = {
-    fontSize: 15,
-    fontWeight: 700,
-    color: 'var(--text-primary)',
-    marginBottom: 16,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  }
-
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: '28px 24px 60px' }}>
-      {/* Page Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8 }}>
-          🧩 Extensions
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.7 }}>
-          Extend KamiWatch with community-made scrapers. Install extensions to add new anime and manga sources without updating the app.
-        </p>
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 32px 60px' }}>
+      
+      {/* ── Seanime Marketplace Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.03em', color: '#fff' }}>Marketplace</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
+            Browse and install extension plugins from the official repository.
+          </p>
+        </div>
+
+        {/* Installed / Marketplace Pill Switcher */}
+        <div style={{
+          display: 'flex', background: 'rgba(15, 15, 23, 0.85)', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255,255,255,0.08)', borderRadius: 999, padding: 3, gap: 2
+        }}>
+          <button
+            onClick={() => setActiveTab('Installed')}
+            style={{
+              padding: '6px 18px', borderRadius: 999, border: 'none',
+              background: activeTab === 'Installed' ? 'var(--accent)' : 'transparent',
+              color: activeTab === 'Installed' ? '#fff' : 'var(--text-secondary)',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s'
+            }}
+          >
+            Installed
+          </button>
+          <button
+            onClick={() => setActiveTab('Marketplace')}
+            style={{
+              padding: '6px 18px', borderRadius: 999, border: 'none',
+              background: activeTab === 'Marketplace' ? 'var(--accent)' : 'transparent',
+              color: activeTab === 'Marketplace' ? '#fff' : 'var(--text-secondary)',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s'
+            }}
+          >
+            ★ Marketplace
+          </button>
+        </div>
       </div>
 
-      {/* Alerts */}
-      {error && (
-        <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#f87171' }}>
-          ❌ {error}
-          <button onClick={() => setError('')} style={{ float: 'right', background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
-        </div>
-      )}
-      {success && (
-        <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#34d399' }}>
-          {success}
-          <button onClick={() => setSuccess('')} style={{ float: 'right', background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
-        </div>
-      )}
+      {/* Official Notice Banner */}
+      <div style={{
+        background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.25)',
+        borderRadius: 12, padding: '14px 18px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'center'
+      }}>
+        <span style={{ fontSize: 18 }}>⚠️</span>
+        <span style={{ fontSize: 12.5, color: '#fbbf24', fontWeight: 600 }}>
+          Official Extension Marketplace — All extension packages are validated for security, privacy, and fast scraping.
+        </span>
+      </div>
 
-      {/* ── Install by URL ─────────────────────────────────── */}
-      <div style={cardStyle}>
-        <div style={sectionTitle}>
-          <span style={{ width: 3, height: 16, background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', borderRadius: 2, display: 'block' }} />
-          Install from URL
-        </div>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
-          Paste a direct link to a <code style={{ background: 'rgba(255,255,255,0.07)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>.js</code> extension file hosted on GitHub, Pastebin, or any raw URL.
-        </p>
+      {/* Category Pills */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 24, paddingBottom: 4 }}>
+        {['All Types', 'Plugins', 'Anime Torrents', 'Manga', 'Online Streaming', 'Custom Sources'].map(type => (
+          <button
+            key={type}
+            onClick={() => setSelectedType(type)}
+            style={{
+              padding: '6px 16px', borderRadius: 99, border: 'none',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: selectedType === type ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
+              color: selectedType === type ? '#fff' : 'var(--text-secondary)'
+            }}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
+
+      {/* Extensions Grid */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: 16, marginBottom: 40
+      }}>
+        {marketplacePlugins
+          .filter(p => activeTab === 'Marketplace' || p.installed)
+          .map(plugin => (
+            <div
+              key={plugin.id}
+              style={{
+                background: 'rgba(15, 15, 23, 0.75)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                backdropFilter: 'blur(12px)', transition: 'transform 0.2s, border-color 0.2s'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{
+                      width: 38, height: 38, borderRadius: 10, background: 'rgba(124, 58, 237, 0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18
+                    }}>
+                      {plugin.icon}
+                    </span>
+                    <div>
+                      <h3 style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{plugin.name}</h3>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{plugin.author}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => toggleMarketplaceInstall(plugin.id)}
+                    style={{
+                      width: 34, height: 34, borderRadius: 8, border: 'none',
+                      background: plugin.installed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.08)',
+                      color: plugin.installed ? '#10b981' : '#fff', cursor: 'pointer',
+                      fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}
+                    title={plugin.installed ? 'Installed' : 'Install'}
+                  >
+                    {plugin.installed ? '✓' : '📥'}
+                  </button>
+                </div>
+
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
+                  {plugin.description}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 6 }}>
+                <span style={{ padding: '3px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {plugin.lang}
+                </span>
+              </div>
+            </div>
+          ))}
+      </div>
+
+      {/* Install custom URL or file section */}
+      <div style={{
+        background: 'rgba(15, 15, 23, 0.75)', border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 14, padding: 20
+      }}>
+        <h3 style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 12 }}>Install Custom Extension URL</h3>
         <div style={{ display: 'flex', gap: 10 }}>
           <input
             value={installUrl}
             onChange={e => setInstallUrl(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleInstallUrl()}
             placeholder="https://raw.githubusercontent.com/user/repo/main/extension.js"
             style={{
               flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13,
-              outline: 'none', transition: 'border-color 0.2s',
+              borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 13, outline: 'none'
             }}
-            onFocus={e => e.target.style.borderColor = 'rgba(124,58,237,0.6)'}
-            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
           />
-          <button
-            className="btn btn-primary"
-            onClick={handleInstallUrl}
-            disabled={installing}
-            style={{ whiteSpace: 'nowrap', minWidth: 100 }}
-          >
-            {installing ? <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : '⬇ Install'}
+          <button className="btn btn-primary" onClick={handleInstallUrl} disabled={installing}>
+            {installing ? 'Installing...' : '⬇ Install URL'}
           </button>
-        </div>
-      </div>
-
-      {/* ── Install by File / Code ─────────────────────────── */}
-      <div style={cardStyle}>
-        <div style={sectionTitle}>
-          <span style={{ width: 3, height: 16, background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', borderRadius: 2, display: 'block' }} />
-          Install from File or Code
-        </div>
-        <div style={{ display: 'flex', gap: 10, marginBottom: showCodeEditor ? 14 : 0, flexWrap: 'wrap' }}>
-          <button
-            className="btn btn-secondary"
-            onClick={() => fileRef.current?.click()}
-          >
-            📁 Upload .js File
-          </button>
-          <input ref={fileRef} type="file" accept=".js" onChange={handleFileUpload} style={{ display: 'none' }} />
-          <button
-            className="btn btn-secondary"
-            onClick={() => setShowCodeEditor(!showCodeEditor)}
-          >
-            {showCodeEditor ? '▲ Hide Code Editor' : '✏️ Paste Extension Code'}
-          </button>
-          <button
-            className="btn btn-ghost"
-            onClick={() => { setShowTemplate(!showTemplate) }}
-            style={{ fontSize: 12 }}
-          >
-            {showTemplate ? '▲ Hide Template' : '📋 Show Extension Template'}
-          </button>
-        </div>
-
-        {showTemplate && (
-          <pre style={{
-            background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 10, padding: 16, fontSize: 11, color: 'var(--text-secondary)',
-            overflowX: 'auto', marginBottom: 14, lineHeight: 1.6, maxHeight: 300, overflowY: 'auto',
-          }}>
-            {EXAMPLE_EXTENSION}
-          </pre>
-        )}
-
-        {showCodeEditor && (
-          <>
-            <textarea
-              value={installCode}
-              onChange={e => setInstallCode(e.target.value)}
-              placeholder={`Paste your extension JavaScript code here...\n\nExample:\nmodule.exports = {\n  manifest: { name: "My Source", version: "1.0.0", type: "anime" },\n  async search(query) { return [] },\n  async getEpisodes(url) { return [] },\n  async getStreamUrl(episodeUrl) { return episodeUrl }\n}`}
-              style={{
-                width: '100%', height: 200, background: 'rgba(0,0,0,0.4)',
-                border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10,
-                padding: 14, color: 'var(--text-primary)', fontSize: 12,
-                fontFamily: '"Fira Code", "Cascadia Code", monospace',
-                resize: 'vertical', outline: 'none', lineHeight: 1.6,
-                marginBottom: 12,
-              }}
-            />
-            <button
-              className="btn btn-primary"
-              onClick={handleInstallCode}
-              disabled={installing}
-            >
-              {installing ? <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : '⬇ Install Extension'}
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* ── Installed Extensions ───────────────────────────── */}
-      <div style={cardStyle}>
-        <div style={sectionTitle}>
-          <span style={{ width: 3, height: 16, background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', borderRadius: 2, display: 'block' }} />
-          Installed Extensions
-          <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.06)', padding: '3px 10px', borderRadius: 99 }}>
-            {extensions.length} installed
-          </span>
-        </div>
-
-        {loading ? (
-          <div style={{ display: 'flex', gap: 14, padding: '20px 0' }}>
-            {[1,2].map(i => <div key={i} className="skeleton" style={{ flex: 1, height: 80, borderRadius: 10 }} />)}
-          </div>
-        ) : extensions.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '36px 0', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🧩</div>
-            <p style={{ fontSize: 14, fontWeight: 600 }}>No extensions installed yet</p>
-            <p style={{ fontSize: 12, marginTop: 6 }}>Install an extension above to add new streaming sources</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {extensions.map(ext => (
-              <div
-                key={ext.id}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: 12, padding: '12px 16px',
-                  transition: 'border-color 0.2s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'}
-              >
-                {/* Icon */}
-                <div style={{
-                  width: 44, height: 44, borderRadius: 10, overflow: 'hidden',
-                  background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 22, flexShrink: 0,
-                }}>
-                  {ext.manifest.icon ? (
-                    <img src={ext.manifest.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
-                  ) : '🧩'}
-                </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>
-                    {ext.manifest.name}
-                    <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
-                      v{ext.manifest.version}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {ext.manifest.description || 'No description'}
-                  </div>
-                </div>
-
-                {/* Badges */}
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <span style={{
-                    padding: '3px 9px', borderRadius: 99, fontSize: 11, fontWeight: 600,
-                    background: ext.manifest.type === 'anime' ? 'rgba(124,58,237,0.15)' : 'rgba(217,119,6,0.15)',
-                    color: ext.manifest.type === 'anime' ? 'var(--accent-light)' : '#fbbf24',
-                    border: `1px solid ${ext.manifest.type === 'anime' ? 'rgba(124,58,237,0.3)' : 'rgba(217,119,6,0.3)'}`,
-                    textTransform: 'capitalize',
-                  }}>
-                    {ext.manifest.type}
-                  </span>
-                  {ext.manifest.author && (
-                    <span style={{ padding: '3px 9px', borderRadius: 99, fontSize: 11, fontWeight: 500, background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      by {ext.manifest.author}
-                    </span>
-                  )}
-                </div>
-
-                {/* Remove */}
-                <button
-                  onClick={() => handleRemove(ext.id, ext.manifest.name)}
-                  style={{
-                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                    color: '#f87171', borderRadius: 8, padding: '6px 12px',
-                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    transition: 'all 0.2s', flexShrink: 0,
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)' }}
-                >
-                  🗑 Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Extension Format Docs ──────────────────────────── */}
-      <div style={{ ...cardStyle, background: 'rgba(124,58,237,0.06)', borderColor: 'rgba(124,58,237,0.2)' }}>
-        <div style={{ ...sectionTitle, color: 'var(--accent-light)' }}>
-          📖 Extension API Reference
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-          <p style={{ marginBottom: 12 }}>Extensions are CommonJS <code style={{ background: 'rgba(255,255,255,0.07)', padding: '1px 5px', borderRadius: 4, fontSize: 12 }}>.js</code> files that export these members:</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              { name: 'manifest', type: 'object', desc: 'id, name, version, type, icon, description, author' },
-              { name: 'search(query)', type: 'async fn', desc: 'Returns [{ id, title, cover, url }]' },
-              { name: 'getEpisodes(url)', type: 'async fn', desc: 'Returns [{ number, title, url }]' },
-              { name: 'getStreamUrl(url)', type: 'async fn', desc: 'Returns a playable URL string' },
-            ].map(({ name, type, desc }) => (
-              <div key={name} style={{ display: 'flex', gap: 12, padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: 8, alignItems: 'flex-start' }}>
-                <code style={{ color: 'var(--accent-light)', fontWeight: 700, fontSize: 12, minWidth: 160, fontFamily: 'monospace' }}>{name}</code>
-                <span style={{ color: 'var(--text-muted)', fontSize: 11, fontWeight: 600, minWidth: 70, marginTop: 1 }}>{type}</span>
-                <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{desc}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

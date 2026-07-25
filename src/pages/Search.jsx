@@ -8,8 +8,17 @@ const LETTERS = ['#', 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O
 export default function Search() {
   const [tab, setTab] = useState('browse') // 'browse' or 'latest'
   
-  // Scraper search states
+  // Search and filter drawer states
   const [query, setQuery] = useState('')
+  const [mediaType, setMediaType] = useState('Anime')
+  const [sortOption, setSortOption] = useState('Highest score')
+  const [selectedGenre, setSelectedGenre] = useState('All')
+  const [selectedFormat, setSelectedFormat] = useState('All')
+  const [selectedSeason, setSelectedSeason] = useState('All')
+  const [selectedStatus, setSelectedStatus] = useState('All')
+  const [isAdult, setIsAdult] = useState(false)
+
+  // Scraper search states
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -25,7 +34,6 @@ export default function Search() {
   const [hasNext, setHasNext] = useState(false)
   const [totalPages, setTotalPages] = useState(1)
   const [activeLetter, setActiveLetter] = useState(null)
-  const [scrolled, setScrolled] = useState(false)
 
   const { setEpisodeModal } = useContext(AppContext)
   const inputRef = useRef()
@@ -53,9 +61,9 @@ export default function Search() {
       setBrowseResults([])
       browseAiring()
     } else if (location.state?.genre) {
-      // Genre filter mode — use Jikan API
       setTab('browse')
       setGenreMode(location.state.genre)
+      setSelectedGenre(location.state.genre)
       setQuery('')
       setBrowseResults([])
       browseGenre(location.state.genre)
@@ -136,41 +144,17 @@ export default function Search() {
     }
   }
 
-  const search = async (q) => {
-    if (!q.trim()) return
-    setGenreMode(null)
-    setLoading(true)
-    setError('')
-    setResults([])
-    try {
-      const [r1, r2, r3, r4] = await Promise.allSettled([
-        fetch(`${API}/anikoto/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
-        fetch(`${API}/animetake/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
-        fetch(`${API}/kissanime/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
-        fetch(`${API}/museasia/search?q=${encodeURIComponent(q)}`).then(r => r.json()),
-      ])
-      const merged = [
-        ...(r1.status === 'fulfilled' ? r1.value.results || [] : []),
-        ...(r2.status === 'fulfilled' ? r2.value.results || [] : []),
-        ...(r3.status === 'fulfilled' ? r3.value.results || [] : []),
-        ...(r4.status === 'fulfilled' ? r4.value.results || [] : []),
-      ]
-      setResults(merged)
-      if (merged.length === 0) setError('No results found. Try a different search term.')
-    } catch {
-      setError('Search failed. Make sure the backend is running.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const fetchBrowse = async (p, letter, searchQ = '') => {
     setBrowseLoading(true)
     setBrowseError('')
     setBrowseResults([])
     try {
       let url = ''
-      if (searchQ) {
+      if (mediaType === 'Manga') {
+        url = `${API}/manga/trending`
+      } else if (selectedGenre !== 'All') {
+        url = `${API}/jikan/by-genre?genre=${encodeURIComponent(selectedGenre)}`
+      } else if (searchQ) {
         url = `${API}/jikan/search?q=${encodeURIComponent(searchQ)}&page=${p}`
       } else {
         const letterParam = letter && letter !== '#' ? `&letter=${letter}` : ''
@@ -195,29 +179,6 @@ export default function Search() {
     }
   }
 
-  const handleKey = (e) => {
-    if (e.key === 'Enter') {
-      if (tab === 'browse') {
-        setGenreMode(null)
-        setActiveLetter(null)
-        fetchBrowse(1, null, query)
-      } else {
-        search(query)
-      }
-    }
-  }
-
-  const handleSearchClick = () => {
-    if (tab === 'browse') {
-      setGenreMode(null)
-      setActiveLetter(null)
-      fetchBrowse(1, null, query)
-    } else {
-      setGenreMode(null)
-      search(query)
-    }
-  }
-
   const handleLetter = (letter) => {
     const nextLetter = letter === activeLetter ? null : letter
     setActiveLetter(nextLetter)
@@ -234,101 +195,165 @@ export default function Search() {
 
   const filtered = activeSource === 'all' ? results : results.filter(r => r.source === activeSource)
 
-  // Sources available based on mode (Recently Released does not filter by scraper source)
-  const sourceKeys = (genreMode || tab === 'latest')
-    ? []
-    : ['all', 'anikoto', 'kissanime', 'animetake', 'museasia']
-
-  const handleScroll = (e) => {
-    setScrolled(e.target.scrollTop > 50)
-  }
+  const displayBrowseResults = browseResults.filter(item => {
+    if (query && !item.title.toLowerCase().includes(query.toLowerCase())) return false
+    return true
+  })
 
   return (
-    <div className="search-page" onScroll={handleScroll}>
+    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
       
-      <div className={`search-sticky-header ${scrolled ? 'scrolled' : ''}`}>
-        {/* Sub tabs to toggle between scraper search and alphabetical MAL browse */}
-        <div style={{display:'flex', gap:10, marginBottom:20, borderBottom: scrolled ? 'none' : '1px solid var(--border)', paddingBottom:12}}>
-        <button 
-          className={`btn ${tab === 'browse' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{fontSize:13, padding:'6px 14px', borderRadius:20}}
-          onClick={() => { setTab('browse'); setGenreMode(null); setQuery(''); setBrowseResults([]); setBrowseError(''); }}
-        >
-          🗂️ Anime Index (A-Z)
-        </button>
-        <button 
-          className={`btn ${tab === 'latest' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{fontSize:13, padding:'6px 14px', borderRadius:20}}
-          onClick={() => { setTab('latest'); setGenreMode(null); setQuery(''); setResults([]); setError(''); fetchLatestScraperEpisodes(); }}
-        >
-          🕒 Recently Released
-        </button>
-      </div>
+      {/* ── Seanime Left Side Multi-Attribute Filter Drawer ── */}
+      <aside style={{
+        width: 240, background: 'rgba(10, 10, 18, 0.95)', borderRight: '1px solid rgba(255,255,255,0.08)',
+        padding: 20, display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0, overflowY: 'auto'
+      }}>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Search Title</label>
+          <input
+            type="text"
+            placeholder="🔍 Title..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && fetchBrowse(1, activeLetter, query)}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none'
+            }}
+          />
+        </div>
 
-      <div className="search-header">
-        {genreMode ? (
-          <>
-            <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:4}}>
-              <button
-                className="btn btn-ghost"
-                style={{padding:'4px 10px', fontSize:13}}
-                onClick={() => { setGenreMode(null); setBrowseResults([]); setBrowseError(''); fetchBrowse(1, null); }}
-              >
-                ← Back to Index
-              </button>
-            </div>
-            <h1 className="search-heading">
-               <span style={{color:'var(--text-muted)', fontWeight:400, fontSize:'0.6em', letterSpacing:2, textTransform:'uppercase', display:'block', marginBottom:4}}>
-                 {genreMode === 'Airing This Season' ? 'Current Season' : 'Browsing Genre'}
-               </span>
-               {genreMode}
-             </h1>
-             <p className="search-sub">
-               {genreMode === 'Airing This Season' ? 'Popular anime currently airing this season · powered by MyAnimeList' : 'Top-rated anime in this genre · powered by MyAnimeList'}
-             </p>
-          </>
-        ) : tab === 'browse' ? (
-          <>
-            <h1 className="search-heading">Anime Index</h1>
-            <p className="search-sub">Browse anime database alphabetically or search directly across the index</p>
-          </>
-        ) : (
-          <>
-            <h1 className="search-heading">Recently Released</h1>
-            <p className="search-sub">Latest updated episodes from streaming servers</p>
-          </>
-        )}
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Media Type</label>
+          <select
+            value={mediaType}
+            onChange={(e) => { setMediaType(e.target.value); fetchBrowse(1, null, query) }}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
+            }}
+          >
+            <option value="Anime" style={{ background: '#0e0e16' }}>Anime</option>
+            <option value="Manga" style={{ background: '#0e0e16' }}>Manga</option>
+          </select>
+        </div>
 
-        {tab === 'browse' && (
-          <div className="search-input-wrap">
-            <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input
-              ref={inputRef}
-              className="search-input"
-              type="text"
-              placeholder="Search all anime index by title..."
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={handleKey}
-              autoFocus={!genreMode}
-            />
-            {query && (
-              <button className="search-clear" onClick={() => {
-                setQuery('');
-                setGenreMode(null);
-                setActiveLetter(null);
-                fetchBrowse(1, null);
-                inputRef.current?.focus();
-              }}>✕</button>
-            )}
-            <button className="btn btn-primary search-btn" onClick={handleSearchClick} disabled={browseLoading}>
-              {browseLoading ? <span className="spinner" /> : 'Search'}
-            </button>
-          </div>
-        )}
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Sort By</label>
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
+            }}
+          >
+            <option value="Highest score" style={{ background: '#0e0e16' }}>Highest score</option>
+            <option value="Most popular" style={{ background: '#0e0e16' }}>Most popular</option>
+            <option value="Latest added" style={{ background: '#0e0e16' }}>Latest added</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Genres</label>
+          <select
+            value={selectedGenre}
+            onChange={(e) => { setSelectedGenre(e.target.value); browseGenre(e.target.value) }}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
+            }}
+          >
+            {['All', 'Action', 'Adventure', 'Comedy', 'Drama', 'Ecchi', 'Fantasy', 'Horror', 'Mahou Shoujo', 'Mecha', 'Music', 'Mystery', 'Psychological', 'Romance', 'Sci-Fi', 'Slice of Life', 'Sports'].map(g => (
+              <option key={g} value={g} style={{ background: '#0e0e16' }}>{g}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Format</label>
+          <select
+            value={selectedFormat}
+            onChange={(e) => setSelectedFormat(e.target.value)}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
+            }}
+          >
+            <option value="All" style={{ background: '#0e0e16' }}>All formats</option>
+            <option value="TV" style={{ background: '#0e0e16' }}>TV</option>
+            <option value="Movie" style={{ background: '#0e0e16' }}>Movie</option>
+            <option value="OVA" style={{ background: '#0e0e16' }}>OVA</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Season</label>
+          <select
+            value={selectedSeason}
+            onChange={(e) => setSelectedSeason(e.target.value)}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
+            }}
+          >
+            <option value="All" style={{ background: '#0e0e16' }}>All seasons</option>
+            <option value="WINTER" style={{ background: '#0e0e16' }}>Winter</option>
+            <option value="SPRING" style={{ background: '#0e0e16' }}>Spring</option>
+            <option value="SUMMER" style={{ background: '#0e0e16' }}>Summer</option>
+            <option value="FALL" style={{ background: '#0e0e16' }}>Fall</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Status</label>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            style={{
+              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
+            }}
+          >
+            <option value="All" style={{ background: '#0e0e16' }}>All statuses</option>
+            <option value="RELEASING" style={{ background: '#0e0e16' }}>Releasing</option>
+            <option value="FINISHED" style={{ background: '#0e0e16' }}>Finished</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Adult (18+)</span>
+          <input
+            type="checkbox"
+            checked={isAdult}
+            onChange={(e) => setIsAdult(e.target.checked)}
+            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }}
+          />
+        </div>
+      </aside>
+
+      {/* Main Search & Grid Content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+        {/* Top Header Mode Tabs */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+          <button 
+            className={`btn ${tab === 'browse' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: 13, padding: '6px 14px', borderRadius: 20 }}
+            onClick={() => { setTab('browse'); setGenreMode(null); setQuery(''); setBrowseResults([]); setBrowseError(''); }}
+          >
+            🗂️ Anime Index (A-Z)
+          </button>
+          <button 
+            className={`btn ${tab === 'latest' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: 13, padding: '6px 14px', borderRadius: 20 }}
+            onClick={() => { setTab('latest'); setGenreMode(null); setQuery(''); setResults([]); setError(''); fetchLatestScraperEpisodes(); }}
+          >
+            🕒 Recently Released
+          </button>
+        </div>
 
         {tab === 'browse' && !genreMode && (
-          <div className="alphabet-bar" style={{marginTop: 14, marginBottom: 14}}>
+          <div className="alphabet-bar" style={{ marginBottom: 20 }}>
             {LETTERS.map(l => (
               <button
                 key={l}
@@ -341,405 +366,100 @@ export default function Search() {
           </div>
         )}
 
-        {tab === 'latest' && !genreMode && results.length > 0 && (
-          <div className="source-tabs">
-            {sourceKeys.map(s => (
-              <button
-                key={s}
-                className={`source-tab${activeSource === s ? ' active' : ''}`}
-                onClick={() => setActiveSource(s)}
-              >
-                {s === 'all'
-                  ? `All (${results.length})`
-                  : s === 'anikoto'
-                  ? `Anikoto (${results.filter(r=>r.source==='anikoto').length})`
-                  : s === 'kissanime'
-                  ? `Kissanime (${results.filter(r=>r.source==='kissanime').length})`
-                  : s === 'animetake'
-                  ? `AnimeTake (${results.filter(r=>r.source==='animetake').length})`
-                  : `Muse Asia (${results.filter(r=>r.source==='museasia').length})`}
-              </button>
-            ))}
+        {/* Results Grid */}
+        {browseLoading ? (
+          <div className="browse-loading">
+            <span className="spinner large" />
+            <p style={{ marginTop: 16 }}>Loading index...</p>
           </div>
-        )}
-        </div>
-      </div>
-
-      <div className="search-results" style={{ padding: '0 28px 32px' }}>
-        
-        {/* Render Scraper Search Mode */}
-        {tab === 'latest' && (
-          <>
-            {error && (
-              <div className="search-empty">
-                <span style={{fontSize:40}}>🔍</span>
-                <p>{error}</p>
-              </div>
-            )}
-
-            {!loading && !error && results.length === 0 && !genreMode && (
-              <div className="search-empty">
-                <span style={{fontSize:48}}>🎌</span>
-                <p>Search for any anime series to get started</p>
-                <p style={{fontSize:13, color:'var(--text-muted)', marginTop:4}}>Try "One Piece", "Naruto", or "Attack on Titan"</p>
-              </div>
-            )}
-
-            {(() => {
-              if (!timetable || results.length === 0) {
-                return (
-                  <div className="results-grid">
-                    {filtered.map((item, i) => (
-                      <div
-                        key={i}
-                        className="result-card"
-                        onClick={() => {
-                          if (item.source === 'jikan' || genreMode) {
-                            navigate(item.mal_id ? `/anime/${item.mal_id}` : '/anime/0', { state: { searchQuery: item.title } })
-                          } else {
-                            navigate('/anime/0', { state: { searchQuery: item.title } })
-                          }
-                        }}
-                      >
-                        <div className="result-card-img">
-                          <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
-                          <div className="result-card-overlay">
-                            <button className="card-play-btn large">
-                              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                            </button>
-                          </div>
-                          {item.sub_episodes && item.sub_episodes !== '0' && item.sub_episodes !== '?' ? (
-                            <span 
-                              className="anime-card-badge" 
-                              style={{ 
-                                background: 'linear-gradient(135deg, var(--cyan), var(--accent))', 
-                                fontWeight: '800', 
-                                border: '1px solid rgba(255,255,255,0.15)', 
-                                boxShadow: '0 2px 8px rgba(6, 182, 212, 0.4)',
-                                letterSpacing: '0.5px'
-                              }}
-                            >
-                              EP {item.sub_episodes}
-                            </span>
-                          ) : item.type ? (
-                            <span className="anime-card-badge">{item.type}</span>
-                          ) : null}
-                          <div className="result-badges">
-                            {item.score && <span className="badge badge-sub">⭐ {item.score}</span>}
-                            {!item.score && (() => {
-                              const subText = item.sub_episodes && item.sub_episodes !== '0' && item.sub_episodes !== '?' ? `Sub ${item.sub_episodes}` : '';
-                              const dubText = item.dub_episodes && item.dub_episodes !== '0' && item.dub_episodes !== '?' ? `Dub ${item.dub_episodes}` : '';
-                              const jointText = subText && dubText ? `${subText} | ${dubText}` : (subText || dubText);
-                              
-                              if (!jointText) return null;
-                              return (
-                                <span className="badge badge-sub">
-                                  {jointText}
-                                </span>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                        <div className="result-card-info">
-                          <p className="result-title">{item.title}</p>
-                          <div className="result-meta">
-                            <span className="badge badge-source" style={{textTransform:'capitalize'}}>{item.source === 'jikan' ? 'MAL' : item.source}</span>
-                            <span style={{color:'var(--text-muted)',fontSize:12}}>{item.type}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              }
-
-              // Grouping matching logic
-              const titleToDay = {};
-              Object.entries(timetable).forEach(([day, shows]) => {
-                if (Array.isArray(shows)) {
-                  shows.forEach(show => {
-                    if (show.title) titleToDay[show.title.toLowerCase()] = day;
-                    if (show.titleEnglish) titleToDay[show.titleEnglish.toLowerCase()] = day;
-                  });
-                }
-              });
-
-              const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-              const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-              const relativeDays = [];
-              for (let i = 0; i < 7; i++) {
-                const idx = (todayIndex - i + 7) % 7;
-                relativeDays.push(daysOrder[idx]);
-              }
-
-              const groups = {};
-              relativeDays.forEach(day => {
-                groups[day] = [];
-              });
-              groups['other'] = [];
-
-              filtered.forEach(item => {
-                const itemTitle = item.title.toLowerCase();
-                let foundDay = null;
-
-                // Match item title to any timetable title
-                for (const [title, day] of Object.entries(titleToDay)) {
-                  if (itemTitle === title || itemTitle.includes(title) || title.includes(itemTitle)) {
-                    foundDay = day;
-                    break;
-                  }
-                }
-
-                if (foundDay && groups[foundDay]) {
-                  groups[foundDay].push(item);
-                } else {
-                  groups['other'].push(item);
-                }
-              });
-
-              const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
-              const renderCard = (item, i) => (
+        ) : browseError ? (
+          <div className="search-empty">
+            <span style={{ fontSize: 40 }}>⏳</span>
+            <p style={{ color: 'var(--text-muted)' }}>{browseError}</p>
+          </div>
+        ) : displayBrowseResults.length === 0 ? (
+          <div className="search-empty">
+            <span style={{ fontSize: 40 }}>🎌</span>
+            <p>No results found for current filter settings.</p>
+          </div>
+        ) : (
+          <div>
+            <div className="results-grid">
+              {displayBrowseResults.map((item, i) => (
                 <div
                   key={i}
                   className="result-card"
-                  onClick={() => {
-                    if (item.source === 'jikan' || genreMode) {
-                      navigate(item.mal_id ? `/anime/${item.mal_id}` : '/anime/0', { state: { searchQuery: item.title } })
-                    } else {
-                      navigate('/anime/0', { state: { searchQuery: item.title } })
-                    }
-                  }}
+                  onClick={() => navigate(mediaType === 'Manga' ? `/manga/${item.id}` : (item.mal_id ? `/anime/${item.mal_id}` : '/anime/0'), { state: { searchQuery: item.title, manga: item } })}
                 >
                   <div className="result-card-img">
-                    <img src={item.thumbnail} alt={item.title} loading="lazy" onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'} />
+                    <img
+                      src={item.thumbnail || item.cover}
+                      alt={item.title}
+                      loading="lazy"
+                      onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'}
+                    />
                     <div className="result-card-overlay">
                       <button className="card-play-btn large">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                       </button>
                     </div>
-                    {item.sub_episodes && item.sub_episodes !== '0' && item.sub_episodes !== '?' ? (
-                      <span 
-                        className="anime-card-badge" 
-                        style={{ 
-                          background: 'linear-gradient(135deg, var(--cyan), var(--accent))', 
-                          fontWeight: '800', 
-                          border: '1px solid rgba(255,255,255,0.15)', 
-                          boxShadow: '0 2px 8px rgba(6, 182, 212, 0.4)',
-                          letterSpacing: '0.5px'
-                        }}
-                      >
-                        EP {item.sub_episodes}
-                      </span>
-                    ) : item.type ? (
+                    {item.type && (
                       <span className="anime-card-badge">{item.type}</span>
-                    ) : null}
+                    )}
                     <div className="result-badges">
                       {item.score && <span className="badge badge-sub">⭐ {item.score}</span>}
-                      {!item.score && (() => {
-                        const subText = item.sub_episodes && item.sub_episodes !== '0' && item.sub_episodes !== '?' ? `Sub ${item.sub_episodes}` : '';
-                        const dubText = item.dub_episodes && item.dub_episodes !== '0' && item.dub_episodes !== '?' ? `Dub ${item.dub_episodes}` : '';
-                        const jointText = subText && dubText ? `${subText} | ${dubText}` : (subText || dubText);
-                        
-                        if (!jointText) return null;
-                        return (
-                          <span className="badge badge-sub">
-                            {jointText}
-                          </span>
-                        );
-                      })()}
                     </div>
                   </div>
                   <div className="result-card-info">
                     <p className="result-title">{item.title}</p>
                     <div className="result-meta">
-                      <span className="badge badge-source" style={{textTransform:'capitalize'}}>{item.source === 'jikan' ? 'MAL' : item.source}</span>
-                      <span style={{color:'var(--text-muted)',fontSize:12}}>{item.type}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.type || mediaType}</span>
+                      {item.year && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.year}</span>}
                     </div>
                   </div>
                 </div>
-              );
+              ))}
+            </div>
 
-              return (
-                <div className="grouped-results">
-                  {relativeDays.map((day, idx) => {
-                    const items = groups[day] || [];
-                    if (items.length === 0) return null;
-
-                    let headerText = capitalize(day);
-                    if (idx === 0) headerText = `📅 Today (${capitalize(day)})`;
-                    else if (idx === 1) headerText = `📅 Yesterday (${capitalize(day)})`;
-                    else headerText = `📅 ${capitalize(day)}`;
-
+            {/* Pagination */}
+            {totalPages > 1 && !query && (
+              <div className="pagination" style={{ marginTop: 24 }}>
+                <button
+                  className="btn btn-ghost page-btn"
+                  disabled={page <= 1 || browseLoading}
+                  onClick={() => handlePage(page - 1)}
+                >
+                  ← Prev
+                </button>
+                <div className="page-numbers">
+                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                    let p
+                    if (totalPages <= 7) p = i + 1
+                    else if (page <= 4) p = i + 1
+                    else if (page >= totalPages - 3) p = totalPages - 6 + i
+                    else p = page - 3 + i
                     return (
-                      <div key={day} className="day-group" style={{ marginBottom: 32 }}>
-                        <h3 className="day-group-title" style={{ 
-                          fontSize: 16, 
-                          fontWeight: 700, 
-                          color: 'var(--accent-light)', 
-                          borderBottom: '1px solid rgba(255,255,255,0.06)', 
-                          paddingBottom: 8, 
-                          marginBottom: 16,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6
-                        }}>
-                          {headerText}
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}>({items.length} releases)</span>
-                        </h3>
-                        <div className="results-grid">
-                          {items.map((item, i) => renderCard(item, i))}
-                        </div>
-                      </div>
-                    );
+                      <button
+                        key={p}
+                        className={`page-num-btn${p === page ? ' active' : ''}`}
+                        onClick={() => handlePage(p)}
+                      >
+                        {p}
+                      </button>
+                    )
                   })}
-
-                  {groups['other'] && groups['other'].length > 0 && (
-                    <div className="day-group" style={{ marginBottom: 32 }}>
-                      <h3 className="day-group-title" style={{ 
-                        fontSize: 16, 
-                        fontWeight: 700, 
-                        color: 'var(--text-secondary)', 
-                        borderBottom: '1px solid rgba(255,255,255,0.06)', 
-                        paddingBottom: 8, 
-                        marginBottom: 16,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6
-                      }}>
-                        📦 Other / Completed Releases
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}>({groups['other'].length} releases)</span>
-                      </h3>
-                      <div className="results-grid">
-                        {groups['other'].map((item, i) => renderCard(item, i))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              );
-            })()}
-          </>
-        )}
-
-        {/* Render Alphabet / Jikan Browse Mode */}
-        {tab === 'browse' && (
-          <>
-            {browseLoading && (
-              <div className="browse-loading">
-                <span className="spinner large" />
-                <p style={{marginTop:16}}>Loading anime from index...</p>
-              </div>
-            )}
-
-            {browseError && (
-              <div className="search-empty">
-                <span style={{fontSize:40}}>⏳</span>
-                <p style={{color:'var(--text-muted)'}}>{browseError}</p>
-                <button className="btn btn-primary" style={{marginTop:16}} onClick={() => fetchBrowse(page, activeLetter, query)}>
-                  Try Again
+                <button
+                  className="btn btn-ghost page-btn"
+                  disabled={!hasNext || browseLoading}
+                  onClick={() => handlePage(page + 1)}
+                >
+                  Next →
                 </button>
               </div>
             )}
-
-            {!browseLoading && !browseError && browseResults.length === 0 && (
-              <div className="search-empty">
-                <span style={{fontSize:40}}>🎌</span>
-                <p>No results found. Try a different letter or page.</p>
-                <button className="btn btn-ghost" style={{marginTop:12}} onClick={() => handleLetter(null)}>
-                  Show All Anime
-                </button>
-              </div>
-            )}
-
-            {!browseLoading && !browseError && browseResults.length > 0 && (
-              <>
-                <div className="results-grid">
-                  {browseResults.map((item, i) => (
-                    <div
-                      key={i}
-                      className="result-card"
-                      onClick={() => navigate(item.mal_id ? `/anime/${item.mal_id}` : '/anime/0', { state: { searchQuery: item.title } })}
-                    >
-                      <div className="result-card-img">
-                        <img
-                          src={item.thumbnail}
-                          alt={item.title}
-                          loading="lazy"
-                          onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'}
-                        />
-                        <div className="result-card-overlay">
-                          <button className="card-play-btn large">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                          </button>
-                        </div>
-                        {item.type && (
-                          <span className="anime-card-badge">{item.type}</span>
-                        )}
-                        <div className="result-badges">
-                          {item.score && <span className="badge badge-sub">⭐ {item.score}</span>}
-                        </div>
-                        {item.status === 'Currently Airing' && (
-                          <span className="badge-airing">AIRING</span>
-                        )}
-                      </div>
-                      <div className="result-card-info">
-                        <p className="result-title">{item.title}</p>
-                        <div className="result-meta">
-                          <span style={{color:'var(--text-muted)',fontSize:12}}>{item.type}</span>
-                          {item.year && <span style={{color:'var(--text-muted)',fontSize:12}}>{item.year}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && !query && !genreMode && (
-                  <div className="pagination">
-                    <button
-                      className="btn btn-ghost page-btn"
-                      disabled={page <= 1 || browseLoading}
-                      onClick={() => handlePage(page - 1)}
-                    >
-                      ← Prev
-                    </button>
-                    <div className="page-numbers">
-                      {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                        let p
-                        if (totalPages <= 7) {
-                          p = i + 1
-                        } else if (page <= 4) {
-                          p = i + 1
-                        } else if (page >= totalPages - 3) {
-                          p = totalPages - 6 + i
-                        } else {
-                          p = page - 3 + i
-                        }
-                        return (
-                          <button
-                            key={p}
-                            className={`page-num-btn${p === page ? ' active' : ''}`}
-                            onClick={() => handlePage(p)}
-                          >
-                            {p}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <button
-                      className="btn btn-ghost page-btn"
-                      disabled={!hasNext || browseLoading}
-                      onClick={() => handlePage(page + 1)}
-                    >
-                      Next →
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          </div>
         )}
-
       </div>
     </div>
   )
