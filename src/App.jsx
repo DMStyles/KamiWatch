@@ -16,6 +16,7 @@ import Extensions from './pages/Extensions'
 import EpisodeModal from './components/EpisodeModal'
 import PlayerModal from './components/PlayerModal'
 import UpdateBanner from './components/UpdateBanner'
+import ErrorBoundary from './components/ErrorBoundary'
 import './styles/app.css'
 import './styles/pages.css'
 import './styles/manga.css'
@@ -119,20 +120,22 @@ export default function App() {
         <div className="app-body">
           <Sidebar />
           <main className="app-main">
-            <Routes>
-              <Route path="/" element={<Navigate to="/home" replace />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/anime/:id" element={<Details />} />
-              <Route path="/downloads" element={<Downloads />} />
-              <Route path="/schedule" element={<Schedule />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/manga" element={<Manga />} />
-              <Route path="/manga/:id" element={<MangaDetails />} />
-              <Route path="/manga/:id/read/:chapterId" element={<MangaReader />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/extensions" element={<Extensions />} />
-            </Routes>
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/" element={<Navigate to="/home" replace />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/anime/:id" element={<Details />} />
+                <Route path="/downloads" element={<Downloads />} />
+                <Route path="/schedule" element={<Schedule />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/manga" element={<Manga />} />
+                <Route path="/manga/:id" element={<MangaDetails />} />
+                <Route path="/manga/:id/read/:chapterId" element={<MangaReader />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/extensions" element={<Extensions />} />
+              </Routes>
+            </ErrorBoundary>
           </main>
         </div>
         {episodeModal && <EpisodeModal />}

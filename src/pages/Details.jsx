@@ -922,7 +922,7 @@ export default function Details() {
                   value={activeSource} 
                   onChange={e => handleSourceChange(e.target.value)}
                 >
-                  {SOURCES.map(s => (
+                  {sourcesList.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
@@ -952,7 +952,7 @@ export default function Details() {
             ) : (
               <div className="source-no-results" style={{ textAlign: 'center', padding: '24px 16px' }}>
                 <p style={{ color: '#f87171', fontWeight: 600, marginBottom: 6, fontSize: 14 }}>
-                  ❌ No matching title found on {SOURCES.find(s => s.id === activeSource)?.name}.
+                  ❌ No matching title found on {sourcesList.find(s => s.id === activeSource)?.name}.
                 </p>
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
                   This anime may be named differently on this server. Try searching custom keywords or click Try Again.
@@ -996,8 +996,8 @@ export default function Details() {
               <div className="scraper-episodes-section">
                 <div className="episodes-controls">
                   <div className="episodes-left-actions">
-                    <button className="btn btn-ghost" onClick={selectAll}>Select All</button>
-                    <button className="btn btn-ghost" onClick={clearAll}>Clear</button>
+                    <button className="btn btn-ghost" onClick={toggleAllEps}>Select All</button>
+                    <button className="btn btn-ghost" onClick={() => setSelectedEpisodes(new Set())}>Clear</button>
                     <span className="selected-count">{selectedEpisodes.size} Selected</span>
                   </div>
 
