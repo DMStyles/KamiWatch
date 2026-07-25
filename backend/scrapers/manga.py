@@ -382,7 +382,9 @@ async def browse_genre(genre_id: str = None, demographic: str = None, page: int 
 
 @router.get("/chapters")
 async def get_chapters(id: str):
-    """Fetch chapter list. id = 'mdex:<uuid>' or 'kakalot:<url>'"""
+    """Fetch chapter list with automatic title search resolution fallback."""
+    chapters = []
+    
     if id.startswith("mdex:"):
         manga_id = id[5:]
         chapters = await mangadex_chapters(manga_id)
@@ -395,9 +397,30 @@ async def get_chapters(id: str):
     elif id.startswith("webtoons:"):
         mid = id[9:]
         chapters = await webtoons_chapters(mid)
-    else:
-        # Try as raw MangaDex UUID
+    elif re.match(r'^[a-f0-9\-]{36}$', id, re.I):
         chapters = await mangadex_chapters(id)
+    else:
+        # Title or non-UUID string passed (e.g. from history or MAL)
+        # 1. Search MangaDex
+        res = await mangadex_search(id, page=1)
+        results = res.get("results", [])
+        if results:
+            mdex_id = results[0]["id"].replace("mdex:", "")
+            chapters = await mangadex_chapters(mdex_id)
+        
+        # 2. Fallback to MangaKakalot
+        if not chapters:
+            k_results = await mangakakalot_search(id, page=1)
+            if k_results:
+                url = k_results[0]["id"].replace("kakalot:", "")
+                chapters = await mangakakalot_chapters(url)
+
+        # 3. Fallback to MangaAddict
+        if not chapters:
+            ma_results = await mangaddict_search(id, page=1)
+            if ma_results:
+                slug = ma_results[0]["id"].replace("mangaddict:", "")
+                chapters = await mangaddict_chapters(slug)
 
     return {"chapters": chapters, "total": len(chapters)}
 
@@ -428,41 +451,58 @@ async def get_pages(id: str):
 @router.get("/details")
 async def get_manga_details(id: str):
     """Fetch detailed metadata for a manga."""
+    manga_id = id
     if id.startswith("mdex:"):
         manga_id = id[5:]
-        params = {
-            "includes[]": ["cover_art", "author", "artist"],
-        }
-        try:
-            async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
-                r = await client.get(f"{MANGADEX_API}/manga/{manga_id}", params=params)
-                data = r.json().get("data", {})
-                attrs = data.get("attributes", {})
-                mid = data["id"]
-                title = (attrs.get("title") or {}).get("en") or next(iter((attrs.get("title") or {}).values()), "Unknown")
-                desc = (attrs.get("description") or {}).get("en", "")
-                cover_rel = next((r for r in data.get("relationships", []) if r["type"] == "cover_art"), None)
-                cover = ""
-                if cover_rel:
-                    fname = cover_rel.get("attributes", {}).get("fileName", "")
-                    cover = f"{MANGADEX_IMG}/covers/{mid}/{fname}.512.jpg"
-                author_rel = next((r for r in data.get("relationships", []) if r["type"] == "author"), None)
-                author = (author_rel.get("attributes") or {}).get("name", "") if author_rel else ""
-                genres = [tag["attributes"]["name"].get("en", "") for tag in attrs.get("tags", []) if tag.get("attributes")]
-                return {
-                    "id": f"mdex:{mid}",
-                    "title": title,
-                    "cover": cover,
-                    "description": desc,
-                    "status": attrs.get("status", ""),
-                    "year": attrs.get("year"),
-                    "author": author,
-                    "genres": genres,
-                    "source": "mangadex",
-                }
-        except Exception as e:
-            return {"error": str(e)}
-    return {"error": "Unknown manga source"}
+    
+    if not re.match(r'^[a-f0-9\-]{36}$', manga_id, re.I):
+        # Resolve title to MangaDex ID
+        res = await mangadex_search(manga_id, page=1)
+        results = res.get("results", [])
+        if results:
+            manga_id = results[0]["id"].replace("mdex:", "")
+        else:
+            return {
+                "id": id,
+                "title": id,
+                "cover": "",
+                "description": "",
+                "status": "Releasing",
+                "source": "mangadex"
+            }
+
+    params = {
+        "includes[]": ["cover_art", "author", "artist"],
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15, headers=MANGADEX_HEADERS) as client:
+            r = await client.get(f"{MANGADEX_API}/manga/{manga_id}", params=params)
+            data = r.json().get("data", {})
+            attrs = data.get("attributes", {})
+            mid = data["id"]
+            title = (attrs.get("title") or {}).get("en") or next(iter((attrs.get("title") or {}).values()), "Unknown")
+            desc = (attrs.get("description") or {}).get("en", "")
+            cover_rel = next((r for r in data.get("relationships", []) if r["type"] == "cover_art"), None)
+            cover = ""
+            if cover_rel:
+                fname = cover_rel.get("attributes", {}).get("fileName", "")
+                cover = f"{MANGADEX_IMG}/covers/{mid}/{fname}.512.jpg"
+            author_rel = next((r for r in data.get("relationships", []) if r["type"] == "author"), None)
+            author = (author_rel.get("attributes") or {}).get("name", "") if author_rel else ""
+            genres = [tag["attributes"]["name"].get("en", "") for tag in attrs.get("tags", []) if tag.get("attributes")]
+            return {
+                "id": f"mdex:{mid}",
+                "title": title,
+                "cover": cover,
+                "description": desc,
+                "status": attrs.get("status", ""),
+                "year": attrs.get("year"),
+                "author": author,
+                "genres": genres,
+                "source": "mangadex",
+            }
+    except Exception as e:
+        return {"error": str(e)}
 
 @router.get("/proxy")
 async def proxy_image(url: str):

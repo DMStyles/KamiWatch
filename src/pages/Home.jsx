@@ -459,7 +459,7 @@ export default function Home() {
           renderCard={(item, i) => (
             <div
               key={i}
-              onClick={() => navigate(`/manga/${item.id}`)}
+              onClick={() => navigate(`/manga/${item.id}`, { state: { manga: item } })}
               style={{ flexShrink: 0, width: 130, cursor: 'pointer' }}
             >
               <div style={{ width: 130, height: 186, borderRadius: 10, overflow: 'hidden', marginBottom: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
