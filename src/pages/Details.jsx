@@ -121,8 +121,8 @@ export default function Details() {
   }
 
   // Scraper Source States
-  const [activeSource, setActiveSource] = useState(SOURCES[0].id)
-  const activeSourceRef = React.useRef(SOURCES[0].id) // ref to avoid stale closure in async callbacks
+  const [activeSource, setActiveSource] = useState(BASE_SOURCES[0].id)
+  const activeSourceRef = React.useRef(BASE_SOURCES[0].id) // ref to avoid stale closure in async callbacks
   const [searchResults, setSearchResults] = useState([])
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [searchingSource, setSearchingSource] = useState(false)
