@@ -1,21 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react'
 
 const OFFICIAL_PLUGINS = [
-  { id: 'aiostreams-plugin', name: 'AIOStreams', author: 'Viren070', lang: 'Javascript', description: 'Stream content from AIOStreams directly in Seanime. Supports all streams with URLs.', installed: true, icon: '⚡', category: 'Online Streaming' },
+  // ── Online Streaming Providers ──
+  { id: '4anime', name: '4Anime.gg', author: 'KoDevV2', lang: 'English', description: '4anime.gg as an online streaming provider with fast HD embeds.', installed: true, icon: '4️⃣', category: 'Online Streaming' },
+  { id: 'agefans', name: 'AgeFans', author: 'Pal', lang: '中文', description: 'AgeFans is an online streaming provider for Chinese subbed anime.', installed: false, icon: '🔮', category: 'Online Streaming' },
+  { id: 'anidao', name: 'AniDao', author: 'Pal', lang: 'English', description: 'AniDao is an online streaming provider for anime series & movies.', installed: false, icon: '🅰️', category: 'Online Streaming' },
+  { id: 'aniwatch', name: 'AniWatch', author: 'Thekingcrusher', lang: 'English', description: 'AniWatch is an online stream provider with multi-quality options.', installed: true, icon: '🍿', category: 'Online Streaming' },
+  { id: 'anizone', name: 'AniZone', author: 'jabifx', lang: 'English', description: 'Online streaming provider with soft subs and high bitrate audio.', installed: false, icon: '🅰️', category: 'Online Streaming' },
+  { id: 'anikoto-ext', name: 'Anikoto', author: 'aquaryuo', lang: 'English', description: 'Only anikoto compatibility layer you\'ll ever need for multi-server playback.', installed: true, icon: '⚡', category: 'Online Streaming' },
+  { id: 'animeav1', name: 'AnimeAV1', author: 'jabifx', lang: 'Español', description: 'Online streaming provider with hard subs and AV1 codec encoding.', installed: false, icon: '📐', category: 'Online Streaming' },
+  { id: 'animegg', name: 'AnimeGG', author: 'Pal', lang: 'English', description: 'AnimeGG is an online streaming provider for ongoing releases.', installed: false, icon: '🍊', category: 'Online Streaming' },
+  { id: 'animeheaven', name: 'AnimeHeaven', author: 'Pal', lang: 'English', description: 'AnimeHeaven is an online streaming provider with instant player mirrors.', installed: true, icon: '🅰️', category: 'Online Streaming' },
+  { id: 'animesalt', name: 'AnimeSalt', author: 'mohaisreal', lang: 'English', description: 'AnimeSalt is an online streaming provider for sub & dub anime.', installed: false, icon: '🧂', category: 'Online Streaming' },
+  { id: 'animesaturn', name: 'AnimeSaturn', author: 'kRYstall9', lang: 'Italiano', description: 'AnimeSaturn is an online streaming provider for Italian subbed anime.', installed: false, icon: '🪐', category: 'Online Streaming' },
+  { id: 'animesaturn-mirror', name: 'AnimeSaturn (Mirror)', author: 'Pal', lang: 'Italiano', description: 'AnimeSaturn mirror provider.', installed: false, icon: '🪐', category: 'Online Streaming' },
+
+  // ── Manga Providers ──
+  { id: '3asq', name: '3asq', author: 'Bruuhim', lang: 'العربية', description: 'Manga provider for 3asq.org.', installed: true, icon: '📖', category: 'Manga' },
+  { id: 'animesama-manga', name: 'AnimeSama (Manga)', author: 'pal', lang: 'Français', description: 'AnimeSama is a manga provider for KamiWatch.', installed: false, icon: '⛩️', category: 'Manga' },
+  { id: 'asurascans', name: 'AsuraScans', author: 'Pal', lang: 'English', description: 'AsuraScans is a top manga & manhwa provider with fast releases.', installed: true, icon: '🥷', category: 'Manga' },
+  { id: 'atsumaru', name: 'Atsumaru', author: 'Pal', lang: 'English', description: 'Atsumaru is a manga provider for KamiWatch.', installed: false, icon: '🅰️', category: 'Manga' },
+  { id: 'azoramoon', name: 'AzoraMoon', author: 'Bruuhim', lang: 'العربية', description: 'Manga provider for azoramoon.com (Arabic).', installed: false, icon: '🌙', category: 'Manga' },
+  { id: 'capibaratraductor', name: 'CapibaraTraductor', author: 'mohaisreal', lang: 'Español', description: 'El Hub de tus Scans Favoritos. Proveedor de manga en español.', installed: false, icon: '🦫', category: 'Manga' },
+  { id: 'comix', name: 'Comix', author: 'Pal & Ari-03', lang: 'English', description: 'Comix is a fast manga provider for KamiWatch.', installed: true, icon: '✖️', category: 'Manga' },
+  { id: 'demonic-scans', name: 'Demonic Scans', author: 'Faddix', lang: 'English', description: 'Integrates Demonic Scans as a manga provider.', installed: false, icon: '👿', category: 'Manga' },
+  { id: 'mangadex', name: 'MangaDex', author: 'Official', lang: 'English', description: 'Official global MangaDex API provider with multi-language chapters.', installed: true, icon: '📚', category: 'Manga' },
+
+  // ── Plugins ──
+  { id: 'aiostreams-plugin', name: 'AIOStreams', author: 'Viren070', lang: 'Javascript', description: 'Stream content from AIOStreams directly in KamiWatch. Supports all streams with URLs.', installed: true, icon: '⚡', category: 'Plugins' },
   { id: 'alternative-titles', name: 'Alternative Titles', author: 'nnotwen', lang: 'Typescript', description: 'Choose how anime and manga titles are displayed in their respective pages.', installed: false, icon: '🔤', category: 'Plugins' },
-  { id: 'anilist-discussions', name: 'AniList Discussions', author: 'Bas1874', lang: 'Typescript', description: 'Read/Post AniList discussions inside Seanime.', installed: false, icon: '💬', category: 'Plugins' },
-  { id: 'anilist-discussions-player', name: 'AniList Discussions (Integrated Player)', author: 'Bas1874', lang: 'Typescript', description: 'Read AniList discussions inside Seanime\'s built-in video player.', installed: false, icon: '💬', category: 'Plugins' },
+  { id: 'anilist-discussions', name: 'AniList Discussions', author: 'Bas1874', lang: 'Typescript', description: 'Read/Post AniList discussions inside KamiWatch.', installed: false, icon: '💬', category: 'Plugins' },
+  { id: 'anilist-discussions-player', name: 'AniList Discussions (Integrated Player)', author: 'Bas1874', lang: 'Typescript', description: 'Read AniList discussions inside KamiWatch\'s built-in video player.', installed: false, icon: '💬', category: 'Plugins' },
   { id: 'anilist-notifications', name: 'AniList Notifications', author: 'Pal', lang: 'Typescript', description: 'View your AniList notifications in real time.', installed: true, icon: '🔔', category: 'Plugins' },
   { id: 'anilist-autopause', name: 'AniList Autopause', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Automatically pause your AniList entries when you stop watching for a set time.', installed: false, icon: '⏸️', category: 'Plugins' },
-  { id: 'anilist-favorites', name: 'AniList Favorites', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Add functionality to favorite anime/manga in AniList inside Seanime.', installed: false, icon: '❤️', category: 'Plugins' },
-  { id: 'anilist-forums', name: 'AniList Forums', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Instant access to AniList forum threads inside Seanime.', installed: false, icon: '💬', category: 'Plugins' },
-  { id: 'anilist-private', name: 'AniList Private', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Add functionality to private anime in AniList inside Seanime.', installed: false, icon: '👁️‍🗨️', category: 'Plugins' },
+  { id: 'anilist-favorites', name: 'AniList Favorites', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Add functionality to favorite anime/manga in AniList inside KamiWatch.', installed: false, icon: '❤️', category: 'Plugins' },
+  { id: 'anilist-forums', name: 'AniList Forums', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Instant access to AniList forum threads inside KamiWatch.', installed: false, icon: '💬', category: 'Plugins' },
+  { id: 'anilist-private', name: 'AniList Private', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Add functionality to private anime in AniList inside KamiWatch.', installed: false, icon: '👁️‍🗨️', category: 'Plugins' },
   { id: 'anilist-watch-order', name: 'AniList Watch Order', author: 'nnotwen', lang: 'English', subLang: 'Typescript', description: 'Get the AniList-recommended watch order within the anime\'s page.', installed: false, icon: '🔢', category: 'Plugins' },
-  { id: 'anilist-activity', name: 'AniList activity', author: 'Pal', lang: 'Typescript', description: 'A plugin for viewing your friend\'s and your AniList activities inside Seanime.', installed: false, icon: '📊', category: 'Plugins' },
-  { id: 'anime-news', name: 'Anime News', author: 'SyntaxSama & Pal', lang: 'English', subLang: 'Typescript', description: 'Get anime news in your Seanime instance!', installed: false, icon: '📰', category: 'Plugins' },
+  { id: 'anilist-activity', name: 'AniList activity', author: 'Pal', lang: 'Typescript', description: 'A plugin for viewing your friend\'s and your AniList activities inside KamiWatch.', installed: false, icon: '📊', category: 'Plugins' },
+  { id: 'anime-news', name: 'Anime News', author: 'SyntaxSama & Pal', lang: 'English', subLang: 'Typescript', description: 'Get anime news in your KamiWatch instance!', installed: false, icon: '📰', category: 'Plugins' },
   { id: 'anime-notes', name: 'Anime Notes', author: 'Faddix, Bas1874', lang: 'Typescript', description: 'Add personal notes to anime.', installed: false, icon: '📝', category: 'Plugins' },
   { id: 'animethemes', name: 'AnimeThemes Player', author: 'jabifx', lang: 'Typescript', description: 'Displays an anime\'s openings and endings (using animethemes.moe) directly on its page.', installed: false, icon: '🎵', category: 'Plugins' },
-  { id: 'asunatracks-sync', name: 'AsunaTracks Sync', author: 'Kolex06', lang: 'English', subLang: 'Typescript', description: 'Live-sync Seanime/AniList anime and manga progress to AsunaTracks.', installed: true, icon: '🔄', category: 'Plugins' },
+  { id: 'asunatracks-sync', name: 'AsunaTracks Sync', author: 'Kolex06', lang: 'English', subLang: 'Typescript', description: 'Live-sync KamiWatch/AniList anime and manga progress to AsunaTracks.', installed: true, icon: '🔄', category: 'Plugins' },
   { id: 'banner-remover', name: 'Banner Remover', author: 'bas1874', lang: 'Typescript', description: 'A plugin to hide banner images on various pages.', installed: false, icon: '🚫', category: 'Plugins' },
 ]
 
