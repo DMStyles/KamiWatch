@@ -1,41 +1,45 @@
 /**
- * KamiWatch Extension Runner
- * Sandboxes and executes community-written extension scripts using Node's vm module.
- * Each extension is a CommonJS module that exports: manifest, search, getEpisodes, getStreamUrl
+ * KamiWatch — Seanime-Compatible Plugin & Extension Engine
+ * Loads and executes Seanime/KamiWatch extensions (.json files with JS Provider payload)
+ * in a secure Node VM sandbox.
  */
 
+const fs = require('fs')
+const path = require('path')
 const vm = require('vm')
 const http = require('http')
 const https = require('https')
+const { app } = require('electron')
 
 class ExtensionRunner {
   constructor() {
-    /** @type {Map<string, { code: string, module: object }>} */
+    /** @type {Map<string, { manifest: object, provider: object }>} */
     this.extensions = new Map()
   }
 
   /**
-   * Create a safe sandbox with limited globals for extension code to run in.
-   * Extensions get access to fetch, console, JSON, URL, URLSearchParams.
+   * Minimal fetch polyfill for VM sandbox supporting custom headers & timeout
    */
   _createSandbox() {
-    // Minimal fetch polyfill for the sandbox
     const sandboxFetch = (url, options = {}) => {
       return new Promise((resolve, reject) => {
         try {
           const urlObj = new URL(url)
           const isHttps = urlObj.protocol === 'https:'
           const lib = isHttps ? https : http
+          const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            ...(options.headers || {}),
+          }
+
           const reqOptions = {
             hostname: urlObj.hostname,
             port: urlObj.port || (isHttps ? 443 : 80),
             path: urlObj.pathname + urlObj.search,
             method: options.method || 'GET',
-            headers: {
-              'User-Agent': 'KamiWatch/3.0 Extension Runner',
-              ...(options.headers || {}),
-            },
+            headers,
           }
+
           const req = lib.request(reqOptions, (res) => {
             let data = ''
             res.on('data', chunk => { data += chunk })
@@ -43,12 +47,15 @@ class ExtensionRunner {
               resolve({
                 ok: res.statusCode >= 200 && res.statusCode < 300,
                 status: res.statusCode,
+                headers: res.headers,
                 text: () => Promise.resolve(data),
                 json: () => Promise.resolve(JSON.parse(data)),
               })
             })
           })
+
           req.on('error', reject)
+          if (options.timeout) req.setTimeout(options.timeout, () => { req.destroy(); reject(new Error('Fetch timeout')) })
           if (options.body) req.write(options.body)
           req.end()
         } catch (e) {
@@ -57,12 +64,38 @@ class ExtensionRunner {
       })
     }
 
+    const memoryStore = new Map()
+    const sandboxStore = {
+      get: (key) => memoryStore.get(key),
+      set: (key, val) => memoryStore.set(key, val),
+    }
+
     return {
       fetch: sandboxFetch,
+      $store: sandboxStore,
+      $scannerUtils: {
+        normalizeTitle: (title) => ({ season: 1, part: 1 }),
+        buildSmartSearchTitles: (raw) => ({ season: 1, part: 1, titles: raw }),
+      },
+      LoadDoc: (html) => {
+        // Minimal DOM query helper matching Cheerio / jQuery regex extraction
+        return (selector) => ({
+          first: () => ({
+            attr: (attrName) => {
+              const regex = new RegExp(`${attrName}=["']([^"']+)["']`, 'i')
+              const match = html.match(regex)
+              return match ? match[1] : ''
+            },
+            text: () => html.replace(/<[^>]+>/g, '').trim(),
+          }),
+          each: (cb) => {},
+          length: () => 0,
+        })
+      },
       console: {
-        log: (...args) => console.log('[Extension]', ...args),
-        error: (...args) => console.error('[Extension]', ...args),
-        warn: (...args) => console.warn('[Extension]', ...args),
+        log: (...args) => console.log('[Seanime Plugin]', ...args),
+        error: (...args) => console.error('[Seanime Plugin]', ...args),
+        warn: (...args) => console.warn('[Seanime Plugin]', ...args),
       },
       module: { exports: {} },
       exports: {},
@@ -92,80 +125,108 @@ class ExtensionRunner {
   }
 
   /**
-   * Load and validate an extension from source code.
-   * @param {string} id - Unique extension identifier
-   * @param {string} code - Extension JavaScript source code
-   * @returns {{ success: boolean, manifest?: object, error?: string }}
+   * Load Seanime JSON Extension File containing `payload` (JS class Provider)
    */
-  async loadExtension(id, code) {
+  async loadExtensionFile(filePath) {
     try {
+      if (!fs.existsSync(filePath)) return { success: false, error: 'File not found' }
+      const content = fs.readFileSync(filePath, 'utf8')
+      const json = JSON.parse(content)
+      const id = json.id || path.basename(filePath, '.json')
+
+      if (!json.payload) {
+        return { success: false, error: 'JSON extension missing payload' }
+      }
+
       const sandbox = this._createSandbox()
-      const script = new vm.Script(`
-        (function(module, exports) {
-          ${code}
-        })(module, exports)
-      `)
+      const scriptCode = `
+        ${json.payload}
+        if (typeof Provider !== 'undefined') {
+          module.exports = new Provider();
+        }
+      `
+      const script = new vm.Script(scriptCode)
       const context = vm.createContext(sandbox)
       script.runInContext(context, { timeout: 10000 })
 
-      const ext = sandbox.module.exports
-      if (!ext.manifest) throw new Error('Extension is missing a "manifest" export')
-      if (!ext.manifest.name) throw new Error('Extension manifest is missing "name"')
-      if (!ext.manifest.version) throw new Error('Extension manifest is missing "version"')
-      if (!ext.manifest.type) throw new Error('Extension manifest is missing "type" (anime|manga)')
+      const provider = sandbox.module.exports
+      this.extensions.set(id, {
+        manifest: {
+          id,
+          name: json.name || id,
+          version: json.version || '1.0.0',
+          type: json.type || 'plugin',
+          description: json.description || '',
+          author: json.author || 'Community',
+          icon: json.icon || '',
+          language: json.language || 'javascript',
+          lang: json.lang || 'en',
+        },
+        provider,
+      })
 
-      this.extensions.set(id, { code, module: ext })
-      return { success: true, manifest: ext.manifest }
+      console.log(`[ExtensionRunner] Loaded Seanime extension: ${json.name} (${id})`)
+      return { success: true, manifest: this.extensions.get(id).manifest }
     } catch (e) {
+      console.error(`[ExtensionRunner] Error loading ${filePath}:`, e.message)
       return { success: false, error: e.message }
     }
   }
 
   /**
-   * Call a function exported by an extension.
-   * @param {string} id - Extension ID
-   * @param {string} fnName - Function name to call (search, getEpisodes, getStreamUrl)
-   * @param {Array} args - Arguments to pass
-   * @returns {{ result?: any, error?: string }}
+   * Automatically scan user's local Seanime extensions folder & KamiWatch extensions folder
    */
-  async callFunction(id, fnName, args = []) {
-    const ext = this.extensions.get(id)
-    if (!ext) return { error: `Extension "${id}" is not loaded` }
+  async autoScanAndLoad() {
+    const searchDirs = [
+      path.join(app.getPath('userData'), 'extensions'),
+      path.join(process.env.APPDATA || '', 'Seanime', 'extensions'),
+    ]
 
-    const fn = ext.module[fnName]
-    if (typeof fn !== 'function') return { error: `Function "${fnName}" not found in extension "${id}"` }
+    for (const dir of searchDirs) {
+      try {
+        if (fs.existsSync(dir)) {
+          const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
+          for (const file of files) {
+            await this.loadExtensionFile(path.join(dir, file))
+          }
+        }
+      } catch (e) {
+        console.error(`[ExtensionRunner] Scan dir error ${dir}:`, e.message)
+      }
+    }
+  }
+
+  /**
+   * Call a provider method (search, findChapters, findChapterPages, findEpisodes, findEpisodeServer)
+   */
+  async callProvider(id, method, ...args) {
+    const ext = this.extensions.get(id)
+    if (!ext || !ext.provider) return { error: `Extension "${id}" is not loaded or active` }
+
+    const fn = ext.provider[method]
+    if (typeof fn !== 'function') return { error: `Method "${method}" not found in provider "${id}"` }
 
     try {
       const result = await Promise.race([
-        fn(...args),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Extension call timed out after 30s')), 30000)),
+        fn.apply(ext.provider, args),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Extension execution timeout after 25s')), 25000)),
       ])
       return { result }
     } catch (e) {
+      console.error(`[ExtensionRunner] Error calling ${method} on ${id}:`, e.message)
       return { error: e.message }
     }
   }
 
   /**
-   * Get list of all loaded extensions with their manifests.
-   * @returns {Array<{ id: string, manifest: object }>}
+   * Get list of all loaded active extensions
    */
   getLoadedExtensions() {
     const list = []
     for (const [id, ext] of this.extensions.entries()) {
-      if (id !== '__test__') {
-        list.push({ id, manifest: ext.module.manifest })
-      }
+      list.push({ id, manifest: ext.manifest, active: true })
     }
     return list
-  }
-
-  /**
-   * Remove an extension by ID.
-   * @param {string} id
-   */
-  unloadExtension(id) {
-    this.extensions.delete(id)
   }
 }
 

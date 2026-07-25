@@ -339,38 +339,15 @@ ipcMain.handle('player-get-time', async () => {
 });
 
 // ============================================================
-// EXTENSION SYSTEM
+// EXTENSION SYSTEM (Seanime Compatible Engine)
 // ============================================================
 const extensionRunner = require('./extensionRunner');
-const extensionsDir = path.join(app.getPath('userData'), 'extensions');
 
-// Create extensions directory if it doesn't exist
-try { fs.mkdirSync(extensionsDir, { recursive: true }); } catch {}
-
-// Load all installed extensions on startup
-async function loadAllExtensions() {
-  try {
-    const files = fs.readdirSync(extensionsDir).filter(f => f.endsWith('.js'));
-    for (const file of files) {
-      const id = path.basename(file, '.js');
-      const code = fs.readFileSync(path.join(extensionsDir, file), 'utf8');
-      const result = await extensionRunner.loadExtension(id, code);
-      if (result.success) {
-        console.log(`[Extensions] Loaded: ${result.manifest.name} (${id})`);
-      } else {
-        console.error(`[Extensions] Failed to load ${id}:`, result.error);
-      }
-    }
-  } catch (e) {
-    console.error('[Extensions] Error loading extensions:', e.message);
-  }
-}
-
-app.whenReady().then(() => {
-  loadAllExtensions();
+app.whenReady().then(async () => {
+  await extensionRunner.autoScanAndLoad();
 });
 
-// List all installed extensions
+// List all installed and loaded extensions
 ipcMain.handle('extension:list', async () => {
   try {
     return extensionRunner.getLoadedExtensions();
@@ -379,7 +356,16 @@ ipcMain.handle('extension:list', async () => {
   }
 });
 
-// Install an extension from a URL or raw code
+// Call a provider method (search, findChapters, findChapterPages, findEpisodes, findEpisodeServer)
+ipcMain.handle('extension:callProvider', async (event, { id, method, args }) => {
+  try {
+    return await extensionRunner.callProvider(id, method, ...(args || []));
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
+// Install an extension from a URL or raw JSON code
 ipcMain.handle('extension:install', async (event, { url, code }) => {
   try {
     let extCode = code;
@@ -403,24 +389,19 @@ ipcMain.handle('extension:install', async (event, { url, code }) => {
 
     if (!extCode) return { success: false, error: 'No extension code or URL provided' };
 
-    // Test load to validate manifest and syntax
-    const testResult = await extensionRunner.loadExtension('__test__', extCode);
-    extensionRunner.unloadExtension('__test__');
-    if (!testResult.success) return { success: false, error: testResult.error };
+    const extensionsDir = path.join(app.getPath('userData'), 'extensions');
+    try { fs.mkdirSync(extensionsDir, { recursive: true }); } catch {}
 
-    // Use manifest id or sanitize name for filename
-    const extId = (testResult.manifest.id || testResult.manifest.name)
+    const json = JSON.parse(extCode);
+    const extId = (json.id || json.name || 'custom')
       .toLowerCase()
-      .replace(/[^a-z0-9-_]/g, '-')
-      .replace(/-+/g, '-');
+      .replace(/[^a-z0-9-_]/g, '-');
 
-    const filePath = path.join(extensionsDir, `${extId}.js`);
+    const filePath = path.join(extensionsDir, `${extId}.json`);
     fs.writeFileSync(filePath, extCode, 'utf8');
 
-    // Actually load it
-    await extensionRunner.loadExtension(extId, extCode);
-
-    return { success: true, id: extId, manifest: testResult.manifest };
+    const loadRes = await extensionRunner.loadExtensionFile(filePath);
+    return loadRes;
   } catch (e) {
     return { success: false, error: e.message };
   }
@@ -429,16 +410,12 @@ ipcMain.handle('extension:install', async (event, { url, code }) => {
 // Remove an extension
 ipcMain.handle('extension:remove', async (event, { id }) => {
   try {
-    const filePath = path.join(extensionsDir, `${id}.js`);
+    const extensionsDir = path.join(app.getPath('userData'), 'extensions');
+    const filePath = path.join(extensionsDir, `${id}.json`);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    extensionRunner.unloadExtension(id);
+    extensionRunner.extensions.delete(id);
     return { success: true };
   } catch (e) {
     return { success: false, error: e.message };
   }
-});
-
-// Call a function from an extension
-ipcMain.handle('extension:call', async (event, { id, fn, args }) => {
-  return extensionRunner.callFunction(id, fn, args || []);
 });

@@ -34,6 +34,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     list: () => ipcRenderer.invoke('extension:list'),
     install: (data) => ipcRenderer.invoke('extension:install', data),
     remove: (id) => ipcRenderer.invoke('extension:remove', { id }),
-    call: (id, fn, args) => ipcRenderer.invoke('extension:call', { id, fn, args }),
+    callProvider: (id, method, args) => ipcRenderer.invoke('extension:callProvider', { id, method, args }),
   },
 });
