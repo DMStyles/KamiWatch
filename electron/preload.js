@@ -36,4 +36,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     remove: (id) => ipcRenderer.invoke('extension:remove', { id }),
     callProvider: (id, method, args) => ipcRenderer.invoke('extension:callProvider', { id, method, args }),
   },
+  // Discord RPC
+  discord: {
+    updatePresence: (data) => ipcRenderer.invoke('discord:updatePresence', data),
+    clearPresence: () => ipcRenderer.invoke('discord:clearPresence'),
+  },
 });

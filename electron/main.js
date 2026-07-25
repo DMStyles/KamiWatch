@@ -419,3 +419,41 @@ ipcMain.handle('extension:remove', async (event, { id }) => {
     return { success: false, error: e.message };
   }
 });
+
+// ============================================================
+// DISCORD RICH PRESENCE (RPC)
+// ============================================================
+const DiscordRPC = require('discord-rpc');
+const DISCORD_CLIENT_ID = '123456789012345678';
+
+let rpcClient = null;
+
+app.whenReady().then(() => {
+  try {
+    rpcClient = new DiscordRPC.Client({ transport: 'ipc' });
+    rpcClient.on('ready', () => {
+      console.log('[Discord RPC] Connected to Discord!');
+    });
+    rpcClient.login({ clientId: DISCORD_CLIENT_ID }).catch(() => {});
+  } catch {}
+});
+
+ipcMain.handle('discord:updatePresence', async (event, data) => {
+  if (!rpcClient) return;
+  try {
+    await rpcClient.setActivity({
+      details: data.details || 'Watching Anime',
+      state: data.state || 'KamiWatch',
+      startTimestamp: data.startTimestamp || Date.now(),
+      largeImageKey: 'kamiwatch_logo',
+      largeImageText: 'KamiWatch',
+      instance: false,
+    });
+  } catch {}
+});
+
+ipcMain.handle('discord:clearPresence', async () => {
+  if (rpcClient) {
+    try { await rpcClient.clearActivity(); } catch {}
+  }
+});
