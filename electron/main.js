@@ -220,8 +220,15 @@ ipcMain.handle('open-external', async (_, url) => {
   await shell.openExternal(url);
 });
 
-ipcMain.handle('check-update', () => {
-  autoUpdater.checkForUpdates();
+ipcMain.handle('check-update', async () => {
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { success: true, version: result?.updateInfo?.version };
+  } catch (e) {
+    console.error('[Updater] Manual check error:', e.message);
+    mainWindow?.webContents.send('update-error', e.message);
+    return { success: false, error: e.message };
+  }
 });
 
 ipcMain.handle('send-notification', (_, { title, body }) => {

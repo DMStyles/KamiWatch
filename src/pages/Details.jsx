@@ -30,6 +30,7 @@ export default function Details() {
   const [error, setError] = useState('')
   const [watchOrder, setWatchOrder] = useState(null)
   const [watchlistStatus, setWatchlistStatus] = useState('')
+  const [isFavorite, setIsFavorite] = useState(false)
   const [mangaMatch, setMangaMatch] = useState(null)
 
   // Scraper Source States

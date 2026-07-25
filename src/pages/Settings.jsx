@@ -68,9 +68,33 @@ export default function Settings() {
     }
   }, [])
 
-  const checkUpdate = () => {
+  const checkUpdate = async () => {
     setUpdateStatus('Checking for updates...')
-    window.electronAPI?.checkUpdate()
+    try {
+      const res = await window.electronAPI?.checkUpdate()
+      if (res?.success && res?.version) {
+        setUpdateStatus(`✨ Update available! (v${res.version})`)
+        return
+      }
+    } catch {}
+
+    // Fallback: Check GitHub Releases API directly
+    try {
+      const ghRes = await fetch('https://api.github.com/repos/DMStyles/KamiWatch/releases/latest')
+      const ghData = await ghRes.json()
+      if (ghData.tag_name) {
+        const latestTag = ghData.tag_name.replace('v', '')
+        if (latestTag !== pkg.version) {
+          setUpdateStatus(`✨ Update available! (${ghData.tag_name})`)
+        } else {
+          setUpdateStatus('✅ You are on the latest version!')
+        }
+      } else {
+        setUpdateStatus('✅ You are on the latest version!')
+      }
+    } catch {
+      setUpdateStatus('⚠️ Could not check for updates. Check internet connection.')
+    }
   }
 
   return (
