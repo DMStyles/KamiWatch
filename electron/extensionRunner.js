@@ -178,8 +178,10 @@ class ExtensionRunner {
    */
   async autoScanAndLoad() {
     const searchDirs = [
+      path.join(__dirname, '..', 'public', 'extensions'),
       path.join(app.getPath('userData'), 'extensions'),
       path.join(process.env.APPDATA || '', 'Seanime', 'extensions'),
+      path.join(process.env.APPDATA || '', 'KamiWatch', 'extensions'),
     ]
 
     for (const dir of searchDirs) {
