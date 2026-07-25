@@ -241,6 +241,10 @@ ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall();
 });
 
+// Configure autoUpdater
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
 // ─── Auto-updater events ─────────────────────────────────
 autoUpdater.on('checking-for-update', () => {
   console.log('[Updater] Checking for update...');
@@ -255,6 +259,11 @@ autoUpdater.on('update-available', (info) => {
 autoUpdater.on('update-not-available', (info) => {
   console.log('[Updater] Update not available:', info ? info.version : '');
   mainWindow?.webContents.send('update-not-available', info);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log('[Updater] Download speed:', progressObj.bytesPerSecond, 'Percent:', progressObj.percent);
+  mainWindow?.webContents.send('download-progress', progressObj);
 });
 
 autoUpdater.on('update-downloaded', (info) => {

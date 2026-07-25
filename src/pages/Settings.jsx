@@ -54,12 +54,26 @@ export default function Settings() {
     if (window.electronAPI) {
       window.electronAPI.onCheckingForUpdate(() => {
         setUpdateStatus('Checking for updates...')
+        setDownloadProgress(null)
       })
       window.electronAPI.onUpdateAvailable((_, info) => {
-        setUpdateStatus(`✨ Update available! (v${info.version})`)
+        setNewVersionTag(info?.version ? `v${info.version}` : '')
+        setUpdateStatus(`✨ Update available! (v${info.version}) — Downloading...`)
       })
       window.electronAPI.onUpdateNotAvailable(() => {
         setUpdateStatus('✅ You are on the latest version!')
+        setDownloadProgress(null)
+      })
+      window.electronAPI.onDownloadProgress((_, progressObj) => {
+        const percent = Math.round(progressObj.percent || 0)
+        setDownloadProgress(percent)
+        setUpdateStatus(`📥 Downloading update... ${percent}%`)
+      })
+      window.electronAPI.onUpdateDownloaded((_, info) => {
+        setUpdateReady(true)
+        setDownloadProgress(null)
+        setNewVersionTag(info?.version ? `v${info.version}` : '')
+        setUpdateStatus(`🎉 Update v${info.version} ready!`)
       })
       window.electronAPI.onUpdateError((_, errMsg) => {
         setUpdateStatus(`❌ Update check failed!`)
@@ -70,9 +84,11 @@ export default function Settings() {
 
   const checkUpdate = async () => {
     setUpdateStatus('Checking for updates...')
+    setDownloadProgress(null)
     try {
       const res = await window.electronAPI?.checkUpdate()
       if (res?.success && res?.version) {
+        setNewVersionTag(`v${res.version}`)
         setUpdateStatus(`✨ Update available! (v${res.version})`)
         return
       }
@@ -85,6 +101,7 @@ export default function Settings() {
       if (ghData.tag_name) {
         const latestTag = ghData.tag_name.replace('v', '')
         if (latestTag !== pkg.version) {
+          setNewVersionTag(ghData.tag_name)
           setUpdateStatus(`✨ Update available! (${ghData.tag_name})`)
         } else {
           setUpdateStatus('✅ You are on the latest version!')
@@ -94,6 +111,14 @@ export default function Settings() {
       }
     } catch {
       setUpdateStatus('⚠️ Could not check for updates. Check internet connection.')
+    }
+  }
+
+  const handleInstallUpdate = () => {
+    if (updateReady) {
+      window.electronAPI?.installUpdate()
+    } else {
+      window.electronAPI?.openExternal('https://github.com/DMStyles/KamiWatch/releases/latest')
     }
   }
 
@@ -296,10 +321,29 @@ export default function Settings() {
               <p className="settings-desc">KamiWatch v{pkg.version} — Auto-updates via GitHub Releases</p>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:12}}>
-              {updateStatus && <span style={{fontSize:12,color:'var(--success)'}}>{updateStatus}</span>}
-              <button className="btn btn-secondary" style={{fontSize:12,padding:'6px 16px'}} onClick={checkUpdate}>
-                Check for Updates
-              </button>
+              {updateStatus && <span style={{fontSize:12,color: updateReady ? '#10b981' : 'var(--success)'}}>{updateStatus}</span>}
+              
+              {updateReady ? (
+                <button
+                  className="btn btn-primary"
+                  style={{fontSize:12,padding:'6px 18px',background:'#10b981',borderColor:'#10b981',fontWeight:700}}
+                  onClick={handleInstallUpdate}
+                >
+                  🚀 Restart & Install {newVersionTag}
+                </button>
+              ) : newVersionTag && newVersionTag !== `v${pkg.version}` ? (
+                <button
+                  className="btn btn-primary"
+                  style={{fontSize:12,padding:'6px 18px',fontWeight:700}}
+                  onClick={handleInstallUpdate}
+                >
+                  ⬇ Download & Install {newVersionTag}
+                </button>
+              ) : (
+                <button className="btn btn-secondary" style={{fontSize:12,padding:'6px 16px'}} onClick={checkUpdate}>
+                  Check for Updates
+                </button>
+              )}
             </div>
           </div>
         </section>
