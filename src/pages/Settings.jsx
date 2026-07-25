@@ -8,8 +8,11 @@ const API = 'http://localhost:8642'
 export default function Settings() {
   const { settings, saveSettings } = useContext(AppContext)
   const navigate = useNavigate()
-  const [local, setLocal] = useState(settings)
+  const [local, setLocal] = useState(settings || {})
   const [updateStatus, setUpdateStatus] = useState('')
+  const [updateReady, setUpdateReady] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState(null)
+  const [newVersionTag, setNewVersionTag] = useState('')
 
   const set = (key, val) => setLocal(s => ({ ...s, [key]: val }))
   const save = async () => {
