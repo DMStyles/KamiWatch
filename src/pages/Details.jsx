@@ -109,10 +109,14 @@ export default function Details() {
         setError(data.error)
       } else {
         setAnime(data)
-        // Load watchlist status
+        // Load watchlist & favorite status
         try {
           const savedList = JSON.parse(localStorage.getItem('kamiwatch-watchlist') || '{}')
           setWatchlistStatus(savedList[data.title]?.status || '')
+        } catch {}
+        try {
+          const savedFavs = JSON.parse(localStorage.getItem('kamiwatch-favorites') || '{}')
+          setIsFavorite(!!savedFavs[data.title])
         } catch {}
 
         // Immediately start searching sources for matching title
@@ -149,6 +153,30 @@ export default function Details() {
         }
       }
       localStorage.setItem('kamiwatch-watchlist', JSON.stringify(savedList))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const toggleFavorite = () => {
+    if (!anime) return
+    try {
+      const savedFavs = JSON.parse(localStorage.getItem('kamiwatch-favorites') || '{}')
+      const newFav = !isFavorite
+      setIsFavorite(newFav)
+      if (!newFav) {
+        delete savedFavs[anime.title]
+      } else {
+        savedFavs[anime.title] = {
+          title: anime.title,
+          id: anime.id,
+          thumbnail: anime.cover,
+          type: anime.type,
+          year: anime.year,
+          timestamp: Date.now()
+        }
+      }
+      localStorage.setItem('kamiwatch-favorites', JSON.stringify(savedFavs))
     } catch (e) {
       console.error(e)
     }
@@ -548,21 +576,38 @@ export default function Details() {
             ))}
           </div>
 
-          {/* Watchlist */}
-          <div style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>Watchlist</span>
-            <select
-              className="settings-select"
-              style={{ flex: 1, minWidth: 0, background: 'var(--bg-secondary)', borderColor: 'var(--border-hover)', fontSize: 12 }}
-              value={watchlistStatus}
-              onChange={(e) => handleWatchlistChange(e.target.value)}
+          {/* Watchlist & Heart Favorite */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 0, background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', borderRadius: 14, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>Watchlist</span>
+              <select
+                className="settings-select"
+                style={{ flex: 1, minWidth: 0, background: 'var(--bg-secondary)', borderColor: 'var(--border-hover)', fontSize: 11.5, padding: '4px 8px' }}
+                value={watchlistStatus}
+                onChange={(e) => handleWatchlistChange(e.target.value)}
+              >
+                <option value="">➕ Add to List...</option>
+                <option value="watching">👀 Watching</option>
+                <option value="plan">📅 Plan to Watch</option>
+                <option value="completed">✅ Completed</option>
+                <option value="on_hold">⏸️ On Hold</option>
+                <option value="dropped">🗑️ Dropped</option>
+              </select>
+            </div>
+            <button
+              onClick={toggleFavorite}
+              title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+              style={{
+                height: 42, width: 42, borderRadius: 14,
+                background: isFavorite ? 'rgba(239, 68, 68, 0.2)' : 'var(--glass-bg)',
+                border: isFavorite ? '1px solid #ef4444' : '1px solid var(--glass-border)',
+                color: isFavorite ? '#ef4444' : 'var(--text-muted)',
+                fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s ease', flexShrink: 0
+              }}
             >
-              <option value="">➕ Add to List...</option>
-              <option value="watching">👀 Watching</option>
-              <option value="plan">📅 Plan to Watch</option>
-              <option value="completed">✅ Completed</option>
-              <option value="favorite">💖 Favorite</option>
-            </select>
+              {isFavorite ? '❤️' : '🤍'}
+            </button>
           </div>
 
           {/* Synopsis + Genres */}

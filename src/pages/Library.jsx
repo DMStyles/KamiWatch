@@ -6,8 +6,9 @@ const API = 'http://localhost:8642'
 
 export default function Library() {
   const [activeTab, setActiveTab] = useState('watchlist') // 'watchlist' or 'downloads'
-  const [watchlistFilter, setWatchlistFilter] = useState('all') // 'all', 'watching', 'plan', 'completed', 'favorite'
+  const [watchlistFilter, setWatchlistFilter] = useState('all') // 'all', 'watching', 'plan', 'completed', 'on_hold', 'dropped', 'favorite'
   const [watchlist, setWatchlist] = useState([])
+  const [favorites, setFavorites] = useState([])
   const [library, setLibrary] = useState([])
   const [loading, setLoading] = useState(true)
   const { setPlayerModal } = useContext(AppContext)
@@ -37,23 +38,38 @@ export default function Library() {
     } catch {
       setWatchlist([])
     }
+    try {
+      const savedFavs = JSON.parse(localStorage.getItem('kamiwatch-favorites') || '{}')
+      setFavorites(Object.values(savedFavs))
+    } catch {
+      setFavorites([])
+    }
   }
 
-  const handleRemoveFromWatchlist = (title, e) => {
+  const handleRemoveItem = (title, status, e) => {
     e.stopPropagation()
     try {
-      const savedList = JSON.parse(localStorage.getItem('kamiwatch-watchlist') || '{}')
-      delete savedList[title]
-      localStorage.setItem('kamiwatch-watchlist', JSON.stringify(savedList))
-      setWatchlist(Object.values(savedList))
+      if (watchlistFilter === 'favorite' || status === 'favorite') {
+        const savedFavs = JSON.parse(localStorage.getItem('kamiwatch-favorites') || '{}')
+        delete savedFavs[title]
+        localStorage.setItem('kamiwatch-favorites', JSON.stringify(savedFavs))
+        setFavorites(Object.values(savedFavs))
+      } else {
+        const savedList = JSON.parse(localStorage.getItem('kamiwatch-watchlist') || '{}')
+        delete savedList[title]
+        localStorage.setItem('kamiwatch-watchlist', JSON.stringify(savedList))
+        setWatchlist(Object.values(savedList))
+      }
     } catch {}
   }
 
-  // Filter watchlist items based on active sub-filter
-  const filteredWatchlist = watchlist.filter(item => {
-    if (watchlistFilter === 'all') return true
-    return item.status === watchlistFilter
-  })
+  // Filter watchlist / favorites items based on active sub-filter
+  const filteredWatchlist = watchlistFilter === 'favorite'
+    ? favorites.map(f => ({ ...f, status: 'favorite' }))
+    : watchlist.filter(item => {
+        if (watchlistFilter === 'all') return true
+        return item.status === watchlistFilter
+      })
 
   return (
     <div className="library-page" style={{ padding: '24px 28px' }}>
@@ -102,7 +118,9 @@ export default function Library() {
               { id: 'watching', label: '👀 Watching' },
               { id: 'plan', label: '📅 Plan to Watch' },
               { id: 'completed', label: '✅ Completed' },
-              { id: 'favorite', label: '💖 Favorites' }
+              { id: 'on_hold', label: '⏸️ On Hold' },
+              { id: 'dropped', label: '🗑️ Dropped' },
+              { id: 'favorite', label: '❤️ Favorites' }
             ].map(f => (
               <button
                 key={f.id}
@@ -168,7 +186,7 @@ export default function Library() {
                         {item.status.toUpperCase()}
                       </span>
                       <button
-                        onClick={(e) => handleRemoveFromWatchlist(item.title, e)}
+                        onClick={(e) => handleRemoveItem(item.title, item.status, e)}
                         style={{
                           background: 'transparent',
                           color: 'var(--text-muted)',
