@@ -5,6 +5,24 @@ import { AppContext } from '../App'
 const API = 'http://localhost:8642'
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 
+const convertToLocalTime = (timeStr) => {
+  if (!timeStr || timeStr === 'Time TBA' || timeStr === 'NOW') return timeStr
+  try {
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+    if (!match) return timeStr
+    let [_, hours, minutes, ampm] = match
+    hours = parseInt(hours, 10)
+    if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12
+    if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0
+
+    const now = new Date()
+    const utcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hours, parseInt(minutes, 10)))
+    return utcDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+  } catch (e) {
+    return timeStr
+  }
+}
+
 export default function Schedule() {
   const { settings } = useContext(AppContext)
   const navigate = useNavigate()
@@ -130,7 +148,7 @@ export default function Schedule() {
                     {show.airings.map((air, idx) => (
                       <div key={idx} className="airing-row">
                         <span className={`airing-type-badge badge-${air.type.toLowerCase()}`}>{air.type}</span>
-                        <span className="airing-time-val">{air.time}</span>
+                        <span className="airing-time-val">{convertToLocalTime(air.time)}</span>
                       </div>
                     ))}
                   </div>

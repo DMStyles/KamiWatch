@@ -52,6 +52,73 @@ export default function Details() {
   const [watchlistStatus, setWatchlistStatus] = useState('')
   const [isFavorite, setIsFavorite] = useState(false)
   const [mangaMatch, setMangaMatch] = useState(null)
+  const [nextAiring, setNextAiring] = useState(null)
+
+  useEffect(() => {
+    if (!anime) return
+    const statusStr = (anime.status || '').toLowerCase()
+    const isOngoing = statusStr.includes('currently') || statusStr.includes('airing') || statusStr.includes('releasing') || anime.airing
+    if (isOngoing) {
+      fetchNextAiringSchedule(anime.title)
+    } else {
+      setNextAiring(null)
+    }
+  }, [anime])
+
+  const fetchNextAiringSchedule = async (title) => {
+    const query = `
+      query ($search: String) {
+        Media (search: $search, type: ANIME) {
+          status
+          nextAiringEpisode {
+            airingAt
+            timeUntilAiring
+            episode
+          }
+        }
+      }
+    `
+    try {
+      const res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: { search: title } })
+      })
+      const data = await res.json()
+      const media = data?.data?.Media
+      if (media?.nextAiringEpisode) {
+        setNextAiring(media.nextAiringEpisode)
+      }
+    } catch {}
+  }
+
+  const formatAiringDate = (timestampSec) => {
+    const d = new Date(timestampSec * 1000)
+    const day = d.toLocaleDateString([], { weekday: 'long' })
+    const dayNum = d.getDate()
+    const month = d.toLocaleDateString([], { month: 'short' })
+    const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+    return `${day} ${dayNum} ${month}, ${time}`
+  }
+
+  const formatCountdown = (seconds) => {
+    if (seconds <= 0) return 'Airing Now'
+    const days = Math.floor(seconds / (3600 * 24))
+    const hours = Math.floor((seconds % (3600 * 24)) / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+    if (days > 0) return `${days}d ${hours}h`
+    if (hours > 0) return `${hours}h ${mins}m`
+    return `${mins}m`
+  }
+
+  const getTimezoneOffsetString = () => {
+    const offsetMin = new Date().getTimezoneOffset()
+    const sign = offsetMin <= 0 ? '+' : '-'
+    const absMin = Math.abs(offsetMin)
+    const hrs = Math.floor(absMin / 60).toString().padStart(2, '0')
+    const mins = (absMin % 60).toString().padStart(2, '0')
+    return `${sign}${hrs}${mins}`
+  }
 
   // Scraper Source States
   const [activeSource, setActiveSource] = useState(SOURCES[0].id)
@@ -610,6 +677,54 @@ export default function Details() {
           }}>
             <img src={anime.cover} alt={anime.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           </div>
+
+          {/* ── Next Episode Release Time & Countdown Box (Ongoing Anime Only) ── */}
+          {nextAiring && (
+            <div style={{
+              background: '#161622', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 14, padding: '18px 16px', textAlign: 'center', color: '#fff'
+            }}>
+              <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 12 }}>Release Time</h3>
+              
+              <div style={{ fontSize: 12, color: '#ef4444', fontWeight: 700, marginBottom: 4 }}>
+                Episode {nextAiring.episode} Raw:
+              </div>
+              <div style={{
+                background: '#ef4444', color: '#fff', padding: '6px 12px', borderRadius: 8,
+                fontSize: 12.5, fontWeight: 700, display: 'inline-block', marginBottom: 12
+              }}>
+                {formatAiringDate(nextAiring.airingAt)}
+              </div>
+
+              <div style={{ fontSize: 12, color: '#3b82f6', fontWeight: 700, marginBottom: 4 }}>
+                Episode {nextAiring.episode} Subs:
+              </div>
+              <div style={{
+                background: '#2563eb', color: '#fff', padding: '6px 12px', borderRadius: 8,
+                fontSize: 12.5, fontWeight: 700, display: 'inline-block', marginBottom: 10
+              }}>
+                {formatAiringDate(nextAiring.airingAt + 42 * 60)}
+              </div>
+
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 12 }}>
+                *Converted to your timezone ({getTimezoneOffsetString()})
+              </div>
+
+              <hr style={{ borderColor: 'rgba(255,255,255,0.08)', margin: '12px 0' }} />
+
+              <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>Countdown</h3>
+
+              <div style={{ fontSize: 12.5, marginBottom: 4 }}>
+                <span style={{ color: '#ef4444', fontWeight: 700 }}>Episode {nextAiring.episode} Raw:</span>{' '}
+                <span style={{ fontWeight: 800 }}>{formatCountdown(nextAiring.timeUntilAiring)}</span>
+              </div>
+
+              <div style={{ fontSize: 12.5 }}>
+                <span style={{ color: '#3b82f6', fontWeight: 700 }}>Episode {nextAiring.episode} Subs:</span>{' '}
+                <span style={{ fontWeight: 800 }}>{formatCountdown(nextAiring.timeUntilAiring + 42 * 60)}</span>
+              </div>
+            </div>
+          )}
 
           {/* Quick stats card */}
           <div style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
