@@ -375,6 +375,10 @@ export default function Details() {
         const res = await fetch(`${API}/museasia/resolve?url=${encodeURIComponent(finalUrl)}`)
         const data = await res.json()
         if (data.url) finalUrl = data.url
+      } else if (activeSource === 'animetake' || finalUrl.includes('animetake')) {
+        const res = await fetch(`${API}/animetake/resolve?url=${encodeURIComponent(finalUrl)}&title=${encodeURIComponent(anime.title)}&ep=${encodeURIComponent(epNum)}`)
+        const data = await res.json()
+        if (data.url) finalUrl = data.url
       }
       setPlayerModal({
         title: `${anime.title} - Episode ${ep.number}`,
