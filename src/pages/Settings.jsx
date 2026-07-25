@@ -85,12 +85,23 @@ export default function Settings() {
     }
   }, [])
 
+  const isNewer = (verStr) => {
+    if (!verStr) return false
+    const v1 = verStr.replace('v', '').split('.').map(Number)
+    const v2 = pkg.version.replace('v', '').split('.').map(Number)
+    for (let i = 0; i < 3; i++) {
+      if ((v1[i] || 0) > (v2[i] || 0)) return true
+      if ((v1[i] || 0) < (v2[i] || 0)) return false
+    }
+    return false
+  }
+
   const checkUpdate = async () => {
     setUpdateStatus('Checking for updates...')
     setDownloadProgress(null)
     try {
       const res = await window.electronAPI?.checkUpdate()
-      if (res?.success && res?.version) {
+      if (res?.success && res?.version && isNewer(res.version)) {
         setNewVersionTag(`v${res.version}`)
         setUpdateStatus(`✨ Update available! (v${res.version})`)
         return
@@ -103,7 +114,7 @@ export default function Settings() {
       const ghData = await ghRes.json()
       if (ghData.tag_name) {
         const latestTag = ghData.tag_name.replace('v', '')
-        if (latestTag !== pkg.version) {
+        if (isNewer(latestTag)) {
           setNewVersionTag(ghData.tag_name)
           setUpdateStatus(`✨ Update available! (${ghData.tag_name})`)
         } else {
