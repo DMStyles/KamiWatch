@@ -365,47 +365,90 @@ ipcMain.handle('extension:callProvider', async (event, { id, method, args }) => 
   }
 });
 
+// Helper to fetch URL following redirects
+function fetchUrlWithRedirects(targetUrl, maxRedirects = 5) {
+  return new Promise((resolve, reject) => {
+    if (maxRedirects <= 0) return reject(new Error('Too many redirects'))
+    try {
+      const urlObj = new URL(targetUrl)
+      const isHttps = urlObj.protocol === 'https:'
+      const lib = isHttps ? https : http
+      lib.get(targetUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' } }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const redirectUrl = new URL(res.headers.location, targetUrl).toString()
+          return resolve(fetchUrlWithRedirects(redirectUrl, maxRedirects - 1))
+        }
+        if (res.statusCode !== 200) {
+          return reject(new Error(`HTTP ${res.statusCode} fetching ${targetUrl}`))
+        }
+        let data = ''
+        res.on('data', chunk => { data += chunk })
+        res.on('end', () => resolve(data))
+      }).on('error', reject)
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
 // Install an extension from a URL or raw JSON code
 ipcMain.handle('extension:install', async (event, { url, code }) => {
   try {
-    let extCode = code;
+    let extCode = code
 
     // Download from URL if no code provided
     if (url && !extCode) {
-      extCode = await new Promise((resolve, reject) => {
-        const isHttps = url.startsWith('https');
-        const lib = isHttps ? https : http;
-        lib.get(url, { headers: { 'User-Agent': 'KamiWatch/3.0' } }, (res) => {
-          if (res.statusCode !== 200) {
-            reject(new Error(`HTTP ${res.statusCode} fetching extension URL`));
-            return;
-          }
-          let data = '';
-          res.on('data', chunk => { data += chunk; });
-          res.on('end', () => resolve(data));
-        }).on('error', reject);
-      });
+      extCode = await fetchUrlWithRedirects(url)
     }
 
-    if (!extCode) return { success: false, error: 'No extension code or URL provided' };
+    if (!extCode) return { success: false, error: 'No extension code or URL provided' }
 
-    const extensionsDir = path.join(app.getPath('userData'), 'extensions');
-    try { fs.mkdirSync(extensionsDir, { recursive: true }); } catch {}
+    let json = null
+    try {
+      json = JSON.parse(extCode)
+    } catch (err) {
+      // If code is not JSON (e.g. raw JS/TS class Provider starting with "import" or "class")
+      const cleanName = path.basename(url || 'plugin', path.extname(url || '.js'))
+      json = {
+        id: cleanName.toLowerCase().replace(/[^a-z0-9-_]/g, '-'),
+        name: cleanName,
+        version: '1.0.0',
+        type: 'plugin',
+        payload: extCode
+      }
+    }
 
-    const json = JSON.parse(extCode);
+    // If manifest has payloadURI but payload field is empty, fetch the provider payload
+    if (json && !json.payload && json.payloadURI) {
+      try {
+        const payloadData = await fetchUrlWithRedirects(json.payloadURI)
+        json.payload = payloadData
+      } catch (e) {
+        console.error('[ExtensionEngine] Failed to fetch payloadURI:', e.message)
+      }
+    }
+
+    if (!json.payload) {
+      return { success: false, error: 'Extension missing executable JS Provider payload.' }
+    }
+
+    const extensionsDir = path.join(app.getPath('userData'), 'extensions')
+    try { fs.mkdirSync(extensionsDir, { recursive: true }) } catch {}
+
     const extId = (json.id || json.name || 'custom')
       .toLowerCase()
-      .replace(/[^a-z0-9-_]/g, '-');
+      .replace(/[^a-z0-9-_]/g, '-')
 
-    const filePath = path.join(extensionsDir, `${extId}.json`);
-    fs.writeFileSync(filePath, extCode, 'utf8');
+    const saveJsonStr = JSON.stringify(json, null, 2)
+    const filePath = path.join(extensionsDir, `${extId}.json`)
+    fs.writeFileSync(filePath, saveJsonStr, 'utf8')
 
-    const loadRes = await extensionRunner.loadExtensionFile(filePath);
-    return loadRes;
+    const loadRes = await extensionRunner.loadExtensionFile(filePath)
+    return loadRes
   } catch (e) {
-    return { success: false, error: e.message };
+    return { success: false, error: e.message }
   }
-});
+})
 
 // Remove an extension
 ipcMain.handle('extension:remove', async (event, { id }) => {

@@ -66,18 +66,22 @@ export default function Extensions() {
   }
 
   const handleInstallMarketplaceItem = async (item) => {
-    const targetUrl = item.manifestURI || item.payloadURI
-    if (!targetUrl) return
+    const primaryUrl = item.manifestURI || item.payloadURI
+    if (!primaryUrl) return
     setInstallingId(item.id)
     try {
-      const res = await window.electronAPI?.extensions?.install({ url: targetUrl })
+      let res = await window.electronAPI?.extensions?.install({ url: primaryUrl })
+      if (!res?.success && item.payloadURI && item.payloadURI !== primaryUrl) {
+        res = await window.electronAPI?.extensions?.install({ url: item.payloadURI })
+      }
+
       if (res?.success) {
         fetchLoadedExtensions()
       } else {
-        alert(`Failed to install plugin: ${res?.error || 'Unknown error'}`)
+        alert(`Could not load "${item.name}": ${res?.error || 'Unknown error'}`)
       }
     } catch (e) {
-      alert(`Error installing plugin: ${e.message}`)
+      alert(`Error installing "${item.name}": ${e.message}`)
     } finally {
       setInstallingId(null)
     }

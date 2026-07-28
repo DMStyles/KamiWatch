@@ -664,7 +664,7 @@ export default function Details() {
       {/* =========================================================
           MAIN CONTENT — floating cover card + info
       ========================================================= */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 28, padding: '0 28px', marginTop: -80, position: 'relative', zIndex: 10, maxWidth: 1400, margin: '-80px auto 0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '270px 1fr', gap: 32, padding: '0 32px', marginTop: -80, position: 'relative', zIndex: 10, width: '100%', maxWidth: '100%', margin: '-80px 0 0' }}>
 
         {/* Left Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -824,70 +824,6 @@ export default function Details() {
                     📖 Start Reading
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Franchise Watch Order */}
-          {watchOrder && watchOrder.length > 1 && (
-            <div className="details-relations-card">
-              <h3>🌸 Franchise Watch Order</h3>
-              <div className="relations-list">
-                {watchOrder.map(item => (
-                  <button 
-                    key={item.id} 
-                    className={`relation-item-btn${item.id === anime.id ? ' active' : ''}`}
-                    style={item.id === anime.id ? { borderColor: 'var(--accent)', background: 'var(--accent-glow)' } : {}}
-                    onClick={() => navigate(`/anime/${item.id}`, { state: { cacheBuster: Date.now() } })}
-                  >
-                    <div style={{display:'flex', alignItems:'flex-start', gap:10, flex:1, marginRight:12}}>
-                      <span className="relation-type" style={{ color: 'var(--accent-light)', minWidth: 40, marginTop: 1 }}>#{item.order}</span>
-                      <span style={{ fontSize:12, fontWeight:600, color:'var(--text-primary)', wordBreak:'break-word' }}>{item.title}</span>
-                    </div>
-                    <span className="relation-status" style={{flexShrink:0}}>{item.year} · {item.format}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Related Seasons / Prequels / Sequels */}
-          {anime.relations && anime.relations.length > 0 && (
-            <div className="details-relations-card">
-              <h3>Related Seasons & Shows</h3>
-              <div className="relations-list">
-                {anime.relations.map(rel => (
-                  <button 
-                    key={rel.id} 
-                    className="relation-item-btn"
-                    onClick={() => navigate(`/anime/${rel.id}`, { state: { cacheBuster: Date.now() } })}
-                  >
-                    <div style={{display:'flex', alignItems:'flex-start', gap:10, flex:1, marginRight:12}}>
-                      <span className="relation-type" style={{ minWidth: 80, marginTop: 1 }}>{rel.relation}</span>
-                      <span style={{ fontSize:12, fontWeight:600, color:'var(--text-primary)', wordBreak:'break-word' }}>{rel.title}</span>
-                    </div>
-                    <span className="relation-status" style={{flexShrink:0}}>{rel.status}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recommendations */}
-          {anime.recommendations && anime.recommendations.length > 0 && (
-            <div className="details-recommendations-card">
-              <h3>Recommended Shows</h3>
-              <div className="recommendations-grid">
-                {anime.recommendations.map(rec => (
-                  <div 
-                    key={rec.id} 
-                    className="rec-card"
-                    onClick={() => navigate(`/anime/${rec.id}`, { state: { cacheBuster: Date.now() } })}
-                  >
-                    <img src={rec.thumbnail} alt={rec.title} />
-                    <p className="rec-title">{rec.title}</p>
-                  </div>
-                ))}
               </div>
             </div>
           )}
@@ -1209,6 +1145,88 @@ export default function Details() {
                         <img src={char.image} alt={char.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', lineHeight: 1.3 }}>{char.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Franchise Watch Order */}
+            {watchOrder && watchOrder.length > 1 && (
+              <div style={{ marginTop: 24, background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, color: '#fff' }}>
+                  <span style={{ width: 3, height: 16, background: 'var(--gradient-accent)', borderRadius: 2, display: 'block' }} /> 🌸 Franchise Watch Order
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                  {watchOrder.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => navigate(`/anime/${item.id}`, { state: { cacheBuster: Date.now() } })}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                        padding: '12px 14px', borderRadius: 12, background: item.id === anime.id ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)',
+                        border: item.id === anime.id ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.08)',
+                        color: '#fff', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ fontSize: 10, color: '#a78bfa', fontWeight: 800, textTransform: 'uppercase', display: 'block', marginBottom: 2 }}>#{item.order}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
+                      </div>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{item.year || item.format}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Related Seasons / Prequels / Sequels */}
+            {anime.relations && anime.relations.length > 0 && (
+              <div style={{ marginTop: 24, background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, color: '#fff' }}>
+                  <span style={{ width: 3, height: 16, background: 'var(--gradient-accent)', borderRadius: 2, display: 'block' }} /> Related Seasons & Shows
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                  {anime.relations.map(rel => (
+                    <button
+                      key={rel.id}
+                      onClick={() => navigate(`/anime/${rel.id}`, { state: { cacheBuster: Date.now() } })}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                        padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer', textAlign: 'left'
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ fontSize: 10, color: '#60a5fa', fontWeight: 800, textTransform: 'uppercase', display: 'block', marginBottom: 2 }}>{rel.relation}</span>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rel.title}</span>
+                      </div>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{rel.status}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommended Shows (Full Widescreen Poster Grid) */}
+            {anime.recommendations && anime.recommendations.length > 0 && (
+              <div style={{ marginTop: 24, background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, color: '#fff' }}>
+                  <span style={{ width: 3, height: 16, background: 'var(--gradient-accent)', borderRadius: 2, display: 'block' }} /> Recommended Shows
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 16 }}>
+                  {anime.recommendations.map(rec => (
+                    <div
+                      key={rec.id}
+                      onClick={() => navigate(`/anime/${rec.id}`, { state: { cacheBuster: Date.now() } })}
+                      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 8 }}
+                    >
+                      <div style={{ aspectRatio: '2/3', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#111' }}>
+                        <img src={rec.thumbnail} alt={rec.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>
+                        {rec.title}
+                      </p>
                     </div>
                   ))}
                 </div>
