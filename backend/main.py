@@ -43,5 +43,62 @@ async def startup():
 async def health():
     return {"status": "ok", "version": "2.0.0"}
 
+from fastapi.responses import HTMLResponse
+
+@app.get("/auth/callback", response_class=HTMLResponse)
+async def auth_callback():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Google Sign-In Successful - KamiWatch</title>
+        <meta charset="utf-8">
+        <style>
+            body {
+                background-color: #07070f;
+                color: #ffffff;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                margin: 0;
+                text-align: center;
+            }
+            .card {
+                background: #121220;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                padding: 40px 32px;
+                max-width: 400px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            }
+            .icon { font-size: 54px; margin-bottom: 16px; }
+            h1 { font-size: 22px; margin: 0 0 10px 0; color: #10b981; }
+            p { font-size: 14px; color: #a1a1aa; line-height: 1.5; margin-bottom: 24px; }
+            .btn {
+                background: linear-gradient(135deg, #6366f1, #4f46e5);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                font-weight: bold;
+                border-radius: 10px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">✨</div>
+            <h1>Google Sign-In Successful!</h1>
+            <p>Your Google Account has been authenticated. You can close this tab and return to KamiWatch.</p>
+            <button class="btn" onclick="window.close()">Close Tab</button>
+        </div>
+    </body>
+    </html>
+    """
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8642, log_level="info")

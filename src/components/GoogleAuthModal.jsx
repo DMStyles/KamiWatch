@@ -35,6 +35,9 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
   const handleGoogleSignIn = async () => {
     setLoading(true)
     setError('')
+    let sessionEmail = ''
+    let sessionName = ''
+
     try {
       // Get OAuth URL with skipBrowserRedirect so Electron main window never goes black
       const data = await signInWithGoogleOAuth()
@@ -45,14 +48,23 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
           window.open(data.url, '_blank')
         }
       }
+      
+      const client = createSupabaseInstance()
+      if (client) {
+        const { data: { session } } = await client.auth.getSession()
+        if (session?.user) {
+          sessionEmail = session.user.email
+          sessionName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
+        }
+      }
     } catch (err) {
       console.warn('OAuth window warning:', err.message)
     }
 
-    // Complete login profile in app
+    // Complete login profile using real email
     try {
-      const userEmail = email.trim() || 'user@gmail.com'
-      const userName = name.trim() || 'User'
+      const userEmail = email.trim() || sessionEmail || 'google.user@kamiwatch.app'
+      const userName = name.trim() || sessionName || userEmail.split('@')[0]
       const googleId = 'g_' + btoa(userEmail.toLowerCase()).replace(/=/g, '')
       const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userEmail)}`
 
