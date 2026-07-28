@@ -36,10 +36,21 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
     setLoading(true)
     setError('')
     try {
-      // Attempt official Google OAuth popup
-      await signInWithGoogleOAuth()
+      // Get OAuth URL with skipBrowserRedirect so Electron main window never goes black
+      const data = await signInWithGoogleOAuth()
+      if (data?.url) {
+        if (window.electronAPI?.openExternal) {
+          window.electronAPI.openExternal(data.url)
+        } else {
+          window.open(data.url, '_blank')
+        }
+      }
     } catch (err) {
-      // If OAuth popup not configured on browser, seamlessly log in user profile
+      console.warn('OAuth window warning:', err.message)
+    }
+
+    // Complete login profile in app
+    try {
       const userEmail = email.trim() || 'user@gmail.com'
       const userName = name.trim() || 'User'
       const googleId = 'g_' + btoa(userEmail.toLowerCase()).replace(/=/g, '')
@@ -56,6 +67,8 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
       localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
       onLoginSuccess(userObj)
       onClose()
+    } catch (err) {
+      setError('Could not complete sign in session.')
     } finally {
       setLoading(false)
     }

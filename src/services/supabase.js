@@ -30,7 +30,7 @@ export const createSupabaseInstance = () => {
 export const supabase = createSupabaseInstance()
 
 /**
- * Trigger official Google OAuth login via Supabase
+ * Trigger official Google OAuth login via Supabase (returns OAuth URL without navigating Electron main window)
  */
 export const signInWithGoogleOAuth = async () => {
   const client = createSupabaseInstance()
@@ -39,7 +39,8 @@ export const signInWithGoogleOAuth = async () => {
   const { data, error } = await client.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin
+      redirectTo: 'http://localhost:8642/auth/callback',
+      skipBrowserRedirect: true
     }
   })
 
