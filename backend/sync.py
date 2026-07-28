@@ -61,7 +61,11 @@ async def upload_user_sync_data(data: SyncUploadRequest):
     }
 
     json_str = json.dumps(merged_data)
-    c.execute("UPDATE user_sync SET sync_data = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?", (json_str, data.user_id))
+    c.execute(
+        "INSERT INTO user_sync (user_id, sync_data) VALUES (?, ?) "
+        "ON CONFLICT(user_id) DO UPDATE SET sync_data = excluded.sync_data, updated_at = CURRENT_TIMESTAMP",
+        (data.user_id, json_str)
+    )
     conn.commit()
     conn.close()
     return {"status": "synced", "last_synced": merged_data["last_synced"]}

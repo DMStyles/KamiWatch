@@ -1,14 +1,14 @@
 import React, { useState } from 'react'
 
 export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
-  const [email, setEmail] = useState('dilsh@gmail.com')
-  const [name, setName] = useState('Dilshan')
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const performLogin = async (userEmail, userName) => {
-    const finalEmail = (userEmail || 'dilsh@gmail.com').trim()
-    const finalName = (userName || 'Dilshan').trim()
+    const finalEmail = (userEmail || email || 'user@gmail.com').trim()
+    const finalName = (userName || name || 'Anime Fan').trim()
 
     setLoading(true)
     setError('')
@@ -18,36 +18,21 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
       const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(finalEmail)}`
 
       const API = 'http://localhost:8642'
-      const res = await fetch(`${API}/sync/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: googleId,
-          email: finalEmail,
-          name: finalName,
-          avatar
+      try {
+        await fetch(`${API}/sync/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: googleId,
+            email: finalEmail,
+            name: finalName,
+            avatar
+          })
         })
-      })
-
-      const data = await res.json()
-      if (data.status === 'authenticated' || res.ok) {
-        const userObj = {
-          id: googleId,
-          email: finalEmail,
-          name: finalName,
-          avatar,
-          loggedInAt: Date.now()
-        }
-        localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
-        onLoginSuccess(userObj)
-        onClose()
-      } else {
-        setError('Failed to authenticate with Google Sync backend.')
+      } catch (e) {
+        console.warn('Backend sync auth offline, continuing local sync profile.')
       }
-    } catch (err) {
-      // Fallback local account sign-in if backend offline
-      const googleId = 'g_' + btoa(finalEmail.toLowerCase()).replace(/=/g, '')
-      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(finalEmail)}`
+
       const userObj = {
         id: googleId,
         email: finalEmail,
@@ -58,6 +43,8 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
       localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
       onLoginSuccess(userObj)
       onClose()
+    } catch (err) {
+      setError('An error occurred while initializing sync profile.')
     } finally {
       setLoading(false)
     }
@@ -116,21 +103,21 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
             boxShadow: '0 8px 25px rgba(66,133,244,0.35)', transition: 'all 0.2s'
           }}
         >
-          {loading ? <span className="spinner small" /> : '🌐 1-Click Sign in with Google Account'}
+          {loading ? <span className="spinner small" /> : '🌐 1-Click Sign in & Enable Cloud Sync'}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0' }}>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>OR CUSTOM PROFILE</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>OR ENTER ACCOUNT DETAILS</span>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
         </div>
 
         <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Full Name</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Display Name</label>
             <input
               type="text"
-              placeholder="Dilshan"
+              placeholder="e.g. User"
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
@@ -138,10 +125,10 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Google Email Address</label>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Email Address</label>
             <input
               type="email"
-              placeholder="dilsh@gmail.com"
+              placeholder="user@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
@@ -157,7 +144,7 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
               color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer'
             }}
           >
-            Connect Custom Account
+            Connect Account & Sync
           </button>
         </form>
       </div>
