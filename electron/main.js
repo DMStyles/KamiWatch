@@ -111,14 +111,14 @@ function startBackend() {
     backendCmd = process.platform === 'win32' ? 'python' : 'python3';
     backendArgs = [path.join(__dirname, '../backend/main.py')];
   } else {
-    // In production: run the bundled .exe
-    const backendExe = path.join(
-      process.resourcesPath,
-      'backend',
-      process.platform === 'win32' ? 'kamiwatch-backend.exe' : 'kamiwatch-backend'
-    );
-    backendCmd = backendExe;
-    backendArgs = [];
+    // In production: run the bundled .exe (check subfolder first, then direct folder)
+    const exeName = process.platform === 'win32' ? 'kamiwatch-backend.exe' : 'kamiwatch-backend'
+    let backendExe = path.join(process.resourcesPath, 'backend', 'kamiwatch-backend', exeName)
+    if (!fs.existsSync(backendExe)) {
+      backendExe = path.join(process.resourcesPath, 'backend', exeName)
+    }
+    backendCmd = backendExe
+    backendArgs = []
   }
 
   console.log('[Backend] Starting:', backendCmd, backendArgs.join(' '));
