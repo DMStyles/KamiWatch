@@ -50,7 +50,7 @@ export default function App() {
   }
   const [settings, setSettings] = useState(defaultSettings)
 
-  // Load user profile on startup
+  // Load user profile on startup & handle window focus sync
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem('kamiwatch-user')
@@ -60,12 +60,42 @@ export default function App() {
         downloadAndMergeCloudData(u.id)
       }
     } catch {}
+
+    const handleFocus = () => {
+      try {
+        const savedUser = localStorage.getItem('kamiwatch-user')
+        if (savedUser) {
+          const u = JSON.parse(savedUser)
+          downloadAndMergeCloudData(u.id)
+        }
+      } catch {}
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
   }, [])
 
   const downloadAndMergeCloudData = async (userId) => {
     if (!userId) return
     setSyncStatus('syncing')
     try {
+      // Check local backend sync for fresh Google OAuth profile update
+      try {
+        const API = 'http://localhost:8642'
+        const res = await fetch(`${API}/sync/download?user_id=${encodeURIComponent(userId)}`)
+        const data = await res.json()
+        if (data.status === 'success' && data.user && data.user.email) {
+          const freshUser = {
+            id: userId,
+            email: data.user.email,
+            name: data.user.name || data.user.email.split('@')[0],
+            avatar: data.user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.user.email)}`,
+            loggedInAt: Date.now()
+          }
+          setUser(freshUser)
+          localStorage.setItem('kamiwatch-user', JSON.stringify(freshUser))
+        }
+      } catch {}
+
       // 1. Try Supabase Cloud download
       const sbData = await fetchCloudDataFromSupabase(userId)
       let sd = sbData
