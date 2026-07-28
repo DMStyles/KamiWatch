@@ -17,7 +17,7 @@ app = FastAPI(title="KamiWatch Backend", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "file://"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,17 +71,28 @@ async def auth_callback():
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 20px;
                 padding: 40px 32px;
-                max-width: 400px;
+                max-width: 420px;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.8);
             }
             .icon { font-size: 54px; margin-bottom: 16px; }
             h1 { font-size: 22px; margin: 0 0 10px 0; color: #10b981; }
-            p { font-size: 14px; color: #a1a1aa; line-height: 1.5; margin-bottom: 24px; }
+            p { font-size: 14px; color: #a1a1aa; line-height: 1.5; margin-bottom: 20px; }
+            .user-box {
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 10px;
+                padding: 10px;
+                font-size: 13px;
+                font-weight: 600;
+                color: #60a5fa;
+                margin-bottom: 24px;
+                word-break: break-all;
+            }
             .btn {
                 background: linear-gradient(135deg, #6366f1, #4f46e5);
                 color: white;
                 border: none;
-                padding: 12px 24px;
+                padding: 12px 28px;
                 font-weight: bold;
                 border-radius: 10px;
                 cursor: pointer;
@@ -93,9 +104,60 @@ async def auth_callback():
         <div class="card">
             <div class="icon">✨</div>
             <h1>Google Sign-In Successful!</h1>
-            <p>Your Google Account has been authenticated. You can close this tab and return to KamiWatch.</p>
-            <button class="btn" onclick="window.close()">Close Tab</button>
+            <p>Your Google Account has been authenticated and linked to KamiWatch.</p>
+            <div id="user-box" class="user-box">Syncing account profile...</div>
+            <button class="btn" onclick="window.close()">Close Tab & Return to App</button>
         </div>
+        <script>
+            window.onload = async function() {
+                try {
+                    const hash = window.location.hash || '';
+                    const search = window.location.search || '';
+                    const params = new URLSearchParams((hash ? hash.replace('#', '?') : search));
+                    const accessToken = params.get('access_token');
+
+                    let email = '';
+                    let name = '';
+
+                    if (accessToken) {
+                        try {
+                            const payloadBase64 = accessToken.split('.')[1];
+                            const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+                            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                            }).join(''));
+                            const decoded = JSON.parse(jsonPayload);
+                            email = decoded.email || decoded.user_metadata?.email || '';
+                            name = decoded.user_metadata?.full_name || decoded.name || (email ? email.split('@')[0] : 'User');
+                        } catch (e) {
+                            console.error('Failed to parse access token', e);
+                        }
+                    }
+
+                    if (email) {
+                        document.getElementById('user-box').innerText = 'Signed in as: ' + email;
+                        const googleId = 'g_' + btoa(email.toLowerCase()).replace(/=/g, '');
+                        const avatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + encodeURIComponent(email);
+
+                        await fetch('/sync/auth', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: googleId,
+                                email: email,
+                                name: name,
+                                avatar: avatar
+                            })
+                        });
+                    } else {
+                        document.getElementById('user-box').innerText = 'Account connected!';
+                    }
+                } catch (err) {
+                    console.error('Auth callback error', err);
+                    document.getElementById('user-box').innerText = 'Account connected!';
+                }
+            };
+        </script>
     </body>
     </html>
     """
