@@ -1,25 +1,21 @@
 import React, { useState } from 'react'
 
 export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
-  const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
+  const [email, setEmail] = useState('dilsh@gmail.com')
+  const [name, setName] = useState('Dilshan')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleGoogleLogin = async (e) => {
-    e.preventDefault()
-    if (!email.trim() || !name.trim()) {
-      setError('Please enter your name and email to proceed.')
-      return
-    }
+  const performLogin = async (userEmail, userName) => {
+    const finalEmail = (userEmail || 'dilsh@gmail.com').trim()
+    const finalName = (userName || 'Dilshan').trim()
 
     setLoading(true)
     setError('')
 
     try {
-      // Simulate Google OAuth account payload
-      const googleId = 'g_' + btoa(email.toLowerCase().trim()).replace(/=/g, '')
-      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email.trim())}`
+      const googleId = 'g_' + btoa(finalEmail.toLowerCase()).replace(/=/g, '')
+      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(finalEmail)}`
 
       const API = 'http://localhost:8642'
       const res = await fetch(`${API}/sync/auth`, {
@@ -27,18 +23,18 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: googleId,
-          email: email.trim(),
-          name: name.trim(),
+          email: finalEmail,
+          name: finalName,
           avatar
         })
       })
 
       const data = await res.json()
-      if (data.status === 'authenticated') {
+      if (data.status === 'authenticated' || res.ok) {
         const userObj = {
           id: googleId,
-          email: email.trim(),
-          name: name.trim(),
+          email: finalEmail,
+          name: finalName,
           avatar,
           loggedInAt: Date.now()
         }
@@ -49,10 +45,27 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
         setError('Failed to authenticate with Google Sync backend.')
       }
     } catch (err) {
-      setError('Could not connect to sync service. Ensure backend is running.')
+      // Fallback local account sign-in if backend offline
+      const googleId = 'g_' + btoa(finalEmail.toLowerCase()).replace(/=/g, '')
+      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(finalEmail)}`
+      const userObj = {
+        id: googleId,
+        email: finalEmail,
+        name: finalName,
+        avatar,
+        loggedInAt: Date.now()
+      }
+      localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
+      onLoginSuccess(userObj)
+      onClose()
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault()
+    performLogin(email, name)
   }
 
   return (
@@ -91,16 +104,36 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
           </div>
         )}
 
-        <form onSubmit={handleGoogleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* 1-Click Fast Google Sign-In Button */}
+        <button
+          onClick={() => performLogin(email, name)}
+          disabled={loading}
+          style={{
+            width: '100%', padding: '14px', borderRadius: 14,
+            background: 'linear-gradient(135deg, #4285F4 0%, #34a853 100%)',
+            border: 'none', color: '#fff', fontSize: 14, fontWeight: 800,
+            cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            boxShadow: '0 8px 25px rgba(66,133,244,0.35)', transition: 'all 0.2s'
+          }}
+        >
+          {loading ? <span className="spinner small" /> : '🌐 1-Click Sign in with Google Account'}
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0' }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>OR CUSTOM PROFILE</span>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        </div>
+
+        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Full Name</label>
             <input
               type="text"
-              placeholder="e.g. Dilshan"
+              placeholder="Dilshan"
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
-              required
             />
           </div>
 
@@ -108,11 +141,10 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Google Email Address</label>
             <input
               type="email"
-              placeholder="user@gmail.com"
+              placeholder="dilsh@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
-              required
             />
           </div>
 
@@ -120,14 +152,12 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
             type="submit"
             disabled={loading}
             style={{
-              marginTop: 10, width: '100%', padding: '12px', borderRadius: 12,
-              background: 'linear-gradient(135deg, #4285F4 0%, #34a853 100%)',
-              border: 'none', color: '#fff', fontSize: 14, fontWeight: 700,
-              cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              boxShadow: '0 6px 20px rgba(66,133,244,0.3)', transition: 'all 0.2s'
+              marginTop: 4, width: '100%', padding: '10px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+              color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer'
             }}
           >
-            {loading ? <span className="spinner small" /> : '🌐 Connect Google Account & Sync'}
+            Connect Custom Account
           </button>
         </form>
       </div>
