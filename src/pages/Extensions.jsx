@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react'
 
+const MARKETPLACE_FEED_URL = 'https://raw.githubusercontent.com/Bas1874/Seanime-Marketplace/main/Marketplace/Main.json'
+
 export default function Extensions() {
   const [activeTab, setActiveTab] = useState('Marketplace') // 'Installed' | 'Marketplace'
   const [selectedCategory, setSelectedCategory] = useState('All Types')
   const [selectedLang, setSelectedLang] = useState('All Languages')
   const [searchQuery, setSearchQuery] = useState('')
   const [loadedExtensions, setLoadedExtensions] = useState([])
+  const [marketplaceItems, setMarketplaceItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMarketplace, setLoadingMarketplace] = useState(false)
   const [showRepoModal, setShowRepoModal] = useState(false)
   const [repoUrl, setRepoUrl] = useState('')
   const [repoSuccess, setRepoSuccess] = useState('')
+  const [installingId, setInstallingId] = useState(null)
 
   useEffect(() => {
     fetchLoadedExtensions()
+    fetchMarketplaceFeed()
   }, [])
 
   const fetchLoadedExtensions = async () => {
@@ -24,6 +30,21 @@ export default function Extensions() {
       console.error(e)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchMarketplaceFeed = async () => {
+    setLoadingMarketplace(true)
+    try {
+      const res = await fetch(MARKETPLACE_FEED_URL)
+      const items = await res.json()
+      if (Array.isArray(items)) {
+        setMarketplaceItems(items)
+      }
+    } catch (e) {
+      console.error('Failed to load marketplace feed', e)
+    } finally {
+      setLoadingMarketplace(false)
     }
   }
 
@@ -44,6 +65,24 @@ export default function Extensions() {
     }
   }
 
+  const handleInstallMarketplaceItem = async (item) => {
+    const targetUrl = item.manifestURI || item.payloadURI
+    if (!targetUrl) return
+    setInstallingId(item.id)
+    try {
+      const res = await window.electronAPI?.extensions?.install({ url: targetUrl })
+      if (res?.success) {
+        fetchLoadedExtensions()
+      } else {
+        alert(`Failed to install plugin: ${res?.error || 'Unknown error'}`)
+      }
+    } catch (e) {
+      alert(`Error installing plugin: ${e.message}`)
+    } finally {
+      setInstallingId(null)
+    }
+  }
+
   const handleRemove = async (id) => {
     try {
       await window.electronAPI?.extensions?.remove(id)
@@ -54,19 +93,23 @@ export default function Extensions() {
   const categories = ['All Types', 'Plugins', 'Anime Torrents', 'Manga', 'Online Streaming', 'Custom Sources']
   const languages = ['All Languages', 'English', 'Typescript', 'Javascript', 'العربية', 'Français', 'Español', 'Italiano', '中文']
 
-  // Format type name for UI
   const formatCategory = (typeStr) => {
     if (!typeStr) return 'Plugins'
     if (typeStr.includes('onlinestream')) return 'Online Streaming'
     if (typeStr.includes('manga')) return 'Manga'
     if (typeStr.includes('torrent')) return 'Anime Torrents'
+    if (typeStr.includes('custom')) return 'Custom Sources'
     return 'Plugins'
   }
 
-  const filteredExtensions = loadedExtensions.filter(item => {
-    const m = item.manifest || {}
+  const installedIds = new Set(loadedExtensions.map(x => x.manifest?.id || x.id))
+
+  const filteredExtensions = (activeTab === 'Installed' ? loadedExtensions.map(x => ({
+    ...x.manifest,
+    isInstalled: true,
+    manifestURI: x.filePath
+  })) : marketplaceItems).filter(m => {
     const cat = formatCategory(m.type)
-    
     if (selectedCategory !== 'All Types' && cat !== selectedCategory) return false
     if (selectedLang !== 'All Languages' && m.lang !== selectedLang && m.language !== selectedLang) return false
     if (searchQuery) {
@@ -91,23 +134,23 @@ export default function Extensions() {
           <span style={{ fontSize: 20 }}>⚡</span>
           <div>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: '#10b981' }}>
-              Seanime Extension Engine Active ({loadedExtensions.length} Plugins Live)
+              Seanime Extension Marketplace Active ({loadedExtensions.length} Installed / {marketplaceItems.length} Available)
             </div>
             <div style={{ fontSize: 12, color: 'rgba(16, 185, 129, 0.85)', marginTop: 2 }}>
-              KamiWatch automatically detected and loaded all Seanime JS/TS extension providers on your PC.
+              Explore community-maintained plugins, manga providers, anime torrent scrapers, and streaming extensions from the Seanime Marketplace!
             </div>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button
-            onClick={fetchLoadedExtensions}
+            onClick={() => { fetchLoadedExtensions(); fetchMarketplaceFeed() }}
             style={{
               padding: '6px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.08)',
               color: '#fff', border: '1px solid rgba(255,255,255,0.12)', fontSize: 12, fontWeight: 700, cursor: 'pointer'
             }}
           >
-            🔄 Reload Plugins
+            🔄 Refresh Feed
           </button>
           <button
             onClick={() => setShowRepoModal(true)}
@@ -117,7 +160,7 @@ export default function Extensions() {
               boxShadow: '0 2px 10px rgba(79, 70, 229, 0.4)'
             }}
           >
-            ➕ Add Extension URL
+            ➕ Add Manifest URL
           </button>
         </div>
       </div>
@@ -125,24 +168,24 @@ export default function Extensions() {
       {/* ── Top Bar with Tab Pills ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Marketplace & Extensions</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>Seanime Community Marketplace</h1>
           <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>
-            Manage and run Seanime extension provider plugins natively inside KamiWatch.
+            Browse live plugins, manga sources, torrent providers, and custom streaming engines.
           </p>
         </div>
 
         <div className="mode-switcher-pill">
           <button
+            className={`mode-switcher-btn${activeTab === 'Marketplace' ? ' active' : ''}`}
+            onClick={() => setActiveTab('Marketplace')}
+          >
+            ★ Marketplace ({marketplaceItems.length})
+          </button>
+          <button
             className={`mode-switcher-btn${activeTab === 'Installed' ? ' active' : ''}`}
             onClick={() => setActiveTab('Installed')}
           >
             Installed ({loadedExtensions.length})
-          </button>
-          <button
-            className={`mode-switcher-btn${activeTab === 'Marketplace' ? ' active' : ''}`}
-            onClick={() => setActiveTab('Marketplace')}
-          >
-            ★ Marketplace
           </button>
         </div>
       </div>
@@ -184,7 +227,7 @@ export default function Extensions() {
         <div style={{ flex: 1, position: 'relative' }}>
           <input
             type="text"
-            placeholder="🔍 Search extensions..."
+            placeholder="🔍 Search marketplace extensions..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{
@@ -196,11 +239,11 @@ export default function Extensions() {
         </div>
       </div>
 
-      {/* ── 4-Column Live Seanime Plugins Grid ── */}
-      {loading ? (
+      {/* ── 4-Column Marketplace Grid ── */}
+      {(loading && activeTab === 'Installed') || (loadingMarketplace && activeTab === 'Marketplace') ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <span className="spinner" style={{ width: 32, height: 32, margin: '0 auto 12px' }} />
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Scanning and initializing Seanime JS extensions...</p>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Fetching live Seanime marketplace extensions...</p>
         </div>
       ) : filteredExtensions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
@@ -212,16 +255,18 @@ export default function Extensions() {
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
           gap: 16
         }}>
-          {filteredExtensions.map(item => {
-            const m = item.manifest || {}
+          {filteredExtensions.map(m => {
             const cat = formatCategory(m.type)
+            const isInstalled = installedIds.has(m.id)
+            const isWorking = m.workingTag !== false
+
             return (
               <div
                 key={m.id}
                 style={{
                   background: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
                   borderRadius: 14, padding: 18, display: 'flex', flexDirection: 'column',
-                  justifyContent: 'space-between', minHeight: 180, position: 'relative',
+                  justifyContent: 'space-between', minHeight: 190, position: 'relative',
                   transition: 'all 0.25s ease'
                 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
@@ -247,42 +292,66 @@ export default function Extensions() {
                       )}
                       <div>
                         <h3 style={{ fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>{m.name}</h3>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.id} · v{m.version}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.id} · v{m.version || '1.0.0'}</span>
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleRemove(m.id)}
-                      style={{
-                        width: 32, height: 32, borderRadius: 8, border: 'none',
-                        background: 'rgba(16, 185, 129, 0.2)',
-                        color: '#10b981', cursor: 'pointer',
-                        fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.2s'
-                      }}
-                      title="Loaded & Active (Click to unload)"
-                    >
-                      ✓
-                    </button>
+                    {isInstalled ? (
+                      <button
+                        onClick={() => handleRemove(m.id)}
+                        style={{
+                          padding: '4px 10px', borderRadius: 8, border: 'none',
+                          background: 'rgba(16, 185, 129, 0.2)',
+                          color: '#10b981', cursor: 'pointer',
+                          fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4
+                        }}
+                        title="Click to uninstall"
+                      >
+                        ✓ Installed
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleInstallMarketplaceItem(m)}
+                        disabled={installingId === m.id}
+                        style={{
+                          padding: '6px 12px', borderRadius: 8, border: 'none',
+                          background: '#4f46e5', color: '#fff', cursor: 'pointer',
+                          fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4,
+                          boxShadow: '0 2px 8px rgba(79,70,229,0.3)'
+                        }}
+                      >
+                        {installingId === m.id ? 'Installing...' : '📥 Install'}
+                      </button>
+                    )}
                   </div>
 
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
-                    {m.description || 'Seanime provider plugin.'}
+                    {m.description || 'Seanime provider plugin extension.'}
                   </p>
                 </div>
 
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
-                      {m.author || 'Community'}
+                      by {m.author || 'Community'}
                     </span>
                     <span style={{ padding: '2px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
                       {cat}
                     </span>
+                    {m.stars > 0 && (
+                      <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>
+                        ★ {m.stars}
+                      </span>
+                    )}
                   </div>
 
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 8px', borderRadius: 4 }}>
-                    ● LIVE
+                  <span style={{
+                    fontSize: 10, fontWeight: 700,
+                    color: isWorking ? '#10b981' : '#f87171',
+                    background: isWorking ? 'rgba(16,185,129,0.1)' : 'rgba(248,113,113,0.1)',
+                    padding: '2px 8px', borderRadius: 4
+                  }}>
+                    {isWorking ? '🟢 Working' : '🔴 Broken'}
                   </span>
                 </div>
               </div>
