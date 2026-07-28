@@ -1,58 +1,89 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { getSupabaseSettings, saveSupabaseSettings, signInWithGoogleOAuth, createSupabaseInstance } from '../services/supabase'
 
 export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
-  const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
+  const [supabaseConfig, setSupabaseConfig] = useState(getSupabaseSettings())
+  const [showConfig, setShowConfig] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const performLogin = async (userEmail, userName) => {
-    const finalEmail = (userEmail || email || 'user@gmail.com').trim()
-    const finalName = (userName || name || 'Anime Fan').trim()
+  useEffect(() => {
+    // Listen to Supabase auth state change (Google OAuth callback)
+    const client = createSupabaseInstance()
+    if (client) {
+      client.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          handleSupabaseSession(session.user)
+        }
+      })
+    }
+  }, [])
 
+  const handleSupabaseSession = (sbUser) => {
+    const userObj = {
+      id: sbUser.id,
+      email: sbUser.email || 'user@gmail.com',
+      name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'User',
+      avatar: sbUser.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(sbUser.email || 'user')}`,
+      loggedInAt: Date.now()
+    }
+    localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
+    onLoginSuccess(userObj)
+    onClose()
+  }
+
+  const handleGoogleOAuth = async () => {
     setLoading(true)
     setError('')
-
     try {
-      const googleId = 'g_' + btoa(finalEmail.toLowerCase()).replace(/=/g, '')
-      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(finalEmail)}`
-
-      const API = 'http://localhost:8642'
-      try {
-        await fetch(`${API}/sync/auth`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: googleId,
-            email: finalEmail,
-            name: finalName,
-            avatar
-          })
-        })
-      } catch (e) {
-        console.warn('Backend sync auth offline, continuing local sync profile.')
-      }
-
-      const userObj = {
-        id: googleId,
-        email: finalEmail,
-        name: finalName,
-        avatar,
-        loggedInAt: Date.now()
-      }
-      localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
-      onLoginSuccess(userObj)
-      onClose()
+      await signInWithGoogleOAuth()
     } catch (err) {
-      setError('An error occurred while initializing sync profile.')
+      // Fallback: If no Supabase credentials configured yet, guide user or sign in with local profile
+      if (err.message?.includes('not configured') || err.message?.includes('fake_key') || err.message?.includes('Fetch')) {
+        setError('To connect official Google OAuth, please configure your Supabase Project URL & Anon Key below, or click Fast Connect.')
+        setShowConfig(true)
+      } else {
+        setError(err.message || 'Failed to open Google OAuth window.')
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  const handleFormSubmit = (e) => {
+  const handleFastConnect = async (e) => {
     e.preventDefault()
-    performLogin(email, name)
+    setLoading(true)
+    setError('')
+
+    try {
+      const email = 'user_' + Math.floor(Math.random() * 1000) + '@gmail.com'
+      const googleId = 'g_' + btoa(email).replace(/=/g, '')
+      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`
+
+      const userObj = {
+        id: googleId,
+        email: 'user@gmail.com',
+        name: 'User',
+        avatar,
+        loggedInAt: Date.now()
+      }
+
+      localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
+      onLoginSuccess(userObj)
+      onClose()
+    } catch (err) {
+      setError('Could not initialize sync session.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveConfig = (e) => {
+    e.preventDefault()
+    saveSupabaseSettings(supabaseConfig.url, supabaseConfig.key)
+    setShowConfig(false)
+    setError('')
+    alert('✅ Supabase configuration saved!')
   }
 
   return (
@@ -62,9 +93,9 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div style={{
-        width: '100%', maxWidth: 440, background: '#0e111a', border: '1px solid rgba(255,255,255,0.1)',
+        width: '100%', maxWidth: 460, background: '#0e111a', border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: 20, padding: 32, boxShadow: '0 25px 80px rgba(0,0,0,0.9)', color: '#fff',
-        display: 'flex', flexDirection: 'column', gap: 20, position: 'relative'
+        display: 'flex', flexDirection: 'column', gap: 18, position: 'relative'
       }}>
         <button
           onClick={onClose}
@@ -79,21 +110,21 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
               ☁️
             </div>
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Sign in with Google</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Google Account & Cloud Sync</h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-            Sync your watch history, reading progress, favorites, and settings seamlessly across all devices!
+            Backup & sync your watch history, watchlist, favorites, and settings to Supabase Cloud!
           </p>
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#f87171' }}>
+          <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#f87171', lineHeight: 1.4 }}>
             {error}
           </div>
         )}
 
-        {/* 1-Click Fast Google Sign-In Button */}
+        {/* ⚡ Fast Connect & Sync Button */}
         <button
-          onClick={() => performLogin(email, name)}
+          onClick={handleFastConnect}
           disabled={loading}
           style={{
             width: '100%', padding: '14px', borderRadius: 14,
@@ -103,50 +134,65 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
             boxShadow: '0 8px 25px rgba(66,133,244,0.35)', transition: 'all 0.2s'
           }}
         >
-          {loading ? <span className="spinner small" /> : '🌐 1-Click Sign in & Enable Cloud Sync'}
+          {loading ? <span className="spinner small" /> : '⚡ Fast Enable Cloud Sync'}
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>OR ENTER ACCOUNT DETAILS</span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-        </div>
+        {/* Official Google OAuth Popup Button */}
+        <button
+          onClick={handleGoogleOAuth}
+          disabled={loading}
+          style={{
+            width: '100%', padding: '12px', borderRadius: 12,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+            color: '#60a5fa', fontSize: 13, fontWeight: 700,
+            cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}
+        >
+          🌐 Google OAuth Popup Login
+        </button>
 
-        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Display Name</label>
-            <input
-              type="text"
-              placeholder="e.g. User"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Email Address</label>
-            <input
-              type="email"
-              placeholder="user@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
-            />
-          </div>
-
+        {/* Supabase Configuration Setup Toggle */}
+        <div style={{ marginTop: 4 }}>
           <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: 4, width: '100%', padding: '10px', borderRadius: 10,
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-              color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer'
-            }}
+            onClick={() => setShowConfig(!showConfig)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            Connect Account & Sync
+            ⚙️ {showConfig ? 'Hide' : 'Configure'} Supabase Credentials
           </button>
-        </form>
+
+          {showConfig && (
+            <form onSubmit={handleSaveConfig} style={{ marginTop: 12, padding: 16, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Supabase Project URL</label>
+                <input
+                  type="url"
+                  placeholder="https://your-project.supabase.co"
+                  value={supabaseConfig.url}
+                  onChange={(e) => setSupabaseConfig({ ...supabaseConfig, url: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: 12, outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Supabase Anon Key</label>
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOi..."
+                  value={supabaseConfig.key}
+                  onChange={(e) => setSupabaseConfig({ ...supabaseConfig, key: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff', fontSize: 12, outline: 'none' }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                style={{ padding: '8px 14px', borderRadius: 8, background: '#10b981', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Save Supabase Config
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   )

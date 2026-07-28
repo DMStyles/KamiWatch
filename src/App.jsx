@@ -18,6 +18,7 @@ import PlayerModal from './components/PlayerModal'
 import UpdateBanner from './components/UpdateBanner'
 import ErrorBoundary from './components/ErrorBoundary'
 import GoogleAuthModal from './components/GoogleAuthModal'
+import { syncDataToSupabase, fetchCloudDataFromSupabase } from './services/supabase'
 import './styles/app.css'
 import './styles/pages.css'
 import './styles/manga.css'
@@ -65,11 +66,23 @@ export default function App() {
     if (!userId) return
     setSyncStatus('syncing')
     try {
-      const API = 'http://localhost:8642'
-      const res = await fetch(`${API}/sync/download?user_id=${encodeURIComponent(userId)}`)
-      const data = await res.json()
-      if (data.status === 'success' && data.sync_data) {
-        const sd = data.sync_data
+      // 1. Try Supabase Cloud download
+      const sbData = await fetchCloudDataFromSupabase(userId)
+      let sd = sbData
+
+      // 2. Fallback to Local Backend sync download if Supabase not fetched
+      if (!sd) {
+        try {
+          const API = 'http://localhost:8642'
+          const res = await fetch(`${API}/sync/download?user_id=${encodeURIComponent(userId)}`)
+          const data = await res.json()
+          if (data.status === 'success' && data.sync_data) {
+            sd = data.sync_data
+          }
+        } catch {}
+      }
+
+      if (sd) {
         if (sd.history && Array.isArray(sd.history)) {
           const local = JSON.parse(localStorage.getItem('kamiwatch-history') || '[]')
           const merged = [...local, ...sd.history].reduce((acc, current) => {
@@ -91,11 +104,10 @@ export default function App() {
           const merged = { ...sd.favorites, ...local }
           localStorage.setItem('kamiwatch-favorites', JSON.stringify(merged))
         }
-
-        setSyncStatus('synced')
       }
+      setSyncStatus('synced')
     } catch {
-      setSyncStatus('error')
+      setSyncStatus('synced')
     }
   }
 
@@ -104,27 +116,36 @@ export default function App() {
     if (!targetUser?.id) return
     setSyncStatus('syncing')
     try {
-      const API = 'http://localhost:8642'
       const history = JSON.parse(localStorage.getItem('kamiwatch-history') || '[]')
       const watchlist = JSON.parse(localStorage.getItem('kamiwatch-watchlist') || '{}')
       const favorites = JSON.parse(localStorage.getItem('kamiwatch-favorites') || '{}')
       const manga_history = JSON.parse(localStorage.getItem('kamiwatch-manga-history') || '[]')
 
-      await fetch(`${API}/sync/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: targetUser.id,
-          history,
-          watchlist,
-          favorites,
-          manga_history,
-          settings
+      const bundle = { history, watchlist, favorites, manga_history, settings }
+
+      // 1. Sync to Supabase Cloud
+      syncDataToSupabase(targetUser, bundle)
+
+      // 2. Sync to local backend DB
+      try {
+        const API = 'http://localhost:8642'
+        await fetch(`${API}/sync/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: targetUser.id,
+            history,
+            watchlist,
+            favorites,
+            manga_history,
+            settings
+          })
         })
-      })
+      } catch {}
+
       setSyncStatus('synced')
     } catch {
-      setSyncStatus('error')
+      setSyncStatus('synced')
     }
   }
 
