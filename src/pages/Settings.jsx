@@ -6,7 +6,7 @@ import pkg from '../../package.json'
 const API = 'http://localhost:8642'
 
 export default function Settings() {
-  const { settings, saveSettings } = useContext(AppContext)
+  const { settings, saveSettings, user, setShowAuthModal, syncStatus, syncCloudData, handleSignOut } = useContext(AppContext)
   const navigate = useNavigate()
   const [local, setLocal] = useState(settings || {})
   const [updateStatus, setUpdateStatus] = useState('')
@@ -49,7 +49,7 @@ export default function Settings() {
   }
 
   const pickFolder = async () => {
-    const folder = await window.electronAPI?.selectDownloadFolder()
+    const folder = await window.electronAPI?.selectFolder()
     if (folder) set('downloadFolder', folder)
   }
 
@@ -143,6 +143,43 @@ export default function Settings() {
       </div>
 
       <div className="settings-sections">
+        {/* Google Account & Cloud Sync */}
+        <section className="settings-section">
+          <h2 className="settings-section-title">Google Account & Cloud Sync</h2>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <img src={user.avatar} alt="" style={{ width: 44, height: 44, borderRadius: '50%', background: '#1a1d28', border: '2px solid #10b981' }} />
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{user.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{user.email}</div>
+                  <div style={{ fontSize: 11, color: '#10b981', fontWeight: 600, marginTop: 2 }}>
+                    ☁️ Cloud Sync Active ({syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'synced' ? 'Synced' : 'Ready'})
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 12, fontWeight: 700 }} onClick={() => syncCloudData()}>
+                  ☁️ Sync Now
+                </button>
+                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 12, color: '#ef4444' }} onClick={handleSignOut}>
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'rgba(66, 133, 244, 0.08)', border: '1px solid rgba(66, 133, 244, 0.2)', borderRadius: 14 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#60a5fa', marginBottom: 4 }}>Google Cloud Sync</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sign in with Google to backup & sync history, watchlist, favorites across all your devices.</div>
+              </div>
+              <button className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13, fontWeight: 700, background: 'linear-gradient(135deg, #4285F4 0%, #34a853 100%)', border: 'none' }} onClick={() => setShowAuthModal(true)}>
+                🌐 Connect Google Account
+              </button>
+            </div>
+          )}
+        </section>
+
         {/* Downloads */}
         <section className="settings-section">
           <h2 className="settings-section-title">Downloads</h2>

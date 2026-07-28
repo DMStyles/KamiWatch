@@ -57,7 +57,7 @@ const navItems = [
 ]
 
 export default function Sidebar() {
-  const { downloads } = useContext(AppContext)
+  const { downloads, user, setShowAuthModal } = useContext(AppContext)
   const activeDownloads = downloads.filter(d => d.status === 'downloading').length
 
   return (
@@ -84,6 +84,39 @@ export default function Sidebar() {
       ))}
 
       <div className="sidebar-spacer" />
+
+      {/* Google User Account Badge */}
+      <div style={{ padding: '0 8px', marginBottom: 6 }}>
+        {user ? (
+          <div
+            onClick={() => setShowAuthModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+              borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+              cursor: 'pointer', transition: 'all 0.2s'
+            }}
+            title={`Logged in as ${user.email}`}
+          >
+            <img src={user.avatar} alt="" style={{ width: 28, height: 28, borderRadius: '50%', background: '#1a1d28' }} />
+            <div className="sidebar-label" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</span>
+              <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>☁️ Synced</span>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+              borderRadius: 12, background: 'rgba(66, 133, 244, 0.12)', border: '1px solid rgba(66, 133, 244, 0.3)',
+              color: '#60a5fa', cursor: 'pointer', fontSize: 12, fontWeight: 700
+            }}
+          >
+            <span style={{ fontSize: 14 }}>🌐</span>
+            <span className="sidebar-label">Google Sync</span>
+          </button>
+        )}
+      </div>
 
       <NavLink
         to="/settings"

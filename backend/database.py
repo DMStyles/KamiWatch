@@ -45,6 +45,16 @@ def init_db():
             value TEXT
         )
     ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS user_sync (
+            user_id TEXT PRIMARY KEY,
+            user_email TEXT,
+            user_name TEXT,
+            user_avatar TEXT,
+            sync_data TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
     conn.close()
 
