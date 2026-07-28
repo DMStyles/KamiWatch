@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Default KamiWatch Supabase Cloud Sync Endpoint
-const DEFAULT_SUPABASE_URL = 'https://kamiwatch-sync.supabase.co'
-const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthbWl3YXRjaC1zeW5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MjAyMDAwMDAwMH0.fake_key'
+const DEFAULT_SUPABASE_URL = 'https://pfpkczcmhkvlhfhnppdx.supabase.co'
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmcGtjemNta3ZsaGZobnBwZHgiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDIwMDAwMDAwfQ.fake_key'
 
 export const getSupabaseSettings = () => {
   try {
