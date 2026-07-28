@@ -174,16 +174,31 @@ export default function Extensions() {
           </p>
         </div>
 
-        <div className="mode-switcher-pill">
+        <div style={{
+          display: 'flex', gap: 4, padding: 4, borderRadius: 99,
+          background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
           <button
-            className={`mode-switcher-btn${activeTab === 'Marketplace' ? ' active' : ''}`}
             onClick={() => setActiveTab('Marketplace')}
+            style={{
+              padding: '6px 18px', borderRadius: 99, border: 'none',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease',
+              background: activeTab === 'Marketplace' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'transparent',
+              color: activeTab === 'Marketplace' ? '#fff' : 'var(--text-muted)',
+              boxShadow: activeTab === 'Marketplace' ? '0 4px 14px rgba(99, 102, 241, 0.4)' : 'none'
+            }}
           >
             ★ Marketplace ({marketplaceItems.length})
           </button>
           <button
-            className={`mode-switcher-btn${activeTab === 'Installed' ? ' active' : ''}`}
             onClick={() => setActiveTab('Installed')}
+            style={{
+              padding: '6px 18px', borderRadius: 99, border: 'none',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease',
+              background: activeTab === 'Installed' ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'transparent',
+              color: activeTab === 'Installed' ? '#fff' : 'var(--text-muted)',
+              boxShadow: activeTab === 'Installed' ? '0 4px 14px rgba(99, 102, 241, 0.4)' : 'none'
+            }}
           >
             Installed ({loadedExtensions.length})
           </button>
