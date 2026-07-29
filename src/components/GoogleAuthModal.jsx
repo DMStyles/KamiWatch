@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { signInWithGoogleOAuth, createSupabaseInstance } from '../services/supabase'
 
 export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [statusText, setStatusText] = useState('')
   const [error, setError] = useState('')
+  const pollIntervalRef = useRef(null)
 
   useEffect(() => {
     try {
@@ -26,6 +28,10 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
         }
       })
     }
+
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+    }
   }, [])
 
   const handleSupabaseSession = (sbUser) => {
@@ -41,11 +47,44 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
     onClose()
   }
 
+  const startPollingLatestAuthUser = () => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+
+    let attempts = 0
+    pollIntervalRef.current = setInterval(async () => {
+      attempts++
+      if (attempts > 90) {
+        clearInterval(pollIntervalRef.current)
+        setLoading(false)
+        setStatusText('')
+        setError('Google Sign-In timed out. Please try clicking the button again.')
+        return
+      }
+
+      try {
+        const res = await fetch('http://localhost:8642/sync/latest-user')
+        const data = await res.json()
+        if (data.status === 'success' && data.user && data.user.email) {
+          clearInterval(pollIntervalRef.current)
+          const realUser = {
+            id: data.user.id || ('g_' + btoa(data.user.email.toLowerCase()).replace(/=/g, '')),
+            email: data.user.email,
+            name: data.user.name || data.user.email.split('@')[0],
+            avatar: data.user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.user.email)}`,
+            loggedInAt: Date.now()
+          }
+          localStorage.setItem('kamiwatch-user', JSON.stringify(realUser))
+          onLoginSuccess(realUser)
+          onClose()
+        }
+      } catch {}
+    }, 1000)
+  }
+
   const handleGoogleSignIn = async () => {
     setLoading(true)
     setError('')
-    let sessionEmail = ''
-    let sessionName = ''
+    setStatusText('Opening Google Sign-In in browser...')
 
     try {
       // Get OAuth URL with skipBrowserRedirect so Electron main window never goes black
@@ -56,48 +95,42 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
         } else {
           window.open(data.url, '_blank')
         }
-      }
-      
-      const client = createSupabaseInstance()
-      if (client) {
-        const { data: { session } } = await client.auth.getSession()
-        if (session?.user) {
-          sessionEmail = session.user.email
-          sessionName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
-        }
+        setStatusText('⏳ Waiting for Google Sign-In in browser...')
+        startPollingLatestAuthUser()
+      } else {
+        throw new Error('Failed to retrieve Google Auth URL')
       }
     } catch (err) {
-      console.warn('OAuth window warning:', err.message)
-    }
-
-    // Complete login profile using real email
-    try {
-      const userEmail = email.trim() || sessionEmail || 'google.user@kamiwatch.app'
-      const userName = name.trim() || sessionName || userEmail.split('@')[0]
-      const googleId = 'g_' + btoa(userEmail.toLowerCase()).replace(/=/g, '')
-      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userEmail)}`
-
-      const userObj = {
-        id: googleId,
-        email: userEmail,
-        name: userName,
-        avatar,
-        loggedInAt: Date.now()
-      }
-
-      localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
-      onLoginSuccess(userObj)
-      onClose()
-    } catch (err) {
-      setError('Could not complete sign in session.')
-    } finally {
+      console.warn('OAuth launch error:', err.message)
       setLoading(false)
+      setStatusText('')
+      setError('Could not launch Google Sign-In window.')
     }
   }
 
   const handleCustomFormSubmit = (e) => {
     e.preventDefault()
-    handleGoogleSignIn()
+    if (!email.trim()) {
+      setError('Please enter your Google Email Address.')
+      return
+    }
+
+    const userEmail = email.trim()
+    const userName = name.trim() || userEmail.split('@')[0]
+    const googleId = 'g_' + btoa(userEmail.toLowerCase()).replace(/=/g, '')
+    const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userEmail)}`
+
+    const userObj = {
+      id: googleId,
+      email: userEmail,
+      name: userName,
+      avatar,
+      loggedInAt: Date.now()
+    }
+
+    localStorage.setItem('kamiwatch-user', JSON.stringify(userObj))
+    onLoginSuccess(userObj)
+    onClose()
   }
 
   return (
@@ -137,19 +170,26 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
         )}
 
         {/* 1-Click Primary Sign-In Button */}
-        <button
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          style={{
-            width: '100%', padding: '14px', borderRadius: 14,
-            background: 'linear-gradient(135deg, #4285F4 0%, #34a853 100%)',
-            border: 'none', color: '#fff', fontSize: 14, fontWeight: 800,
-            cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            boxShadow: '0 8px 25px rgba(66,133,244,0.35)', transition: 'all 0.2s'
-          }}
-        >
-          {loading ? <span className="spinner small" /> : '🌐 Sign in with Google Account'}
-        </button>
+        <div>
+          <button
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            style={{
+              width: '100%', padding: '14px', borderRadius: 14,
+              background: 'linear-gradient(135deg, #4285F4 0%, #34a853 100%)',
+              border: 'none', color: '#fff', fontSize: 14, fontWeight: 800,
+              cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              boxShadow: '0 8px 25px rgba(66,133,244,0.35)', transition: 'all 0.2s'
+            }}
+          >
+            {loading ? <span className="spinner small" /> : '🌐 Sign in with Google Account'}
+          </button>
+          {statusText && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: '#60a5fa', fontWeight: 600, marginTop: 8 }}>
+              {statusText}
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0' }}>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
@@ -162,7 +202,7 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Display Name</label>
             <input
               type="text"
-              placeholder="e.g. User"
+              placeholder="e.g. Dilshan"
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}

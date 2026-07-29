@@ -94,3 +94,23 @@ async def download_user_sync_data(user_id: str):
         "user": {"email": row[1], "name": row[2], "avatar": row[3]},
         "sync_data": sync_data
     }
+
+@router.get("/latest-user")
+async def get_latest_user():
+    """Get the most recently authenticated user from Google OAuth."""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT user_id, user_email, user_name, user_avatar FROM user_sync WHERE user_email IS NOT NULL AND user_email != '' ORDER BY updated_at DESC LIMIT 1")
+    row = c.fetchone()
+    conn.close()
+    if not row or not row[1]:
+        return {"status": "not_found"}
+    return {
+        "status": "success",
+        "user": {
+            "id": row[0],
+            "email": row[1],
+            "name": row[2],
+            "avatar": row[3]
+        }
+    }
