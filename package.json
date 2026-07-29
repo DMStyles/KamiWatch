@@ -1,6 +1,6 @@
 {
   "name": "kamiwatch",
-  "version": "3.9.1",
+  "version": "4.0.0",
   "description": "KamiWatch — Anime & Manga Desktop App",
   "main": "electron/main.js",
   "homepage": "https://github.com/DMStyles/KamiWatch",
@@ -26,11 +26,11 @@
     "react-router-dom": "^6.22.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^8.2.2",
     "electron": "^28.2.0",
     "electron-builder": "^24.9.1",
-    "vite": "^5.1.4",
+    "vite": "^6.0.0",
     "wait-on": "^7.2.0"
   },
   "build": {
