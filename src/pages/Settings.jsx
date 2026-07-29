@@ -158,11 +158,14 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 12, fontWeight: 700 }} onClick={() => syncCloudData()}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: 12, fontWeight: 700 }} onClick={() => setShowAuthModal(true)}>
+                  ✏️ Edit Profile
+                </button>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: 12, fontWeight: 700 }} onClick={() => syncCloudData()}>
                   ☁️ Sync Now
                 </button>
-                <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 12, color: '#ef4444' }} onClick={handleSignOut}>
+                <button className="btn btn-ghost" style={{ padding: '8px 14px', fontSize: 12, color: '#ef4444' }} onClick={handleSignOut}>
                   Sign Out
                 </button>
               </div>

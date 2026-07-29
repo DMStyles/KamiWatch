@@ -8,6 +8,15 @@ export default function GoogleAuthModal({ onClose, onLoginSuccess }) {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem('kamiwatch-user')
+      if (saved) {
+        const u = JSON.parse(saved)
+        if (u.email && !u.email.includes('kamiwatch.app')) setEmail(u.email)
+        if (u.name && u.name !== 'google.user') setName(u.name)
+      }
+    } catch {}
+
     // Listen for Supabase Google OAuth callback redirect
     const client = createSupabaseInstance()
     if (client) {

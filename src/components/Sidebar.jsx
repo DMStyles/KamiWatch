@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
 
 const icons = {
@@ -57,6 +57,7 @@ const navItems = [
 ]
 
 export default function Sidebar() {
+  const navigate = useNavigate()
   const { downloads, user, setShowAuthModal } = useContext(AppContext)
   const activeDownloads = downloads.filter(d => d.status === 'downloading').length
 
@@ -89,13 +90,13 @@ export default function Sidebar() {
       <div style={{ padding: '0 8px', marginBottom: 6 }}>
         {user ? (
           <div
-            onClick={() => setShowAuthModal(true)}
+            onClick={() => navigate('/settings')}
             style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
               borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
               cursor: 'pointer', transition: 'all 0.2s'
             }}
-            title={`Logged in as ${user.email}`}
+            title={`Logged in as ${user.email} — Click to manage in Settings`}
           >
             <img src={user.avatar} alt="" style={{ width: 28, height: 28, borderRadius: '50%', background: '#1a1d28' }} />
             <div className="sidebar-label" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
