@@ -1,14 +1,16 @@
 import React, { useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
+import EditProfileModal from '../components/EditProfileModal'
 import pkg from '../../package.json'
 
 const API = 'http://localhost:8642'
 
 export default function Settings() {
-  const { settings, saveSettings, user, setShowAuthModal, syncStatus, syncCloudData, handleSignOut } = useContext(AppContext)
+  const { settings, saveSettings, user, setUser, setShowAuthModal, syncStatus, syncCloudData, handleSignOut } = useContext(AppContext)
   const navigate = useNavigate()
   const [local, setLocal] = useState(settings || {})
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false)
   const [updateStatus, setUpdateStatus] = useState('')
   const [updateReady, setUpdateReady] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(null)
@@ -159,7 +161,7 @@ export default function Settings() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: 12, fontWeight: 700 }} onClick={() => setShowAuthModal(true)}>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: 12, fontWeight: 700 }} onClick={() => setShowEditProfileModal(true)}>
                   ✏️ Edit Profile
                 </button>
                 <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: 12, fontWeight: 700 }} onClick={() => syncCloudData()}>
@@ -435,6 +437,14 @@ export default function Settings() {
           <button className="btn btn-primary" style={{padding:'10px 28px'}} onClick={save}>Save Settings</button>
         </div>
       </div>
+
+      {showEditProfileModal && (
+        <EditProfileModal
+          user={user}
+          onClose={() => setShowEditProfileModal(false)}
+          onSave={(u) => setUser(u)}
+        />
+      )}
     </div>
   )
 }
