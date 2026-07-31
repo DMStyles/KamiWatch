@@ -398,53 +398,75 @@ export default function Search() {
               <p>No recently released episodes found for current filters.</p>
             </div>
           ) : (
-            <div className="results-grid">
-              {filtered.map((item, i) => (
-                <div
-                  key={i}
-                  className="result-card"
-                  onClick={() => {
-                    if (item.episode) {
-                      setEpisodeModal({
-                        animeTitle: item.title,
-                        episodeNumber: item.episode,
-                        source: item.source || 'anikoto',
-                        episodeUrl: item.url
-                      })
-                    } else {
-                      navigate(`/anime/${item.id || item.mal_id || 0}`, { state: { searchQuery: item.title } })
-                    }
-                  }}
-                >
-                  <div className="result-card-img">
-                    <img
-                      src={item.thumbnail || item.cover || item.image}
-                      alt={item.title}
-                      loading="lazy"
-                      onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'}
-                    />
-                    <div className="result-card-overlay">
-                      <button className="card-play-btn large">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                      </button>
-                    </div>
-                    {item.episode && (
-                      <span className="anime-card-badge" style={{ background: '#10b981', color: '#fff', fontWeight: 800 }}>EP {item.episode}</span>
-                    )}
-                    {item.source && (
-                      <div className="result-badges">
-                        <span className="badge badge-sub" style={{ textTransform: 'uppercase', fontSize: 10 }}>{item.source}</span>
-                      </div>
-                    )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+              {[
+                { title: '🔥 Released Today', items: filtered.slice(0, 18) },
+                { title: '⏱️ Released Yesterday', items: filtered.slice(18, 36) },
+                { title: '📅 Earlier This Week', items: filtered.slice(36) }
+              ].filter(group => group.items.length > 0).map((group, groupIdx) => (
+                <div key={groupIdx}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 17, fontWeight: 800, color: '#fff', margin: 0 }}>{group.title}</h2>
+                    <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', padding: '2px 10px', borderRadius: 12, color: '#10b981', fontWeight: 700 }}>
+                      {group.items.length} releases
+                    </span>
                   </div>
-                  <div className="result-card-info">
-                    <p className="result-title">{item.title}</p>
-                    <div className="result-meta">
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                        {item.episode ? `Episode ${item.episode}` : 'Recently Airing'}
-                      </span>
-                      {item.year && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.year}</span>}
-                    </div>
+
+                  <div className="results-grid">
+                    {group.items.map((item, i) => {
+                      const epNum = item.episode || (item.sub_episodes && item.sub_episodes !== '0' ? item.sub_episodes : (item.dub_episodes && item.dub_episodes !== '0' ? item.dub_episodes : (item.episodes || null)))
+                      return (
+                        <div
+                          key={i}
+                          className="result-card"
+                          onClick={() => {
+                            if (epNum) {
+                              setEpisodeModal({
+                                animeTitle: item.title,
+                                episodeNumber: epNum,
+                                source: item.source || 'anikoto',
+                                episodeUrl: item.url
+                              })
+                            } else {
+                              navigate(`/anime/${item.id || item.mal_id || 0}`, { state: { searchQuery: item.title } })
+                            }
+                          }}
+                        >
+                          <div className="result-card-img">
+                            <img
+                              src={item.thumbnail || item.cover || item.image}
+                              alt={item.title}
+                              loading="lazy"
+                              onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'}
+                            />
+                            <div className="result-card-overlay">
+                              <button className="card-play-btn large">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                              </button>
+                            </div>
+                            {epNum && (
+                              <span className="anime-card-badge" style={{ background: '#10b981', color: '#fff', fontWeight: 800, fontSize: 11, padding: '3px 8px', borderRadius: 6, boxShadow: '0 4px 12px rgba(16,185,129,0.4)' }}>
+                                EP {epNum}
+                              </span>
+                            )}
+                            {item.source && (
+                              <div className="result-badges">
+                                <span className="badge badge-sub" style={{ textTransform: 'uppercase', fontSize: 10 }}>{item.source}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="result-card-info">
+                            <p className="result-title">{item.title}</p>
+                            <div className="result-meta">
+                              <span style={{ color: epNum ? '#10b981' : 'var(--text-muted)', fontSize: 12, fontWeight: epNum ? 700 : 400 }}>
+                                {epNum ? `Episode ${epNum}` : 'Recently Airing'}
+                              </span>
+                              {item.type && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.type}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               ))}
