@@ -11,7 +11,8 @@ export default function Library() {
   const [favorites, setFavorites] = useState([])
   const [library, setLibrary] = useState([])
   const [loading, setLoading] = useState(true)
-  const { setPlayerModal } = useContext(AppContext)
+  const [confirmDelete, setConfirmDelete] = useState(null) // { title, status }
+  const { setPlayerModal, syncCloudData } = useContext(AppContext)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -48,6 +49,12 @@ export default function Library() {
 
   const handleRemoveItem = (title, status, e) => {
     e.stopPropagation()
+    setConfirmDelete({ title, status })
+  }
+
+  const executeDelete = () => {
+    const { title, status } = confirmDelete
+    setConfirmDelete(null)
     try {
       if (watchlistFilter === 'favorite' || status === 'favorite') {
         const savedFavs = JSON.parse(localStorage.getItem('kamiwatch-favorites') || '{}')
@@ -60,6 +67,8 @@ export default function Library() {
         localStorage.setItem('kamiwatch-watchlist', JSON.stringify(savedList))
         setWatchlist(Object.values(savedList))
       }
+      // Sync deletion to cloud backend
+      syncCloudData()
     } catch {}
   }
 
@@ -74,6 +83,30 @@ export default function Library() {
   return (
     <div className="library-page" style={{ padding: '24px 28px' }}>
       
+      {/* Delete confirmation dialog */}
+      {confirmDelete && (
+        <div
+          style={{ position:'fixed', inset:0, zIndex:3000, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setConfirmDelete(null)}
+        >
+          <div
+            style={{ background:'#13131a', border:'1px solid rgba(255,255,255,0.1)', borderRadius:14, padding:'28px 32px', maxWidth:360, width:'90%', textAlign:'center' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize:36, marginBottom:12 }}>🗑️</div>
+            <h3 style={{ fontSize:16, fontWeight:800, marginBottom:8 }}>Remove from Library?</h3>
+            <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:6, lineHeight:1.5 }}>
+              <strong style={{ color:'#fff' }}>{confirmDelete.title}</strong> will be removed from your list.
+            </p>
+            <p style={{ fontSize:12, color:'var(--text-muted)', marginBottom:24 }}>This change will also sync to the cloud.</p>
+            <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+              <button className="btn btn-ghost" onClick={() => setConfirmDelete(null)}>Keep It</button>
+              <button className="btn btn-primary" style={{ background:'var(--error)' }} onClick={executeDelete}>🗑️ Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tab Switcher Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
         <button

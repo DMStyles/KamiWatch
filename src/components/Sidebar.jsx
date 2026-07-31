@@ -58,8 +58,9 @@ const navItems = [
 
 export default function Sidebar() {
   const navigate = useNavigate()
-  const { downloads, user, setShowAuthModal } = useContext(AppContext)
-  const activeDownloads = downloads.filter(d => d.status === 'downloading').length
+  const { downloads, user, setShowAuthModal, handleSignOut } = useContext(AppContext)
+  // FIX: optional chaining to prevent crash if downloads is null/undefined
+  const activeDownloads = (downloads || []).filter(d => d.status === 'downloading').length
 
   return (
     <nav className="sidebar">
@@ -79,7 +80,15 @@ export default function Sidebar() {
           {icon}
           <span className="sidebar-label">{label}</span>
           {label === 'Downloads' && activeDownloads > 0 && (
-            <span className="sidebar-badge" />
+            <span className="sidebar-badge" style={{
+              position: 'absolute', top: 4, right: 4,
+              background: 'var(--accent)',
+              color: '#fff', fontSize: 9, fontWeight: 800,
+              width: 16, height: 16, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              {activeDownloads > 9 ? '9+' : activeDownloads}
+            </span>
           )}
         </NavLink>
       ))}
@@ -92,17 +101,28 @@ export default function Sidebar() {
           <div
             onClick={() => navigate('/settings')}
             style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
               borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
               cursor: 'pointer', transition: 'all 0.2s'
             }}
             title={`Logged in as ${user.email} — Click to manage in Settings`}
           >
-            <img src={user.avatar} alt="" style={{ width: 28, height: 28, borderRadius: '50%', background: '#1a1d28' }} />
+            <img src={user.avatar} alt="" style={{ width: 28, height: 28, borderRadius: '50%', background: '#1a1d28' }} onError={e => { e.target.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.name}` }} />
             <div className="sidebar-label" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</span>
               <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>☁️ Synced</span>
             </div>
+            <button
+              onClick={e => { e.stopPropagation(); handleSignOut() }}
+              title="Sign out"
+              style={{
+                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                color: '#ef4444', borderRadius: 6, padding: '2px 6px', fontSize: 10,
+                cursor: 'pointer', fontWeight: 700, flexShrink: 0
+              }}
+            >
+              ⬅ Out
+            </button>
           </div>
         ) : (
           <button

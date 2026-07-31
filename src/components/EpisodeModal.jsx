@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect, useContext, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
 
@@ -9,11 +9,13 @@ export default function EpisodeModal() {
   const { episodeModal, setEpisodeModal, setDownloads, settings, setPlayerModal } = useContext(AppContext)
   const [episodes, setEpisodes] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [selected, setSelected] = useState(new Set())
   const [quality, setQuality] = useState(settings.quality || 'best')
   const [subDub, setSubDub] = useState(settings.subDub || 'sub')
   const [queuing, setQueuing] = useState(false)
   const [watching, setWatching] = useState(false)
+  const [watchError, setWatchError] = useState('')
 
   const [follows, setFollows] = useState([])
   const [isFollowed, setIsFollowed] = useState(false)
@@ -25,18 +27,29 @@ export default function EpisodeModal() {
   }, [settings.subDub, settings.quality])
 
   useEffect(() => {
+    setError('')
+    setWatchError('')
+    setSelected(new Set())
     fetchEpisodes()
     fetchFollows()
   }, [episodeModal])
 
   const fetchEpisodes = async () => {
     setLoading(true)
+    setError('')
     try {
       const source = episodeModal.source
       const res = await fetch(`${API}/${source}/episodes?url=${encodeURIComponent(episodeModal.url)}`)
       const data = await res.json()
-      setEpisodes(data.episodes || [])
-    } catch {
+      if (data.error) {
+        setError(`Failed to load episodes: ${data.error}`)
+        setEpisodes([])
+      } else {
+        setEpisodes(data.episodes || [])
+        if ((data.episodes || []).length === 0) setError('No episodes found for this anime.')
+      }
+    } catch (e) {
+      setError('Could not reach the backend. Make sure it\'s running.')
       setEpisodes([])
     } finally {
       setLoading(false)
@@ -80,28 +93,33 @@ export default function EpisodeModal() {
   const selectAll = () => setSelected(new Set(episodes.map(e => e.number)))
   const clearAll = () => setSelected(new Set())
 
+  // FIX: Parallelize all download requests using Promise.all instead of sequential for loop
   const startDownloads = async () => {
     if (selected.size === 0) return
     setQueuing(true)
     const toDownload = episodes.filter(e => selected.has(e.number))
-    for (const ep of toDownload) {
-      const dlId = `${Date.now()}-${ep.number}`
-      try {
-        await fetch(`${API}/download/start`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: ep.url,
-            title: episodeModal.title,
-            episode: `Episode ${ep.number}`,
-            quality,
-            download_id: dlId,
-            thumbnail: episodeModal.thumbnail,
-            source: episodeModal.source,
-            sub_dub: subDub,
-          }),
+    try {
+      await Promise.all(
+        toDownload.map(ep => {
+          const dlId = `${Date.now()}-${ep.number}`
+          return fetch(`${API}/download/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: ep.url,
+              title: episodeModal.title,
+              episode: `Episode ${ep.number}`,
+              quality,
+              download_id: dlId,
+              thumbnail: episodeModal.thumbnail,
+              source: episodeModal.source,
+              sub_dub: subDub,
+            }),
+          }).catch(err => console.warn(`Failed to queue EP ${ep.number}:`, err))
         })
-      } catch {}
+      )
+    } catch (e) {
+      console.warn('Some downloads failed to queue:', e)
     }
     setQueuing(false)
     setEpisodeModal(null)
@@ -114,6 +132,7 @@ export default function EpisodeModal() {
     if (!ep) return
     
     setWatching(true)
+    setWatchError('')
     try {
       let finalUrl = ep.url
       let alternatives = null
@@ -121,6 +140,7 @@ export default function EpisodeModal() {
         const dataIds = finalUrl.split('anikoto:')[1]
         const res = await fetch(`${API}/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}&sub_dub=${subDub}`)
         const data = await res.json()
+        if (data.error) { setWatchError(`Stream error: ${data.error}`); setWatching(false); return }
         if (data.url) finalUrl = data.url
         if (data.alternatives) alternatives = data.alternatives
       } else if (finalUrl.startsWith('kissanime:') || finalUrl.includes('kissanime.com.vc')) {
@@ -130,7 +150,9 @@ export default function EpisodeModal() {
       }
       setPlayerModal({ title: `${episodeModal.title} - Episode ${ep.number}`, url: finalUrl, alternatives })
       setEpisodeModal(null)
-    } catch {}
+    } catch (e) {
+      setWatchError('Failed to resolve stream. Try a different server.')
+    }
     setWatching(false)
   }
 
@@ -154,7 +176,12 @@ export default function EpisodeModal() {
         <div className="modal-header">
           <div style={{display:'flex',gap:14,alignItems:'flex-start'}}>
             {modalThumb && (
-              <img src={modalThumb} alt={modalTitle} className="modal-thumb" />
+              <img
+                src={modalThumb}
+                alt={modalTitle}
+                className="modal-thumb"
+                onError={e => e.target.style.display = 'none'}
+              />
             )}
             <div>
               <h2 className="modal-title">{modalTitle}</h2>
@@ -210,9 +237,16 @@ export default function EpisodeModal() {
 
         <div className="modal-episodes">
           {loading ? (
-            <div style={{display:'flex',justifyContent:'center',padding:40}}><span className="spinner" style={{width:32,height:32}} /></div>
-          ) : episodes.length === 0 ? (
-            <div style={{textAlign:'center',padding:40,color:'var(--text-muted)'}}>No episodes found</div>
+            <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:40,gap:12}}>
+              <span className="spinner" style={{width:32,height:32}} />
+              <span style={{color:'var(--text-muted)',fontSize:13}}>Loading episodes...</span>
+            </div>
+          ) : error ? (
+            <div style={{textAlign:'center',padding:40}}>
+              <div style={{fontSize:32,marginBottom:10}}>⚠️</div>
+              <p style={{color:'var(--error)',fontSize:13,marginBottom:12}}>{error}</p>
+              <button className="btn btn-secondary" style={{fontSize:12}} onClick={fetchEpisodes}>↻ Retry</button>
+            </div>
           ) : (
             <div className="ep-grid">
               {episodes.map(ep => (
@@ -228,6 +262,13 @@ export default function EpisodeModal() {
             </div>
           )}
         </div>
+
+        {/* Watch error banner */}
+        {watchError && (
+          <div style={{padding:'8px 16px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:8,margin:'0 16px',fontSize:12,color:'var(--error)'}}>
+            ⚠️ {watchError}
+          </div>
+        )}
 
         <div className="modal-footer">
           {isDownloadDisabled && <span style={{fontSize:12, color:'var(--text-muted)', marginRight:'auto'}}>Downloads are currently disabled for protected streams. Please use Watch.</span>}

@@ -13,6 +13,16 @@ from database import add_to_library
 router = APIRouter()
 
 active_downloads = {}
+MAX_FINISHED_DOWNLOADS = 50  # Keep at most 50 finished/cancelled/error entries in memory
+
+def _evict_old_downloads():
+    """Remove oldest finished/cancelled/error downloads to prevent memory leak."""
+    terminal_states = {'finished', 'cancelled', 'error'}
+    done = [k for k, v in active_downloads.items() if v.get('status') in terminal_states]
+    if len(done) > MAX_FINISHED_DOWNLOADS:
+        # Remove oldest entries beyond the limit
+        for key in done[:-MAX_FINISHED_DOWNLOADS]:
+            del active_downloads[key]
 
 class DownloadRequest(BaseModel):
     url: str
@@ -200,6 +210,7 @@ async def start_download(req: DownloadRequest):
                 active_downloads[req.download_id]["error"] = str(e)
 
     asyncio.get_event_loop().run_in_executor(None, run_download)
+    _evict_old_downloads()  # FIX: cleanup old entries to prevent memory leak
     return {"download_id": req.download_id, "status": "started"}
 
 @router.get("/status/{download_id}")
@@ -215,3 +226,11 @@ async def cancel_download(download_id: str):
     if download_id in active_downloads:
         active_downloads[download_id]["status"] = "cancelled"
     return {"status": "cancelled"}
+
+@router.delete("/clear/done")
+async def clear_finished():
+    """Remove all finished/cancelled/error downloads from memory."""
+    to_remove = [k for k, v in active_downloads.items() if v.get('status') in {'finished', 'cancelled', 'error'}]
+    for k in to_remove:
+        del active_downloads[k]
+    return {"removed": len(to_remove)}

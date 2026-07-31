@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect, useContext, useMemo } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TitleBar from './components/TitleBar'
@@ -238,7 +238,8 @@ export default function App() {
     setSyncStatus('idle')
   }
 
-  const ctx = {
+  // useMemo prevents all context consumers re-rendering on every App state change
+  const ctx = useMemo(() => ({
     settings, saveSettings,
     episodeModal, setEpisodeModal,
     playerModal, setPlayerModal,
@@ -246,7 +247,7 @@ export default function App() {
     user, setUser,
     showAuthModal, setShowAuthModal,
     syncStatus, syncCloudData, handleSignOut
-  }
+  }), [settings, episodeModal, playerModal, downloads, user, showAuthModal, syncStatus])
 
   return (
     <AppContext.Provider value={ctx}>

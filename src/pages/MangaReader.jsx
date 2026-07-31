@@ -25,8 +25,14 @@ export default function MangaReader() {
   useEffect(() => {
     const handleKey = (e) => {
       if (mode === 'paged') {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goNextPage()
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPrevPage()
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault() // FIX: prevent browser scroll on arrow keys
+          goNextPage()
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault()
+          goPrevPage()
+        }
       }
     }
     window.addEventListener('keydown', handleKey)

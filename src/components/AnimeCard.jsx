@@ -81,6 +81,7 @@ export default function AnimeCard({ anime, onClick, progress, badge, wide = fals
             referrerPolicy="no-referrer"
             style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
             className="card-poster"
+            onError={e => { e.target.onerror = null; e.target.style.display = 'none'; e.target.parentElement.style.alignItems = 'center'; e.target.parentElement.style.justifyContent = 'center'; e.target.parentElement.innerHTML += '<div style="font-size:32px">🎬</div>' }}
           />
         ) : (
           <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #111120, #1a1a30)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
