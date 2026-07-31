@@ -456,20 +456,41 @@ export default function Home() {
         <Row
           title="Continue Reading"
           items={mangaHistory}
-          renderCard={(item, i) => (
-            <div
-              key={i}
-              onClick={() => navigate(`/manga/${item.id}`, { state: { manga: item } })}
-              style={{ flexShrink: 0, width: 130, cursor: 'pointer' }}
-            >
-              <div style={{ width: 130, height: 186, borderRadius: 10, overflow: 'hidden', marginBottom: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                <img src={item.cover} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          renderCard={(item, i) => {
+            const mId = item.mangaId || item.id
+            const mTitle = item.title || item.mangaTitle || 'Manga'
+            const mCover = item.cover || item.image || 'https://via.placeholder.com/200x280?text=No+Cover'
+            const chapterTag = item.chapterNumber ? `Ch. ${item.chapterNumber}` : (item.chapterTitle || '')
+
+            return (
+              <div
+                key={i}
+                onClick={() => navigate(`/manga/${encodeURIComponent(mId)}`, {
+                  state: {
+                    manga: {
+                      id: mId,
+                      title: mTitle,
+                      cover: mCover,
+                      description: item.description || ''
+                    }
+                  }
+                })}
+                style={{ flexShrink: 0, width: 130, cursor: 'pointer' }}
+              >
+                <div style={{ width: 130, height: 186, borderRadius: 10, overflow: 'hidden', marginBottom: 8, border: '1px solid rgba(255,255,255,0.08)', position: 'relative' }}>
+                  <img src={mCover} alt={mTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.src = 'https://via.placeholder.com/200x280?text=No+Cover'} />
+                  {chapterTag && (
+                    <span style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(16, 185, 129, 0.9)', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4 }}>
+                      {chapterTag}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                  {mTitle}
+                </div>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {item.title}
-              </div>
-            </div>
-          )}
+            )
+          }}
         />
       )}
 

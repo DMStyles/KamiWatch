@@ -59,10 +59,12 @@ export default function MangaReader() {
           const historyStr = localStorage.getItem('kamiwatch-manga-history') || '[]'
           let history = JSON.parse(historyStr)
           // Remove existing entry for same manga
-          history = history.filter(h => h.mangaId !== id)
+          history = history.filter(h => (h.mangaId || h.id) !== id)
           // Add new entry at the top
           history.unshift({
+            id: id,
             mangaId: id,
+            title: manga.title || 'Unknown',
             mangaTitle: manga.title || 'Unknown',
             cover: manga.cover || '',
             source: manga.source || 'mangadex',

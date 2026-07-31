@@ -120,25 +120,28 @@ export default function Search() {
     setError('')
     setResults([])
     try {
-      const [resLatest, resSchedule] = await Promise.all([
-        fetch(`${API}/anikoto/latest?limit=100`),
-        fetch(`${API}/schedule/timetables?weeksAfter=0`).catch(() => null)
-      ])
-      
-      const dataLatest = await resLatest.json()
-      let dataSchedule = null
-      if (resSchedule && resSchedule.ok) {
-        dataSchedule = await resSchedule.json()
+      let items = []
+      try {
+        const resLatest = await fetch(`${API}/anikoto/latest?limit=100`)
+        const dataLatest = await resLatest.json()
+        if (dataLatest.results && dataLatest.results.length > 0) {
+          items = dataLatest.results
+        }
+      } catch (e) {}
+
+      if (items.length === 0) {
+        // Fallback to currently airing anime sorted by release date
+        const resAiring = await fetch(`${API}/jikan/airing?limit=100`)
+        const dataAiring = await resAiring.json()
+        items = dataAiring.results || []
       }
-      
-      setResults(dataLatest.results || [])
-      setTimetable(dataSchedule)
-      
-      if ((dataLatest.results || []).length === 0) {
-        setError('No latest episodes found.')
+
+      setResults(items)
+      if (items.length === 0) {
+        setError('No recently released episodes found.')
       }
     } catch {
-      setError('Failed to fetch latest episodes.')
+      setError('Failed to fetch recently released episodes.')
     } finally {
       setLoading(false)
     }
@@ -193,7 +196,11 @@ export default function Search() {
     if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const filtered = activeSource === 'all' ? results : results.filter(r => r.source === activeSource)
+  const filtered = results.filter(r => {
+    if (query && !r.title.toLowerCase().includes(query.toLowerCase())) return false
+    if (activeSource !== 'all' && r.source && r.source !== activeSource) return false
+    return true
+  })
 
   const displayBrowseResults = browseResults.filter(item => {
     if (query && !item.title.toLowerCase().includes(query.toLowerCase())) return false
@@ -215,7 +222,7 @@ export default function Search() {
             placeholder="🔍 Title..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchBrowse(1, activeLetter, query)}
+            onKeyDown={(e) => e.key === 'Enter' && (tab === 'latest' ? null : fetchBrowse(1, activeLetter, query))}
             style={{
               width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none'
@@ -242,7 +249,14 @@ export default function Search() {
           <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Sort By</label>
           <select
             value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value
+              setSortOption(val)
+              if (val === 'Latest added') {
+                setTab('latest')
+                fetchLatestScraperEpisodes()
+              }
+            }}
             style={{
               width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
@@ -339,7 +353,7 @@ export default function Search() {
           <button 
             className={`btn ${tab === 'browse' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ fontSize: 13, padding: '6px 14px', borderRadius: 20 }}
-            onClick={() => { setTab('browse'); setGenreMode(null); setQuery(''); setBrowseResults([]); setBrowseError(''); }}
+            onClick={() => { setTab('browse'); setGenreMode(null); setQuery(''); setBrowseResults([]); setBrowseError(''); fetchBrowse(1, null); }}
           >
             🗂️ Anime Index (A-Z)
           </button>
@@ -348,7 +362,7 @@ export default function Search() {
             style={{ fontSize: 13, padding: '6px 14px', borderRadius: 20 }}
             onClick={() => { setTab('latest'); setGenreMode(null); setQuery(''); setResults([]); setError(''); fetchLatestScraperEpisodes(); }}
           >
-            🕒 Recently Released
+            ⏱️ Recently Released
           </button>
         </div>
 
@@ -367,7 +381,76 @@ export default function Search() {
         )}
 
         {/* Results Grid */}
-        {browseLoading ? (
+        {tab === 'latest' ? (
+          loading ? (
+            <div className="browse-loading">
+              <span className="spinner large" />
+              <p style={{ marginTop: 16 }}>Loading recently released anime & episodes...</p>
+            </div>
+          ) : error ? (
+            <div className="search-empty">
+              <span style={{ fontSize: 40 }}>⚠️</span>
+              <p style={{ color: 'var(--text-muted)' }}>{error}</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="search-empty">
+              <span style={{ fontSize: 40 }}>⏱️</span>
+              <p>No recently released episodes found for current filters.</p>
+            </div>
+          ) : (
+            <div className="results-grid">
+              {filtered.map((item, i) => (
+                <div
+                  key={i}
+                  className="result-card"
+                  onClick={() => {
+                    if (item.episode) {
+                      setEpisodeModal({
+                        animeTitle: item.title,
+                        episodeNumber: item.episode,
+                        source: item.source || 'anikoto',
+                        episodeUrl: item.url
+                      })
+                    } else {
+                      navigate(`/anime/${item.id || item.mal_id || 0}`, { state: { searchQuery: item.title } })
+                    }
+                  }}
+                >
+                  <div className="result-card-img">
+                    <img
+                      src={item.thumbnail || item.cover || item.image}
+                      alt={item.title}
+                      loading="lazy"
+                      onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'}
+                    />
+                    <div className="result-card-overlay">
+                      <button className="card-play-btn large">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                      </button>
+                    </div>
+                    {item.episode && (
+                      <span className="anime-card-badge" style={{ background: '#10b981', color: '#fff', fontWeight: 800 }}>EP {item.episode}</span>
+                    )}
+                    {item.source && (
+                      <div className="result-badges">
+                        <span className="badge badge-sub" style={{ textTransform: 'uppercase', fontSize: 10 }}>{item.source}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="result-card-info">
+                    <p className="result-title">{item.title}</p>
+                    <div className="result-meta">
+                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                        {item.episode ? `Episode ${item.episode}` : 'Recently Airing'}
+                      </span>
+                      {item.year && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.year}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : browseLoading ? (
           <div className="browse-loading">
             <span className="spinner large" />
             <p style={{ marginTop: 16 }}>Loading index...</p>
