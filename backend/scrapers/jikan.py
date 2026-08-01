@@ -558,76 +558,73 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
 @router.get("/watch-order")
 async def get_watch_order(id: int):
     """Retrieve chronologically/release ordered watch path for a franchise."""
-    visited = set()
-    queue = [id]
-    franchise = []
-
-    # Limit to maximum 6 queries to avoid hitting rate limits
-    max_queries = 6
-    queries_made = 0
-
-    while queue and queries_made < max_queries:
-        current_id = queue.pop(0)
-        if current_id in visited:
-            continue
-        visited.add(current_id)
-
-        query = """
-        query ($id: Int) {
-          Media(id: $id, type: ANIME) {
-            id
-            title { english romaji }
-            coverImage { large }
-            format
-            seasonYear
-            startDate { year month }
-            status
-            relations {
-              edges {
-                relationType
-                node {
-                  id
-                  type
-                }
-              }
-            }
+    # FIX: Replaced sequential while-loop (up to 6 serial AniList requests) with
+    # parallel asyncio.gather — fetches all related IDs simultaneously, much faster.
+    relation_query = """
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id
+        title { english romaji }
+        coverImage { large }
+        format
+        seasonYear
+        startDate { year month }
+        status
+        relations {
+          edges {
+            relationType
+            node { id type }
           }
         }
-        """
-        res = await anilist_post(query, {"id": current_id})
-        queries_made += 1
+      }
+    }
+    """
 
-        media = (res.get("data") or {}).get("Media")
-        if not media:
-            continue
+    async def fetch_media(media_id: int) -> dict:
+        res = await anilist_post(relation_query, {"id": media_id})
+        return (res.get("data") or {}).get("Media")
 
-        title_en = (media.get("title") or {}).get("english") or (media.get("title") or {}).get("romaji", "")
-        year = media.get("seasonYear") or (media.get("startDate") or {}).get("year")
+    visited = set()
+    to_fetch = {id}
+    franchise = []
+    max_rounds = 3  # Max 3 rounds of BFS (handles 3 levels of prequel/sequel chains)
 
-        franchise.append({
-            "id": media.get("id"),
-            "title": title_en,
-            "cover": (media.get("coverImage") or {}).get("large") or "",
-            "year": year,
-            "format": (media.get("format") or "TV").replace("_", " "),
-            "status": media.get("status"),
-        })
+    for _ in range(max_rounds):
+        unvisited = to_fetch - visited
+        if not unvisited:
+            break
 
-        edges = (media.get("relations") or {}).get("edges") or []
-        for edge in edges:
-            node = edge.get("node")
-            rel_type = edge.get("relationType", "")
-            if node and node.get("type") == "ANIME":
-                rel_id = node.get("id")
-                if rel_id not in visited and rel_id not in queue:
-                    # Follow main prequel/sequel relations
-                    if rel_type in ["PREQUEL", "SEQUEL"]:
-                        queue.append(rel_id)
+        # FIX: Fetch all unvisited IDs in parallel
+        results = await asyncio.gather(*[fetch_media(mid) for mid in unvisited], return_exceptions=True)
+        visited |= unvisited
+        to_fetch = set()
 
-    # Sort by year
+        for media in results:
+            if not media or isinstance(media, Exception):
+                continue
+
+            title_en = (media.get("title") or {}).get("english") or (media.get("title") or {}).get("romaji", "")
+            year = media.get("seasonYear") or (media.get("startDate") or {}).get("year")
+
+            franchise.append({
+                "id": media.get("id"),
+                "title": title_en,
+                "cover": (media.get("coverImage") or {}).get("large") or "",
+                "year": year,
+                "format": (media.get("format") or "TV").replace("_", " "),
+                "status": media.get("status"),
+            })
+
+            # Queue PREQUEL/SEQUEL relations for next round
+            for edge in (media.get("relations") or {}).get("edges") or []:
+                node = edge.get("node")
+                if node and node.get("type") == "ANIME" and edge.get("relationType") in ["PREQUEL", "SEQUEL"]:
+                    rel_id = node.get("id")
+                    if rel_id not in visited:
+                        to_fetch.add(rel_id)
+
+    # Sort by year and assign order index
     franchise.sort(key=lambda x: x.get("year") or 9999)
-
-    # Format the index/order
     for idx, item in enumerate(franchise):
         item["order"] = idx + 1
 
@@ -637,18 +634,18 @@ async def get_watch_order(id: int):
 @router.get("/recommendations")
 async def get_history_recommendations(ids: Optional[str] = None):
     """Fetch recommendations from AniList based on a comma-separated list of media IDs."""
-    if not ids:
-        # Fall back to trending anime if no IDs are supplied
-        query = """
-        query {
-          Page(perPage: 12) {
-            media(type: ANIME, sort: TRENDING_DESC, isAdult: false) {
-              """ + MEDIA_FRAGMENT + """
-            }
-          }
+    fallback_query = """
+    query {
+      Page(perPage: 12) {
+        media(type: ANIME, sort: TRENDING_DESC, isAdult: false) {
+          """ + MEDIA_FRAGMENT + """
         }
-        """
-        result = await anilist_post(query)
+      }
+    }
+    """
+
+    if not ids:
+        result = await anilist_post(fallback_query)
         anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
         return {"results": [parse_media(a) for a in anime_list]}
 
@@ -661,56 +658,43 @@ async def get_history_recommendations(ids: Optional[str] = None):
             continue
 
     if not id_list:
-        # Fall back
-        query = """
-        query {
-          Page(perPage: 12) {
-            media(type: ANIME, sort: TRENDING_DESC, isAdult: false) {
-              """ + MEDIA_FRAGMENT + """
-            }
-          }
-        }
-        """
-        result = await anilist_post(query)
+        result = await anilist_post(fallback_query)
         anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
         return {"results": [parse_media(a) for a in anime_list]}
 
-    # Fetch recommendations for each ID concurrently
-    query = """
-    query ($id: Int) {
-      Media(id: $id, type: ANIME) {
-        recommendations(perPage: 6) {
-          nodes {
-            mediaRecommendation {
-              """ + MEDIA_FRAGMENT + """
-            }
-          }
-        }
-      }
-    }
-    """
-    
-    tasks = [anilist_post(query, {"id": anime_id}) for anime_id in id_list[:4]]
-    responses = await asyncio.gather(*tasks, return_exceptions=True)
+    # FIX: Use a single batched GraphQL query with aliases instead of N separate requests.
+    # AniList supports multiple aliased root fields in one query — no extra round trips.
+    seed_ids = id_list[:4]
+    alias_fields = ""
+    for i, anime_id in enumerate(seed_ids):
+        alias_fields += f"""
+        rec{i}: Media(id: {anime_id}, type: ANIME) {{
+          recommendations(perPage: 6) {{
+            nodes {{
+              mediaRecommendation {{
+                {MEDIA_FRAGMENT}
+              }}
+            }}
+          }}
+        }}"""
+
+    batched_query = f"query {{ {alias_fields} }}"
+    result = await anilist_post(batched_query)
+    data = result.get("data") or {}
 
     recommended_map = {}
-    for resp in responses:
-        if isinstance(resp, Exception) or not resp:
-            continue
-        media = (resp.get("data") or {}).get("Media") or {}
+    for i in range(len(seed_ids)):
+        media = data.get(f"rec{i}") or {}
         nodes = (media.get("recommendations") or {}).get("nodes") or []
         for node in nodes:
             rec_media = node.get("mediaRecommendation")
             if rec_media and rec_media.get("id"):
                 rec_id = rec_media.get("id")
-                # Avoid recommending any of the input seed IDs
                 if rec_id in id_list:
                     continue
                 recommended_map[rec_id] = parse_media(rec_media)
 
-    # Convert map to list and sort by popularity / score (or keep order)
     results = list(recommended_map.values())
-    # Shuffle or limit to 15
     import random
     random.shuffle(results)
     return {"results": results[:15]}
