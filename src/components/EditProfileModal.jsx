@@ -1,53 +1,58 @@
 import React, { useState } from 'react'
 
+const API = 'http://localhost:8642'
+
 export default function EditProfileModal({ user, onClose, onSave }) {
+  // SECURITY FIX: Only allow display name changes.
+  // Email is verified by Google and cannot be changed here — changing it would allow identity spoofing.
   const [name, setName] = useState(user?.name && user.name !== 'google.user' ? user.name : '')
-  const [email, setEmail] = useState(user?.email && !user.email.includes('kamiwatch.app') ? user.email : '')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const finalEmail = (email.trim() || 'user@gmail.com')
-    const finalName = (name.trim() || finalEmail.split('@')[0] || 'User')
+    const finalName = name.trim()
+    if (!finalName) {
+      setError('Display name cannot be empty.')
+      return
+    }
 
     setLoading(true)
+    setError('')
 
     try {
-      const googleId = user?.id || ('g_' + btoa(finalEmail.toLowerCase()).replace(/=/g, ''))
-      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(finalEmail)}`
-
+      // SECURITY: Keep the existing verified id and email — do NOT regenerate them
       const updatedUser = {
         ...user,
-        id: googleId,
-        email: finalEmail,
         name: finalName,
-        avatar,
         updatedAt: Date.now()
       }
 
       // 1. Save locally
       localStorage.setItem('kamiwatch-user', JSON.stringify(updatedUser))
 
-      // 2. Sync to local backend
-      try {
-        const API = 'http://localhost:8642'
-        await fetch(`${API}/sync/auth`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: googleId,
-            email: finalEmail,
-            name: finalName,
-            avatar
+      // 2. Sync name change to backend — only updates name, keeps existing verified email/id
+      if (user?.id) {
+        try {
+          await fetch(`${API}/sync/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: user.id,       // Use existing verified ID — never regenerate
+              email: user.email,      // Use existing verified email — never allow change
+              name: finalName,
+              avatar: user.avatar || ''
+            })
           })
-        })
-      } catch (err) {
-        console.warn('Backend sync auth updated locally.')
+        } catch {
+          // Non-critical if backend is unreachable
+        }
       }
 
       onSave(updatedUser)
       onClose()
     } catch (e) {
+      setError('Failed to save profile. Please try again.')
       console.error(e)
     } finally {
       setLoading(false)
@@ -73,36 +78,52 @@ export default function EditProfileModal({ user, onClose, onSave }) {
         </button>
 
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 32 }}>✏️</div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Edit Account Profile</h2>
+          {user?.avatar && (
+            <img src={user.avatar} alt="avatar" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', marginBottom: 4 }} onError={e => e.target.style.display='none'} />
+          )}
+          <div style={{ fontSize: 20 }}>✏️</div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Edit Profile</h2>
           <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
-            Update your profile display name and cloud sync email address.
+            Update your display name shown across KamiWatch.
           </p>
         </div>
 
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid #ef4444', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#f87171' }}>
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Display Name — editable */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Display Name</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              Display Name
+            </label>
             <input
               type="text"
               placeholder="e.g. Dilshan"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              autoFocus
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
             />
           </div>
 
+          {/* Email — read-only, managed by Google */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Google Email Address</label>
-            <input
-              type="email"
-              placeholder="your.email@gmail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 13, outline: 'none' }}
-            />
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+              Google Email <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.3)' }}>(managed by Google, cannot be changed)</span>
+            </label>
+            <div style={{
+              width: '100%', padding: '10px 14px',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 10, color: 'rgba(255,255,255,0.4)', fontSize: 13,
+              display: 'flex', alignItems: 'center', gap: 8
+            }}>
+              🔒 {user?.email || 'No email linked'}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
@@ -118,7 +139,7 @@ export default function EditProfileModal({ user, onClose, onSave }) {
               disabled={loading}
               style={{ flex: 2, padding: '11px', borderRadius: 10, background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             >
-              {loading ? <span className="spinner small" /> : '💾 Save Profile Changes'}
+              {loading ? <span className="spinner small" /> : '💾 Save Name'}
             </button>
           </div>
         </form>

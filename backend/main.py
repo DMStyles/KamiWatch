@@ -116,39 +116,34 @@ async def auth_callback():
                     const params = new URLSearchParams((hash ? hash.replace('#', '?') : search));
                     const accessToken = params.get('access_token');
 
-                    let email = '';
-                    let name = '';
+        <script>
+            window.onload = async function() {
+                try {
+                    const hash = window.location.hash || '';
+                    const search = window.location.search || '';
+                    const params = new URLSearchParams((hash ? hash.replace('#', '?') : search));
+                    const accessToken = params.get('access_token');
 
                     if (accessToken) {
+                        // SECURITY FIX: Send the raw token to the backend for server-side verification.
+                        // The browser never decodes JWT or sends user data — Google verifies identity server-side.
                         try {
-                            const payloadBase64 = accessToken.split('.')[1];
-                            const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
-                            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                            }).join(''));
-                            const decoded = JSON.parse(jsonPayload);
-                            email = decoded.email || decoded.user_metadata?.email || '';
-                            name = decoded.user_metadata?.full_name || decoded.name || (email ? email.split('@')[0] : 'User');
-                        } catch (e) {
-                            console.error('Failed to parse access token', e);
+                            const resp = await fetch('/sync/verify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ access_token: accessToken })
+                            });
+                            if (resp.ok) {
+                                const result = await resp.json();
+                                const user = result.user || {};
+                                document.getElementById('user-box').innerText = 'Signed in as: ' + (user.email || 'your account');
+                            } else {
+                                document.getElementById('user-box').innerText = 'Account connected! (verification pending)';
+                            }
+                        } catch (err) {
+                            console.error('Verification call failed:', err);
+                            document.getElementById('user-box').innerText = 'Account connected!';
                         }
-                    }
-
-                    if (email) {
-                        document.getElementById('user-box').innerText = 'Signed in as: ' + email;
-                        const googleId = 'g_' + btoa(email.toLowerCase()).replace(/=/g, '');
-                        const avatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=' + encodeURIComponent(email);
-
-                        await fetch('/sync/auth', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                user_id: googleId,
-                                email: email,
-                                name: name,
-                                avatar: avatar
-                            })
-                        });
                     } else {
                         document.getElementById('user-box').innerText = 'Account connected!';
                     }
