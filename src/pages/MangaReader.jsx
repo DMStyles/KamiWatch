@@ -285,12 +285,49 @@ export default function MangaReader() {
             ‹
           </button>
 
-          <img
-            className="manga-reader-paged-img"
-            src={getImageUrl(pages[currentPage])}
-            alt={`Page ${currentPage + 1}`}
-            referrerPolicy="no-referrer"
-          />
+          {/* FIX: Click-zone wrapper — left 40% goes prev, right 60% goes next */}
+          <div
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const clickX = e.clientX - rect.left
+              if (clickX < rect.width * 0.4) {
+                goPrevPage()
+              } else {
+                if (currentPage === pages.length - 1) {
+                  if (nextChapter) goChapter(nextChapter)
+                } else {
+                  goNextPage()
+                }
+              }
+            }}
+            title="Click left side to go back, right side to go forward"
+          >
+            <img
+              className="manga-reader-paged-img"
+              src={getImageUrl(pages[currentPage])}
+              alt={`Page ${currentPage + 1}`}
+              referrerPolicy="no-referrer"
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+            />
+            {/* Visual click hint overlays */}
+            <div style={{
+              position: 'absolute', left: 0, top: 0, width: '40%', height: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+              paddingLeft: 12, opacity: 0, transition: 'opacity 0.2s',
+              pointerEvents: 'none'
+            }} className="page-hint-left">
+              <span style={{ fontSize: 28, color: 'rgba(255,255,255,0.6)' }}>‹</span>
+            </div>
+            <div style={{
+              position: 'absolute', right: 0, top: 0, width: '60%', height: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+              paddingRight: 12, opacity: 0, transition: 'opacity 0.2s',
+              pointerEvents: 'none'
+            }} className="page-hint-right">
+              <span style={{ fontSize: 28, color: 'rgba(255,255,255,0.6)' }}>›</span>
+            </div>
+          </div>
 
           <button
             className="manga-reader-paged-arrow right"

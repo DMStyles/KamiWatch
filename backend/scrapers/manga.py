@@ -87,7 +87,9 @@ async def mangadex_chapters(manga_id: str) -> list:
         async with httpx.AsyncClient(timeout=20, headers=MANGADEX_HEADERS) as client:
             chapters = []
             offset = 0
-            while True:
+            MAX_PAGES = 20  # FIX: cap at 20 pages (2000 chapters max) — prevents infinite blocking for huge series
+            page_count = 0
+            while page_count < MAX_PAGES:
                 params["offset"] = offset
                 r = await client.get(f"{MANGADEX_API}/chapter", params=params)
                 data = r.json()
@@ -109,6 +111,7 @@ async def mangadex_chapters(manga_id: str) -> list:
                     })
                 total = data.get("total", 0)
                 offset += len(batch)
+                page_count += 1
                 if offset >= total:
                     break
                 await asyncio.sleep(0.3)  # rate limit

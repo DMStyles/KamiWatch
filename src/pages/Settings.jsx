@@ -15,6 +15,7 @@ export default function Settings() {
   const [updateReady, setUpdateReady] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(null)
   const [newVersionTag, setNewVersionTag] = useState('')
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false) // FIX: prevent spam-clicking
 
   const set = (key, val) => setLocal(s => ({ ...s, [key]: val }))
   const save = async () => {
@@ -99,6 +100,8 @@ export default function Settings() {
   }
 
   const checkUpdate = async () => {
+    if (isCheckingUpdate) return // FIX: prevent spam-clicking
+    setIsCheckingUpdate(true)
     setUpdateStatus('Checking for updates...')
     setDownloadProgress(null)
     try {
@@ -106,6 +109,7 @@ export default function Settings() {
       if (res?.success && res?.version && isNewer(res.version)) {
         setNewVersionTag(`v${res.version}`)
         setUpdateStatus(`✨ Update available! (v${res.version})`)
+        setIsCheckingUpdate(false)
         return
       }
     } catch {}
@@ -127,6 +131,8 @@ export default function Settings() {
       }
     } catch {
       setUpdateStatus('⚠️ Could not check for updates. Check internet connection.')
+    } finally {
+      setIsCheckingUpdate(false)
     }
   }
 
@@ -396,8 +402,13 @@ export default function Settings() {
                   ⬇ Download & Install {newVersionTag}
                 </button>
               ) : (
-                <button className="btn btn-secondary" style={{fontSize:12,padding:'6px 16px'}} onClick={checkUpdate}>
-                  Check for Updates
+                <button
+                  className="btn btn-secondary"
+                  style={{fontSize:12,padding:'6px 16px', opacity: isCheckingUpdate ? 0.6 : 1}}
+                  onClick={checkUpdate}
+                  disabled={isCheckingUpdate}
+                >
+                  {isCheckingUpdate ? <><span className="spinner" style={{width:10,height:10,display:'inline-block',marginRight:6}} />Checking...</> : 'Check for Updates'}
                 </button>
               )}
             </div>

@@ -173,15 +173,20 @@ async def get_timetables(weeksAfter: int = 0):
 async def translate_titles(titles: List[str]):
     """
     Accepts a list of Romaji titles that are NOT yet in cache.
-    Fetches English names from AniList in parallel and saves to cache.
+    Fetches English names from AniList with a concurrency limit (max 5 at once)
+    to avoid hitting AniList 429 rate limits.
     Returns {romaji: english, ...} map.
     """
+    # FIX: Semaphore limits concurrent AniList requests to prevent 429 rate limiting
+    semaphore = asyncio.Semaphore(5)
+
     async def resolve(t: str):
         cached = get_translation(t)
         if cached:
             return t, cached
-        english = await fetch_english_title_anilist(t)
-        return t, english
+        async with semaphore:
+            english = await fetch_english_title_anilist(t)
+            return t, english
 
     results = await asyncio.gather(*[resolve(t) for t in titles])
     return {romaji: english for romaji, english in results}

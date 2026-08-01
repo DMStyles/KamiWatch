@@ -14,7 +14,10 @@ export default function Extensions() {
   const [showRepoModal, setShowRepoModal] = useState(false)
   const [repoUrl, setRepoUrl] = useState('')
   const [repoSuccess, setRepoSuccess] = useState('')
-  const [installingId, setInstallingId] = useState(null)
+  // FIX: use a Set instead of single value so multiple installs work simultaneously
+  const [installingIds, setInstallingIds] = useState(new Set())
+  // FIX: in-app toast replaces browser alert()
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     fetchLoadedExtensions()
@@ -65,10 +68,16 @@ export default function Extensions() {
     }
   }
 
+  const showToast = (msg, type = 'error') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
   const handleInstallMarketplaceItem = async (item) => {
     const primaryUrl = item.manifestURI || item.payloadURI
     if (!primaryUrl) return
-    setInstallingId(item.id)
+    // FIX: add to Set of installing IDs (supports concurrent installs)
+    setInstallingIds(prev => new Set([...prev, item.id]))
     try {
       let res = await window.electronAPI?.extensions?.install({ url: primaryUrl })
       if (!res?.success && item.payloadURI && item.payloadURI !== primaryUrl) {
@@ -77,13 +86,15 @@ export default function Extensions() {
 
       if (res?.success) {
         fetchLoadedExtensions()
+        showToast(`✅ "${item.name}" installed successfully!`, 'success')
       } else {
-        alert(`Could not load "${item.name}": ${res?.error || 'Unknown error'}`)
+        showToast(`❌ Could not install "${item.name}": ${res?.error || 'Unknown error'}`, 'error')
       }
     } catch (e) {
-      alert(`Error installing "${item.name}": ${e.message}`)
+      showToast(`❌ Error installing "${item.name}": ${e.message}`, 'error')
     } finally {
-      setInstallingId(null)
+      // Remove from Set when done
+      setInstallingIds(prev => { const s = new Set(prev); s.delete(item.id); return s })
     }
   }
 
@@ -128,6 +139,21 @@ export default function Extensions() {
 
   return (
     <div style={{ maxWidth: 1320, margin: '0 auto', padding: '24px 32px 60px', color: 'var(--text-main)' }}>
+
+      {/* ── In-app Toast Notification (replaces alert()) ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 28, right: 28, zIndex: 9999,
+          background: toast.type === 'success' ? 'rgba(16,185,129,0.95)' : 'rgba(239,68,68,0.95)',
+          color: '#fff', padding: '12px 20px', borderRadius: 12, fontSize: 13, fontWeight: 700,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', gap: 10, maxWidth: 400,
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          {toast.msg}
+          <button onClick={() => setToast(null)} style={{ background:'none', border:'none', color:'#fff', cursor:'pointer', fontSize:16, marginLeft:'auto' }}>✕</button>
+        </div>
+      )}
       
       {/* ── Seanime Extension Engine Header Banner ── */}
       <div style={{
@@ -331,15 +357,16 @@ export default function Extensions() {
                     ) : (
                       <button
                         onClick={() => handleInstallMarketplaceItem(m)}
-                        disabled={installingId === m.id}
+                        disabled={installingIds.has(m.id)}
                         style={{
                           padding: '6px 12px', borderRadius: 8, border: 'none',
                           background: '#4f46e5', color: '#fff', cursor: 'pointer',
                           fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4,
-                          boxShadow: '0 2px 8px rgba(79,70,229,0.3)'
+                          boxShadow: '0 2px 8px rgba(79,70,229,0.3)',
+                          opacity: installingIds.has(m.id) ? 0.7 : 1
                         }}
                       >
-                        {installingId === m.id ? 'Installing...' : '📥 Install'}
+                        {installingIds.has(m.id) ? <><span className="spinner" style={{width:10,height:10}} /> Installing...</> : '📥 Install'}
                       </button>
                     )}
                   </div>

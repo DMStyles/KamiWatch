@@ -70,14 +70,21 @@ function HeroSection({ slides }) {
 
   useEffect(() => {
     if (slides.length < 2) return
+    // FIX: track mounted state to avoid setState on unmounted component
+    let mounted = true
     timerRef.current = setInterval(() => {
+      if (!mounted) return
       setFading(true)
       setTimeout(() => {
+        if (!mounted) return
         setIdx(prev => (prev + 1) % slides.length)
         setFading(false)
       }, 350)
     }, 6000)
-    return () => clearInterval(timerRef.current)
+    return () => {
+      mounted = false
+      clearInterval(timerRef.current)
+    }
   }, [slides.length])
 
   const slide = slides[idx]

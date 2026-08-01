@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect, useContext, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
 
@@ -23,6 +23,9 @@ const convertToLocalTime = (timeStr) => {
   }
 }
 
+// FIX: in-memory cache for translations to avoid re-hitting AniList on re-visit
+const translationCache = {}
+
 export default function Schedule() {
   const { settings } = useContext(AppContext)
   const navigate = useNavigate()
@@ -31,40 +34,74 @@ export default function Schedule() {
   const [error, setError] = useState('')
   const [activeDay, setActiveDay] = useState(DAYS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1])
   const [week, setWeek] = useState(0)
+  const abortRef = useRef(null) // FIX: AbortController ref to cancel stale translation requests
 
   useEffect(() => {
     fetchSchedule()
+    return () => {
+      // Cancel any in-flight translation request when week changes
+      if (abortRef.current) abortRef.current.abort()
+    }
   }, [week])
 
   const fetchSchedule = async () => {
     setLoading(true)
     setError('')
+
+    // Cancel previous translation fetch if still running
+    if (abortRef.current) abortRef.current.abort()
+
     try {
       const res = await fetch(`${API}/schedule/timetables?weeksAfter=${week}`)
       const data = await res.json()
       setSchedule(data)
       setLoading(false)
 
-      // After rendering, resolve any missing English titles in background
+      // Collect uncached titles that need translation
       const uncached = []
       Object.values(data).forEach(dayShows => {
         dayShows.forEach(show => {
-          if (!show.titleEnglish && show.title) {
+          if (!show.titleEnglish && show.title && !translationCache[show.title]) {
             uncached.push(show.title)
           }
         })
       })
 
+      // Apply already-cached translations immediately
+      if (Object.keys(translationCache).length > 0) {
+        setSchedule(prev => {
+          const updated = {}
+          Object.entries(prev).forEach(([day, shows]) => {
+            updated[day] = shows.map(show => ({
+              ...show,
+              titleEnglish: show.titleEnglish || translationCache[show.title] || show.titleEnglish
+            }))
+          })
+          return updated
+        })
+      }
+
+      // Fetch new translations with AbortController
       if (uncached.length > 0) {
+        const controller = new AbortController()
+        abortRef.current = controller
+
         try {
           const unique = [...new Set(uncached)]
           const res2 = await fetch(`${API}/schedule/translate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(unique)
+            body: JSON.stringify(unique),
+            signal: controller.signal  // FIX: abort if week changes mid-request
           })
           const translations = await res2.json()
-          // Patch existing schedule state with resolved translations
+
+          // Save to in-memory cache
+          Object.entries(translations).forEach(([romaji, english]) => {
+            translationCache[romaji] = english
+          })
+
+          // Patch schedule state with new translations
           setSchedule(prev => {
             const updated = {}
             Object.entries(prev).forEach(([day, shows]) => {
@@ -75,11 +112,16 @@ export default function Schedule() {
             })
             return updated
           })
-        } catch {}
+        } catch (e) {
+          // Ignore AbortError — user changed week, it's expected
+          if (e.name !== 'AbortError') console.warn('Translation fetch failed:', e)
+        }
       }
-    } catch {
-      setError('Could not load schedule. Check your connection.')
-      setLoading(false)
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        setError('Could not load schedule. Check your connection.')
+        setLoading(false)
+      }
     }
   }
 

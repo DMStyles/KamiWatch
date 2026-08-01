@@ -143,9 +143,12 @@ export default function Details() {
     if (settings.quality) setQuality(settings.quality)
   }, [settings.subDub, settings.quality])
 
+  // FIX: extract searchQuery string (stable primitive) instead of using location.state object
+  // location.state creates a new object reference on every navigation, causing double-fetches
+  const searchQuery = location.state?.searchQuery || null
   useEffect(() => {
     fetchAnimeDetails()
-  }, [id, location.state])
+  }, [id, searchQuery])
 
   const fetchWatchOrder = async (animeId) => {
     try {
