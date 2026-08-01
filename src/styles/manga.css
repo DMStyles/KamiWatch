@@ -206,13 +206,61 @@
   overflow: hidden;
   border: 1.5px solid var(--border);
   background: var(--bg-card);
-  transition: all 0.2s;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, box-shadow 0.3s;
 }
 
 .manga-card:hover {
   border-color: #d97706;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(217, 119, 6, 0.2);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(217, 119, 6, 0.3), 0 0 20px rgba(217, 119, 6, 0.1);
+}
+
+/* Cover image scales on hover */
+.manga-card-cover-img {
+  width: 100%;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  display: block;
+  background: var(--bg-secondary);
+  transition: transform 0.4s ease;
+}
+.manga-card:hover .manga-card-cover-img {
+  transform: scale(1.07);
+}
+
+/* Hover overlay — amber glow, matches anime card overlay */
+.manga-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(15,10,5,0.88) 0%, rgba(15,10,5,0.2) 55%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.manga-card:hover .manga-card-overlay {
+  opacity: 1;
+}
+
+/* Play button in center of overlay */
+.manga-card-play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--manga-primary, #d97706);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 28px rgba(217, 119, 6, 0.6), 0 4px 16px rgba(0, 0, 0, 0.5);
+  transform: scale(0.8);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  margin-bottom: 24px;
+}
+.manga-card:hover .manga-card-play-btn {
+  transform: scale(1);
+  box-shadow: 0 0 36px rgba(217, 119, 6, 0.8), 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 .manga-card-cover {

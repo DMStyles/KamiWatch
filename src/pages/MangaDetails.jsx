@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 
 const API = 'http://localhost:8642'
+const ANILIST = 'https://graphql.anilist.co'
 
 export default function MangaDetails() {
   const { id } = useParams()
@@ -17,6 +18,11 @@ export default function MangaDetails() {
     { id: 'auto', name: 'Auto (MangaDex / Kakalot)' }
   ])
   const [selectedSource, setSelectedSource] = useState('auto')
+
+  // English title + anime adaptations from AniList
+  const [englishTitle, setEnglishTitle] = useState('')
+  const [animeAdaptations, setAnimeAdaptations] = useState([])
+  const [loadingAnilist, setLoadingAnilist] = useState(false)
 
   // Apply manga theme
   useEffect(() => {
@@ -50,12 +56,84 @@ export default function MangaDetails() {
     fetchChapters(selectedSource)
   }, [id, selectedSource])
 
+  // Fetch AniList English title + anime adaptations when we have a title
+  useEffect(() => {
+    const title = details?.title || mangaFromState?.title
+    if (title) {
+      fetchAnilistMangaData(title)
+    }
+  }, [details?.title, mangaFromState?.title])
+
   const fetchDetails = async () => {
     try {
       const r = await fetch(`${API}/manga/details?id=${encodeURIComponent(decodeURIComponent(id))}`)
       const data = await r.json()
       if (!data.error) setDetails(data)
     } catch {}
+  }
+
+  /** Query AniList for the manga to get English title + any anime adaptations */
+  const fetchAnilistMangaData = async (title) => {
+    setLoadingAnilist(true)
+    try {
+      const query = `
+        query ($search: String) {
+          Media(search: $search, type: MANGA) {
+            title { english romaji native }
+            relations {
+              edges {
+                relationType
+                node {
+                  id
+                  type
+                  title { english romaji }
+                  coverImage { large }
+                  status
+                  seasonYear
+                  format
+                  averageScore
+                }
+              }
+            }
+          }
+        }
+      `
+      const resp = await fetch(ANILIST, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query, variables: { search: title } })
+      })
+      const data = await resp.json()
+      const media = data?.data?.Media
+      if (!media) return
+
+      // Set English title if it's different from the displayed title
+      const en = media.title?.english
+      const romaji = media.title?.romaji
+      if (en && en !== title && en !== romaji) {
+        setEnglishTitle(en)
+      }
+
+      // Find anime adaptations from relations
+      const edges = media.relations?.edges || []
+      const adaptations = edges
+        .filter(e => e.node?.type === 'ANIME' && ['ADAPTATION', 'ALTERNATIVE'].includes(e.relationType))
+        .map(e => ({
+          id: e.node.id,
+          title: e.node.title?.english || e.node.title?.romaji || 'Unknown',
+          cover: e.node.coverImage?.large || '',
+          status: e.node.status,
+          year: e.node.seasonYear,
+          format: (e.node.format || 'TV').replace('_', ' '),
+          score: e.node.averageScore ? (e.node.averageScore / 10).toFixed(1) : null,
+          relationType: e.relationType
+        }))
+      setAnimeAdaptations(adaptations)
+    } catch (err) {
+      console.warn('AniList manga lookup failed:', err.message)
+    } finally {
+      setLoadingAnilist(false)
+    }
   }
 
   const fetchChapters = async (sourceId = selectedSource) => {
@@ -65,12 +143,9 @@ export default function MangaDetails() {
       if (sourceId.startsWith('ext_')) {
         const extId = sourceId.replace('ext_', '')
         const title = details?.title || mangaFromState?.title || id
-        // 1. Search provider for manga ID
         const searchRes = await window.electronAPI?.extensions?.callProvider(extId, 'search', [{ query: title }])
         const firstMatch = searchRes?.result?.[0]
         const mId = firstMatch?.id || firstMatch?.url || title
-        
-        // 2. Fetch chapters
         const chRes = await window.electronAPI?.extensions?.callProvider(extId, 'findChapters', [mId])
         const chList = (chRes?.result || []).map(c => ({
           id: c.id || c.url,
@@ -97,6 +172,13 @@ export default function MangaDetails() {
   }
 
   const displayedChapters = sortAsc ? [...chapters] : [...chapters].reverse()
+
+  const statusColor = (s) => {
+    const lower = (s || '').toLowerCase()
+    if (lower === 'publishing' || lower === 'ongoing') return '#10b981'
+    if (lower === 'finished' || lower === 'completed') return '#60a5fa'
+    return '#fbbf24'
+  }
 
   return (
     <div className="manga-details-page">
@@ -131,10 +213,24 @@ export default function MangaDetails() {
 
         {/* Right: Info */}
         <div className="manga-details-right">
+          {/* Title + English title */}
           <h1 className="manga-details-title">{details?.title || 'Loading...'}</h1>
+          {englishTitle && (
+            <div style={{
+              fontSize: 14, color: 'var(--text-muted)', fontWeight: 500, marginTop: -8, marginBottom: 6,
+              fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 6
+            }}>
+              <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4, fontStyle: 'normal', fontWeight: 700, color: 'rgba(255,255,255,0.4)' }}>EN</span>
+              {englishTitle}
+            </div>
+          )}
 
           <div className="manga-details-meta">
-            {details?.status && <span className="manga-badge">{details.status}</span>}
+            {details?.status && (
+              <span className="manga-badge" style={{ color: statusColor(details.status), borderColor: statusColor(details.status) + '44' }}>
+                {details.status}
+              </span>
+            )}
             {details?.year && <span className="manga-badge manga-badge-neutral">{details.year}</span>}
             {details?.author && <span className="manga-badge manga-badge-neutral">✍️ {details.author}</span>}
           </div>
@@ -190,6 +286,88 @@ export default function MangaDetails() {
           </div>
         </div>
       </div>
+
+      {/* ─── Anime Adaptations Section ─── */}
+      {(animeAdaptations.length > 0 || loadingAnilist) && (
+        <div style={{ maxWidth: 1000, margin: '32px auto 0', padding: '0 24px' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ color: 'var(--accent)', fontSize: 20 }}>📺</span>
+            Anime Adaptation{animeAdaptations.length > 1 ? 's' : ''}
+          </h2>
+
+          {loadingAnilist && animeAdaptations.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>
+              <span className="spinner" style={{ width: 14, height: 14, display: 'inline-block', marginRight: 8 }} />
+              Looking up anime adaptation...
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              {animeAdaptations.map(anime => (
+                <div
+                  key={anime.id}
+                  onClick={() => navigate(`/anime/${anime.id}`)}
+                  style={{
+                    display: 'flex', gap: 14, alignItems: 'flex-start',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(99,102,241,0.25)',
+                    borderRadius: 14, padding: 14, cursor: 'pointer',
+                    transition: 'all 0.2s', minWidth: 260, maxWidth: 420, flex: 1,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'rgba(99,102,241,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.25)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.transform = 'translateY(0)' }}
+                >
+                  {/* Anime cover */}
+                  {anime.cover ? (
+                    <img
+                      src={anime.cover}
+                      alt={anime.title}
+                      style={{ width: 64, height: 92, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div style={{ width: 64, height: 92, background: 'var(--bg-secondary)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎬</div>
+                  )}
+
+                  {/* Anime info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.35, marginBottom: 6 }}>
+                      {anime.title}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+                        background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)'
+                      }}>
+                        {anime.format}
+                      </span>
+                      {anime.year && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}>
+                          {anime.year}
+                        </span>
+                      )}
+                      {anime.score && (
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}>
+                          ★ {anime.score}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: statusColor(anime.status), textTransform: 'capitalize'
+                    }}>
+                      {(anime.status || '').replace('_', ' ').toLowerCase()}
+                    </div>
+                    <div style={{
+                      marginTop: 10, fontSize: 11, fontWeight: 700, color: 'var(--accent)',
+                      display: 'flex', alignItems: 'center', gap: 4
+                    }}>
+                      View Anime → 
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Chapter List */}
       <div style={{ maxWidth: 1000, margin: '40px auto 0', padding: '0 24px' }}>
