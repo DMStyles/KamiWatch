@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import MangaCard from '../components/MangaCard'
 
 const API = 'http://localhost:8642'
 
@@ -188,13 +189,18 @@ export default function Manga() {
   return (
     <div className="manga-page" onScroll={handleScroll}>
       {/* Hero Search Bar */}
-      <div 
-        className={`manga-hero-bar ${scrolled ? 'scrolled' : ''}`}
-        style={!scrolled ? { backgroundImage: `url(${hero.image})`, backgroundSize: 'cover', backgroundPosition: 'center 20%' } : {}}
-      >
-        {!scrolled && <div className="manga-hero-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(15,10,5,0.98) 0%, rgba(15,10,5,0.85) 40%, rgba(15,10,5,0.3) 100%), linear-gradient(to top, rgba(15,10,5,1) 0%, transparent 40%)', zIndex: 0 }} />}
+      <div className={`manga-hero-bar ${scrolled ? 'scrolled' : ''}`}>
+        {!scrolled && (
+          <img 
+            src={hero.image} 
+            alt={hero.title}
+            referrerPolicy="no-referrer"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%', zIndex: 0 }} 
+          />
+        )}
+        {!scrolled && <div className="manga-hero-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(15,10,5,0.98) 0%, rgba(15,10,5,0.85) 40%, rgba(15,10,5,0.3) 100%), linear-gradient(to top, rgba(15,10,5,1) 0%, transparent 40%)', zIndex: 1 }} />}
         
-        <div className="manga-hero-content-wrapper" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="manga-hero-content-wrapper" style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ maxWidth: '600px' }}>
             <div className="manga-hero-eyebrow">
               <span className="manga-hero-icon">📚</span>
@@ -229,7 +235,7 @@ export default function Manga() {
         </div>
         
         {!scrolled && (
-          <div className="hero-dots" style={{ position: 'absolute', bottom: '24px', right: '32px', zIndex: 2, display: 'flex', gap: '6px' }}>
+          <div className="hero-dots" style={{ position: 'absolute', bottom: '24px', right: '32px', zIndex: 3, display: 'flex', gap: '6px' }}>
             {MANGA_HERO_SLIDES.map((_, i) => (
               <div 
                 key={i}
@@ -323,81 +329,7 @@ export default function Manga() {
             ) : (
               <div className="manga-grid">
                 {displayResults.map((manga, i) => (
-              <div
-                    key={manga.id || i}
-                    className="manga-card"
-                    onClick={() => navigate(`/manga/${encodeURIComponent(manga.id)}`, { state: { manga } })}
-                  >
-                    {/* Cover image with hover overlay */}
-                    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '8px 8px 0 0' }}>
-                      {manga.cover ? (
-                        <img
-                          className="manga-card-cover manga-card-cover-img"
-                          src={manga.cover}
-                          alt={manga.title}
-                          loading="lazy"
-                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
-                        />
-                      ) : null}
-                      <div className="manga-card-cover-placeholder" style={{ display: manga.cover ? 'none' : 'flex' }}>
-                        📚
-                      </div>
-
-                      {/* Hover overlay — matches anime card style */}
-                      <div className="manga-card-overlay">
-                        <div className="manga-card-play-btn">
-                          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                          </svg>
-                        </div>
-                        <div style={{
-                          position: 'absolute', bottom: 8, left: 8, right: 8,
-                          fontSize: 11, fontWeight: 700, color: '#fff',
-                          textShadow: '0 1px 4px rgba(0,0,0,0.8)',
-                          textAlign: 'center'
-                        }}>
-                          Read Now
-                        </div>
-                      </div>
-
-                      {/* Status badge top-left */}
-                      {manga.status && (
-                        <div style={{
-                          position: 'absolute', top: 7, left: 7,
-                          background: 'rgba(7,7,15,0.82)', backdropFilter: 'blur(6px)',
-                          padding: '3px 7px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-                          color: manga.status?.toLowerCase() === 'ongoing' ? '#10b981' : manga.status?.toLowerCase() === 'completed' ? '#60a5fa' : '#fbbf24',
-                          border: `1px solid ${manga.status?.toLowerCase() === 'ongoing' ? 'rgba(16,185,129,0.3)' : manga.status?.toLowerCase() === 'completed' ? 'rgba(96,165,250,0.3)' : 'rgba(251,191,36,0.3)'}`,
-                          textTransform: 'capitalize'
-                        }}>
-                          {manga.status}
-                        </div>
-                      )}
-
-                      {/* Year badge top-right */}
-                      {manga.year && (
-                        <div style={{
-                          position: 'absolute', top: 7, right: 7,
-                          background: 'rgba(7,7,15,0.82)', backdropFilter: 'blur(6px)',
-                          padding: '3px 7px', borderRadius: 6, fontSize: 10, fontWeight: 600,
-                          color: 'rgba(255,255,255,0.6)'
-                        }}>
-                          {manga.year}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="manga-card-info">
-                      <div className="manga-card-title">{manga.title}</div>
-                      {/* English/translated title if different from main title */}
-                      {manga.titleEnglish && manga.titleEnglish !== manga.title && (
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {manga.titleEnglish}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <MangaCard key={manga.id || i} manga={manga} />
                 ))}
               </div>
             )}

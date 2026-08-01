@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../App'
 import AnimeCard from '../components/AnimeCard'
+import MangaCard from '../components/MangaCard'
 import SkeletonCard from '../components/SkeletonCard'
 
 const API = 'http://localhost:8642'
@@ -470,32 +471,12 @@ export default function Home() {
             const chapterTag = item.chapterNumber ? `Ch. ${item.chapterNumber}` : (item.chapterTitle || '')
 
             return (
-              <div
-                key={i}
-                onClick={() => navigate(`/manga/${encodeURIComponent(mId)}`, {
-                  state: {
-                    manga: {
-                      id: mId,
-                      title: mTitle,
-                      cover: mCover,
-                      description: item.description || ''
-                    }
-                  }
-                })}
-                style={{ flexShrink: 0, width: 130, cursor: 'pointer' }}
-              >
-                <div style={{ width: 130, height: 186, borderRadius: 10, overflow: 'hidden', marginBottom: 8, border: '1px solid rgba(255,255,255,0.08)', position: 'relative' }}>
-                  <img src={mCover} alt={mTitle} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.src = 'https://via.placeholder.com/200x280?text=No+Cover'} />
-                  {chapterTag && (
-                    <span style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(16, 185, 129, 0.9)', color: '#fff', fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 4 }}>
-                      {chapterTag}
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  {mTitle}
-                </div>
-              </div>
+              <MangaCard 
+                key={i} 
+                manga={{ id: mId, title: mTitle, cover: mCover, description: item.description || '' }} 
+                badge={chapterTag}
+                style={{ flexShrink: 0, width: 140 }} 
+              />
             )
           }}
         />
@@ -584,18 +565,7 @@ export default function Home() {
           title="Trending Manga"
           items={mangaTrending}
           renderCard={(item, i) => (
-            <div
-              key={i}
-              onClick={() => navigate(`/manga/${item.id}`)}
-              style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}
-            >
-              <div style={{ width: 140, height: 200, borderRadius: 10, overflow: 'hidden', marginBottom: 8, border: '1px solid rgba(217,119,6,0.15)' }}>
-                <img src={item.cover} alt={item.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {item.title}
-              </div>
-            </div>
+            <MangaCard key={i} manga={item} style={{ flexShrink: 0, width: 140 }} />
           )}
         />
       )}
@@ -606,19 +576,7 @@ export default function Home() {
           title="New Manga Releases"
           items={mangaNew}
           renderCard={(item, i) => (
-            <div
-              key={i}
-              onClick={() => navigate(`/manga/${item.id}`)}
-              style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}
-            >
-              <div style={{ width: 140, height: 200, borderRadius: 10, overflow: 'hidden', marginBottom: 8, border: '1px solid rgba(217,119,6,0.15)', position: 'relative' }}>
-                <img src={item.cover} alt={item.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', top: 6, left: 6, background: 'linear-gradient(135deg, #d97706, #f59e0b)', padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, color: '#fff' }}>NEW</div>
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {item.title}
-              </div>
-            </div>
+            <MangaCard key={i} manga={{ ...item, status: 'NEW' }} style={{ flexShrink: 0, width: 140 }} />
           )}
         />
       )}
