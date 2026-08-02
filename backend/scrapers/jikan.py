@@ -1,7 +1,13 @@
 import httpx
 import asyncio
+import json
 from typing import Optional
 from fastapi import APIRouter
+try:
+    from curl_cffi.requests import AsyncSession as CurlSession
+    _CURL_AVAILABLE = True
+except ImportError:
+    _CURL_AVAILABLE = False
 
 router = APIRouter()
 
@@ -59,11 +65,25 @@ MEDIA_FRAGMENT = """
 async def anilist_post(query: str, variables: dict = None) -> dict:
     payload = {"query": query, "variables": variables or {}}
     try:
-        async with httpx.AsyncClient(headers=HEADERS, timeout=20) as client:
-            resp = await client.post(ANILIST, json=payload)
-            if resp.status_code != 200:
-                return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
-            return resp.json()
+        # Use curl_cffi to impersonate Chrome TLS fingerprint — bypasses Cloudflare bot detection
+        if _CURL_AVAILABLE:
+            async with CurlSession(impersonate="chrome120") as session:
+                resp = await session.post(
+                    ANILIST,
+                    json=payload,
+                    headers={"Content-Type": "application/json", "Accept": "application/json"},
+                    timeout=20
+                )
+                if resp.status_code != 200:
+                    return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
+                return resp.json()
+        else:
+            # Fallback to httpx with browser User-Agent
+            async with httpx.AsyncClient(headers=HEADERS, timeout=20) as client:
+                resp = await client.post(ANILIST, json=payload)
+                if resp.status_code != 200:
+                    return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
+                return resp.json()
     except Exception as e:
         return {"errors": [{"message": str(e)}], "data": None}
 

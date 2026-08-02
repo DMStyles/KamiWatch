@@ -5,6 +5,11 @@ import asyncio
 from fastapi import APIRouter
 from bs4 import BeautifulSoup
 from typing import List
+try:
+    from curl_cffi.requests import AsyncSession as CurlSession
+    _CURL_AVAILABLE = True
+except ImportError:
+    _CURL_AVAILABLE = False
 
 from database import get_translation, save_translation, DynamicBaseURL
 from client import SharedClientContext
@@ -34,16 +39,33 @@ async def fetch_english_title_anilist(title: str) -> str:
     """
     url = "https://graphql.anilist.co"
     try:
-        async with httpx.AsyncClient(timeout=6, headers=HEADERS) as client:
-            resp = await client.post(url, json={"query": query, "variables": {"search": title}})
-            if resp.status_code == 200:
-                data = resp.json()
-                media = data.get("data", {}).get("Media") or {}
-                eng = media.get("title", {}).get("english")
-                rom = media.get("title", {}).get("romaji")
-                final_title = eng or rom or title
-                save_translation(title, final_title)
-                return final_title
+        if _CURL_AVAILABLE:
+            async with CurlSession(impersonate="chrome120") as session:
+                resp = await session.post(
+                    url,
+                    json={"query": query, "variables": {"search": title}},
+                    headers={"Content-Type": "application/json", "Accept": "application/json"},
+                    timeout=6
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    media = data.get("data", {}).get("Media") or {}
+                    eng = media.get("title", {}).get("english")
+                    rom = media.get("title", {}).get("romaji")
+                    final_title = eng or rom or title
+                    save_translation(title, final_title)
+                    return final_title
+        else:
+            async with httpx.AsyncClient(timeout=6, headers=HEADERS) as client:
+                resp = await client.post(url, json={"query": query, "variables": {"search": title}})
+                if resp.status_code == 200:
+                    data = resp.json()
+                    media = data.get("data", {}).get("Media") or {}
+                    eng = media.get("title", {}).get("english")
+                    rom = media.get("title", {}).get("romaji")
+                    final_title = eng or rom or title
+                    save_translation(title, final_title)
+                    return final_title
     except Exception:
         pass
     return title
