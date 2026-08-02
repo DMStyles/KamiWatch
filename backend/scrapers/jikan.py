@@ -67,13 +67,29 @@ MEDIA_FRAGMENT = """
 
 
 def _anilist_post_sync(query: str, variables: dict = None) -> dict:
-    """Sync curl_cffi call — impersonates Chrome120 TLS to bypass Cloudflare."""
+    """Sync curl_cffi call — impersonates Chrome120 TLS + CORS headers to bypass Cloudflare."""
     payload = {"query": query, "variables": variables or {}}
+    # Full Chrome browser headers including CORS security headers AniList checks
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Origin": "https://anilist.co",
+        "Referer": "https://anilist.co/",
+        "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "Connection": "keep-alive",
+    }
     try:
         resp = _curl.post(
             ANILIST,
             json=payload,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            headers=headers,
             impersonate="chrome120",
             timeout=20
         )
@@ -82,6 +98,7 @@ def _anilist_post_sync(query: str, variables: dict = None) -> dict:
         return resp.json()
     except Exception as e:
         return {"errors": [{"message": str(e)}], "data": None}
+
 
 
 async def anilist_post(query: str, variables: dict = None) -> dict:
