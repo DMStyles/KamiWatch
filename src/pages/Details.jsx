@@ -617,10 +617,9 @@ export default function Details() {
       ========================================================= */}
       <div style={{ position: 'relative', height: '45vh', minHeight: 300, maxHeight: 440, overflow: 'hidden' }}>
         {/* Blurred backdrop */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: `url(${backdropUrl})`,
-          backgroundSize: 'cover', backgroundPosition: 'center 20%',
+        <img src={backdropUrl} referrerPolicy="no-referrer" style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', objectPosition: 'center 20%',
           filter: 'blur(6px) brightness(0.45)',
           transform: 'scale(1.08)',
         }} />

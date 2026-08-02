@@ -94,12 +94,13 @@ function HeroSection({ slides }) {
   return (
     <div style={{ position: 'relative', height: '58vh', minHeight: 380, maxHeight: 560, overflow: 'hidden', marginBottom: 0 }}>
       {/* Backdrop */}
-      <div
+      <img
+        src={slide.backdrop || slide.image || slide.bannerImage}
+        alt={slide.title}
+        referrerPolicy="no-referrer"
         style={{
           position: 'absolute', inset: 0,
-          backgroundImage: `url(${slide.backdrop || slide.image || slide.bannerImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
+          width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top',
           transition: 'opacity 0.4s ease',
           opacity: fading ? 0 : 1,
           transform: 'scale(1.04)',

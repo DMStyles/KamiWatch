@@ -185,8 +185,13 @@ export default function MangaDetails() {
       {/* Hero Banner */}
       <div
         className="manga-details-hero"
-        style={{ backgroundImage: details?.cover ? `url(${details.cover})` : 'none', backgroundColor: '#0d0a05' }}
+        style={{ backgroundColor: '#0d0a05', position: 'relative' }}
       >
+        {details?.cover && (
+          <img src={details.cover} referrerPolicy="no-referrer" style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'
+          }} />
+        )}
         <div className="manga-details-hero-overlay" />
         <div style={{ position: 'absolute', top: 12, left: 16, zIndex: 5 }}>
           <button

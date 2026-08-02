@@ -34,7 +34,7 @@ async def fetch_english_title_anilist(title: str) -> str:
     """
     url = "https://graphql.anilist.co"
     try:
-        async with httpx.AsyncClient(timeout=6) as client:
+        async with httpx.AsyncClient(timeout=6, headers=HEADERS) as client:
             resp = await client.post(url, json={"query": query, "variables": {"search": title}})
             if resp.status_code == 200:
                 data = resp.json()

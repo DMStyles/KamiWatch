@@ -399,7 +399,7 @@ async def resolve_id_to_title(id_str: str) -> str:
         }
         '''
         try:
-            async with httpx.AsyncClient(timeout=8) as client:
+            async with httpx.AsyncClient(timeout=8, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}) as client:
                 r = await client.post('https://graphql.anilist.co', json={'query': query, 'variables': {'id': int(clean_id)}})
                 d = r.json()
                 media = d.get('data', {}).get('Media', {})
