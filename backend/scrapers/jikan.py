@@ -1,13 +1,17 @@
 import httpx
 import asyncio
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from fastapi import APIRouter
 try:
-    from curl_cffi.requests import AsyncSession as CurlSession
+    import curl_cffi.requests as _curl
     _CURL_AVAILABLE = True
 except ImportError:
     _CURL_AVAILABLE = False
+
+# Thread pool for running sync curl_cffi calls without blocking the async event loop
+_executor = ThreadPoolExecutor(max_workers=4)
 
 router = APIRouter()
 
@@ -62,21 +66,31 @@ MEDIA_FRAGMENT = """
 """
 
 
+def _anilist_post_sync(query: str, variables: dict = None) -> dict:
+    """Sync curl_cffi call — impersonates Chrome120 TLS to bypass Cloudflare."""
+    payload = {"query": query, "variables": variables or {}}
+    try:
+        resp = _curl.post(
+            ANILIST,
+            json=payload,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            impersonate="chrome120",
+            timeout=20
+        )
+        if resp.status_code != 200:
+            return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
+        return resp.json()
+    except Exception as e:
+        return {"errors": [{"message": str(e)}], "data": None}
+
+
 async def anilist_post(query: str, variables: dict = None) -> dict:
     payload = {"query": query, "variables": variables or {}}
     try:
-        # Use curl_cffi to impersonate Chrome TLS fingerprint — bypasses Cloudflare bot detection
         if _CURL_AVAILABLE:
-            async with CurlSession(impersonate="chrome120") as session:
-                resp = await session.post(
-                    ANILIST,
-                    json=payload,
-                    headers={"Content-Type": "application/json", "Accept": "application/json"},
-                    timeout=20
-                )
-                if resp.status_code != 200:
-                    return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
-                return resp.json()
+            # Run sync curl_cffi in thread pool — avoids event loop conflicts
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(_executor, _anilist_post_sync, query, variables)
         else:
             # Fallback to httpx with browser User-Agent
             async with httpx.AsyncClient(headers=HEADERS, timeout=20) as client:

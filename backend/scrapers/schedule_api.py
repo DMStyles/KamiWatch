@@ -2,14 +2,17 @@ import httpx
 import datetime
 import re
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter
 from bs4 import BeautifulSoup
 from typing import List
 try:
-    from curl_cffi.requests import AsyncSession as CurlSession
+    import curl_cffi.requests as _curl
     _CURL_AVAILABLE = True
 except ImportError:
     _CURL_AVAILABLE = False
+
+_executor = ThreadPoolExecutor(max_workers=2)
 
 from database import get_translation, save_translation, DynamicBaseURL
 from client import SharedClientContext
@@ -26,7 +29,7 @@ HEADERS = {
 }
 
 async def fetch_english_title_anilist(title: str) -> str:
-    """Fetch English title from AniList. Returns romaji if not found."""
+    """Fetch English title from AniList using curl_cffi Chrome impersonation."""
     query = """
     query ($search: String) {
       Media (search: $search, type: ANIME) {
@@ -40,21 +43,24 @@ async def fetch_english_title_anilist(title: str) -> str:
     url = "https://graphql.anilist.co"
     try:
         if _CURL_AVAILABLE:
-            async with CurlSession(impersonate="chrome120") as session:
-                resp = await session.post(
+            def _sync_fetch():
+                resp = _curl.post(
                     url,
                     json={"query": query, "variables": {"search": title}},
                     headers={"Content-Type": "application/json", "Accept": "application/json"},
+                    impersonate="chrome120",
                     timeout=6
                 )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    media = data.get("data", {}).get("Media") or {}
-                    eng = media.get("title", {}).get("english")
-                    rom = media.get("title", {}).get("romaji")
-                    final_title = eng or rom or title
-                    save_translation(title, final_title)
-                    return final_title
+                return resp.json() if resp.status_code == 200 else None
+            loop = asyncio.get_event_loop()
+            data = await loop.run_in_executor(_executor, _sync_fetch)
+            if data:
+                media = data.get("data", {}).get("Media") or {}
+                eng = media.get("title", {}).get("english")
+                rom = media.get("title", {}).get("romaji")
+                final_title = eng or rom or title
+                save_translation(title, final_title)
+                return final_title
         else:
             async with httpx.AsyncClient(timeout=6, headers=HEADERS) as client:
                 resp = await client.post(url, json={"query": query, "variables": {"search": title}})
