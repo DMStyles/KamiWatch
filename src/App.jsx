@@ -28,6 +28,8 @@ export const AppContext = React.createContext({})
 export default function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [updateDownloaded, setUpdateDownloaded] = useState(false)
+  const [updateProgress, setUpdateProgress] = useState(0)
+
   const [episodeModal, setEpisodeModal] = useState(null) // { title, url, thumbnail, source }
   const [playerModal, setPlayerModal] = useState(null)   // { url, title }
   const [downloads, setDownloads] = useState([])
@@ -222,9 +224,16 @@ export default function App() {
 
     if (window.electronAPI) {
       window.electronAPI.onUpdateAvailable(() => setUpdateAvailable(true))
-      window.electronAPI.onUpdateDownloaded(() => setUpdateDownloaded(true))
+      window.electronAPI.onDownloadProgress((_, progressObj) => {
+        setUpdateProgress(progressObj.percent || 0)
+      })
+      window.electronAPI.onUpdateDownloaded(() => {
+        setUpdateDownloaded(true)
+        setUpdateProgress(100)
+      })
     }
   }, [])
+
 
   const saveSettings = (newSettings) => {
     setSettings(newSettings)
@@ -256,6 +265,7 @@ export default function App() {
         {(updateAvailable || updateDownloaded) && (
           <UpdateBanner
             downloaded={updateDownloaded}
+            progress={updateProgress}
             onInstall={() => window.electronAPI?.installUpdate()}
           />
         )}

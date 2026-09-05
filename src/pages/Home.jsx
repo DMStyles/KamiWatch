@@ -446,13 +446,14 @@ export default function Home() {
 
       {/* === CONTINUE WATCHING === */}
       {history.length > 0 && (
-        <Row
+      <Row
           title="Continue Watching"
           items={history}
           renderCard={(item, i) => (
             <AnimeCard
               key={i}
               anime={item}
+              badge={item.epNumber ? `EP ${item.epNumber}` : undefined}
               progress={getProgress(item)}
               wide
             />

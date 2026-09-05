@@ -80,6 +80,25 @@ function createWindow() {
     }
   );
 
+  // Relax CORS headers for video streaming so Hls.js can load cross-origin m3u8 playlists and ts chunks
+  session.defaultSession.webRequest.onHeadersReceived(
+    (details, callback) => {
+      const responseHeaders = { ...details.responseHeaders };
+      responseHeaders['Access-Control-Allow-Origin'] = ['*'];
+      responseHeaders['Access-Control-Allow-Headers'] = ['*'];
+      responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS, HEAD'];
+      callback({ responseHeaders });
+    }
+  );
+
+  // Handle HTML5 fullscreen requests from video players (iframes)
+  mainWindow.on('enter-html-full-screen', () => {
+    mainWindow.setFullScreen(true);
+  });
+  mainWindow.on('leave-html-full-screen', () => {
+    mainWindow.setFullScreen(false);
+  });
+
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
@@ -238,8 +257,25 @@ ipcMain.handle('send-notification', (_, { title, body }) => {
 });
 
 ipcMain.handle('install-update', () => {
-  autoUpdater.quitAndInstall();
+  console.log('[Updater] Preparing to install update. Terminating backend...');
+  if (backendProcess) {
+    try {
+      if (process.platform === 'win32') {
+        const { execSync } = require('child_process');
+        execSync(`taskkill /pid ${backendProcess.pid} /t /f`);
+        execSync('taskkill /F /IM kamiwatch-backend.exe');
+      } else {
+        process.kill(-backendProcess.pid);
+      }
+    } catch (e) {
+      console.error('[Updater] Error killing backend:', e.message);
+    }
+  }
+  setImmediate(() => {
+    autoUpdater.quitAndInstall(false, true);
+  });
 });
+
 
 // Configure autoUpdater
 autoUpdater.autoDownload = true;

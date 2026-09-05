@@ -139,11 +139,12 @@ async def get_timetables(weeksAfter: int = 0):
                         title = route.replace("-", " ").title()
 
                 ep_el = show.select_one(".show-episode")
-                time_el = show.select_one(".show-air-time")
+                time_el = show.select_one(".show-air-time, time")
                 air_type_el = show.select_one(".air-type-text")
 
                 ep = ep_el.text.strip() if ep_el else ""
                 time_str = time_el.text.strip() if time_el else ""
+                iso_dt = time_el.get("datetime") if time_el else None
                 air_type = air_type_el.text.strip() if air_type_el else ""
 
                 img = (img_el.get("data-src") or img_el.get("data-lazy-src") or img_el.get("src") or "") if img_el else ""
@@ -178,12 +179,14 @@ async def get_timetables(weeksAfter: int = 0):
                 if air_type and time_clean:
                     grouped[key]["airings"].append({
                         "type": air_type,
-                        "time": time_clean
+                        "time": time_clean,
+                        "datetime": iso_dt
                     })
                 elif time_clean:
                     grouped[key]["airings"].append({
                         "type": "SUB" if not air_type else air_type,
-                        "time": time_clean
+                        "time": time_clean,
+                        "datetime": iso_dt
                     })
 
             for val in grouped.values():

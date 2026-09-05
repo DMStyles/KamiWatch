@@ -148,7 +148,43 @@ export default function EpisodeModal() {
         const data = await res.json()
         if (data.url) finalUrl = data.url
       }
-      setPlayerModal({ title: `${episodeModal.title} - Episode ${ep.number}`, url: finalUrl, alternatives })
+      const title = episodeModal.title
+      const epNumber = ep.number
+      const dataIds = ep.url?.startsWith('anikoto:') ? ep.url.split('anikoto:')[1] : null
+      setPlayerModal({
+        title: `${title} - Episode ${epNumber}`,
+        url: finalUrl,
+        alternatives,
+        epNumber,
+        cover: episodeModal.thumbnail || episodeModal.cover,
+        dataIds,
+        episodes,
+      })
+
+
+      // Save to Continue Watching history
+      try {
+        const historyKey = 'kamiwatch-history'
+        const history = JSON.parse(localStorage.getItem(historyKey) || '[]')
+        const existingIdx = history.findIndex(h => h.title === title)
+        const entry = {
+          title,
+          epNumber,
+          url: episodeModal.url,
+          thumbnail: episodeModal.thumbnail || episodeModal.cover || '',
+          cover: episodeModal.thumbnail || episodeModal.cover || '',
+          source: episodeModal.source || 'anikoto',
+          id: episodeModal.id || episodeModal.animeId || episodeModal.malId || null,
+          malId: episodeModal.malId || episodeModal.id || null,
+          watchedAt: Date.now(),
+        }
+        if (existingIdx !== -1) {
+          history.splice(existingIdx, 1)
+        }
+        history.unshift(entry)
+        localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 30)))
+      } catch {}
+
       setEpisodeModal(null)
     } catch (e) {
       setWatchError('Failed to resolve stream. Try a different server.')

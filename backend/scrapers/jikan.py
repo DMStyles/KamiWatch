@@ -1,6 +1,8 @@
 import httpx
 import asyncio
 import json
+import time
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from fastapi import APIRouter
@@ -12,6 +14,10 @@ except ImportError:
 
 # Thread pool for running sync curl_cffi calls without blocking the async event loop
 _executor = ThreadPoolExecutor(max_workers=4)
+
+# Simple in-memory cache: {cache_key: (timestamp, data)}
+_cache: dict = {}
+_CACHE_TTL = 300  # 5 minutes
 
 router = APIRouter()
 
@@ -67,9 +73,9 @@ MEDIA_FRAGMENT = """
 
 
 def _anilist_post_sync(query: str, variables: dict = None) -> dict:
-    """Sync curl_cffi call — impersonates Chrome120 TLS + CORS headers to bypass Cloudflare."""
+    """Sync curl_cffi call — impersonates Chrome120 TLS + CORS headers to bypass Cloudflare.
+    Retries up to 3 times with backoff on 403/429."""
     payload = {"query": query, "variables": variables or {}}
-    # Full Chrome browser headers including CORS security headers AniList checks
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json, text/plain, */*",
@@ -85,38 +91,145 @@ def _anilist_post_sync(query: str, variables: dict = None) -> dict:
         "sec-fetch-site": "same-origin",
         "Connection": "keep-alive",
     }
-    try:
-        resp = _curl.post(
-            ANILIST,
-            json=payload,
-            headers=headers,
-            impersonate="chrome120",
-            timeout=20
-        )
-        if resp.status_code != 200:
-            return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
-        return resp.json()
-    except Exception as e:
-        return {"errors": [{"message": str(e)}], "data": None}
+    last_error = None
+    for attempt in range(3):
+        try:
+            resp = _curl.post(
+                ANILIST,
+                json=payload,
+                headers=headers,
+                impersonate="chrome120",
+                timeout=25
+            )
+            if resp.status_code in (429, 403):
+                wait = (attempt + 1) * 2  # 2s, 4s, 6s
+                time.sleep(wait)
+                last_error = f"HTTP {resp.status_code}"
+                continue
+            if resp.status_code != 200:
+                return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
+            return resp.json()
+        except Exception as e:
+            last_error = str(e)
+            time.sleep((attempt + 1) * 1)
+    return {"errors": [{"message": last_error or "Failed after retries"}], "data": None}
 
+
+def _cache_key(query: str, variables: dict) -> str:
+    raw = json.dumps({"q": query, "v": variables or {}}, sort_keys=True)
+    return hashlib.md5(raw.encode()).hexdigest()
 
 
 async def anilist_post(query: str, variables: dict = None) -> dict:
-    payload = {"query": query, "variables": variables or {}}
+    key = _cache_key(query, variables)
+    # Return cached response if fresh
+    if key in _cache:
+        ts, data = _cache[key]
+        if time.time() - ts < _CACHE_TTL:
+            return data
+
     try:
         if _CURL_AVAILABLE:
-            # Run sync curl_cffi in thread pool — avoids event loop conflicts
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(_executor, _anilist_post_sync, query, variables)
+            result = await loop.run_in_executor(_executor, _anilist_post_sync, query, variables)
         else:
-            # Fallback to httpx with browser User-Agent
-            async with httpx.AsyncClient(headers=HEADERS, timeout=20) as client:
-                resp = await client.post(ANILIST, json=payload)
-                if resp.status_code != 200:
-                    return {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
-                return resp.json()
+            # Fallback to httpx with browser User-Agent + simple retry
+            payload = {"query": query, "variables": variables or {}}
+            last_error = None
+            result = {"errors": [{"message": "Not attempted"}], "data": None}
+            for attempt in range(3):
+                try:
+                    async with httpx.AsyncClient(headers=HEADERS, timeout=25) as client:
+                        resp = await client.post(ANILIST, json=payload)
+                        if resp.status_code in (429, 403):
+                            await asyncio.sleep((attempt + 1) * 2)
+                            last_error = f"HTTP {resp.status_code}"
+                            continue
+                        if resp.status_code != 200:
+                            result = {"errors": [{"message": f"HTTP {resp.status_code}"}], "data": None}
+                            break
+                        result = resp.json()
+                        break
+                except Exception as e:
+                    last_error = str(e)
+                    await asyncio.sleep((attempt + 1) * 1)
+            else:
+                result = {"errors": [{"message": last_error or "Failed after retries"}], "data": None}
     except Exception as e:
         return {"errors": [{"message": str(e)}], "data": None}
+
+    # Cache successful (non-error) responses
+    if not result.get("errors") and result.get("data"):
+        _cache[key] = (time.time(), result)
+    return result
+
+
+
+def _kitsu_get_sync(url: str, params: dict = None) -> dict:
+    try:
+        resp = _curl.get(url, params=params, impersonate="chrome120", timeout=15)
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception:
+        pass
+    return {}
+
+
+async def kitsu_get(endpoint: str, params: dict = None) -> dict:
+    url = f"https://kitsu.io/api/edge/{endpoint.lstrip('/')}"
+    if _CURL_AVAILABLE:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, _kitsu_get_sync, url, params)
+    else:
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                res = await client.get(url, params=params)
+                if res.status_code == 200:
+                    return res.json()
+        except Exception:
+            pass
+        return {}
+
+
+def parse_kitsu_item(item: dict) -> dict:
+    attr = item.get("attributes") or {}
+    titles = attr.get("titles") or {}
+    title_en = attr.get("canonicalTitle") or titles.get("en") or titles.get("en_jp") or "Unknown"
+    title_jp = titles.get("ja_jp") or titles.get("en_jp") or ""
+
+    rating = attr.get("averageRating")
+    score = round(float(rating) / 10, 1) if rating else None
+
+    poster_obj = attr.get("posterImage") or {}
+    poster = poster_obj.get("large") or poster_obj.get("medium") or poster_obj.get("original") or ""
+
+    cover_obj = attr.get("coverImage") or {}
+    cover = cover_obj.get("large") or cover_obj.get("original") or poster
+
+    item_id = item.get("id")
+    episodes = attr.get("episodeCount")
+
+    status_raw = (attr.get("status") or "").lower()
+    status = "RELEASING" if status_raw in ("current", "airing") else "FINISHED"
+
+    return {
+        "id": item_id,
+        "title": title_en,
+        "title_japanese": title_jp,
+        "cover": poster,
+        "banner": cover,
+        "image": poster,
+        "thumbnail": poster,
+        "sub_episodes": str(episodes or "?"),
+        "dub_episodes": "0",
+        "type": (attr.get("subtype") or "TV").upper(),
+        "score": score,
+        "source": "kitsu",
+        "mal_id": item_id,
+        "year": attr.get("startDate", "")[:4] if attr.get("startDate") else None,
+        "status": status,
+        "ep": episodes or "?",
+    }
 
 
 def parse_media(item: dict) -> dict:
@@ -147,6 +260,7 @@ def parse_media(item: dict) -> dict:
     }
 
 
+
 @router.get("/by-genre")
 async def get_by_genre(genre: str, page: int = 1):
     genre_lower = genre.lower()
@@ -169,7 +283,20 @@ async def get_by_genre(genre: str, page: int = 1):
     page_info = page_data.get("pageInfo") or {}
 
     if errors and not anime_list:
-        return {"results": [], "genre": genre, "error": errors[0].get("message", "Unknown error")}
+        offset = (page - 1) * 20
+        kitsu_res = await kitsu_get("anime", {"filter[categories]": genre_lower, "page[limit]": 20, "page[offset]": offset})
+        kitsu_data = kitsu_res.get("data") or []
+        if kitsu_data:
+            results = [parse_kitsu_item(x) for x in kitsu_data]
+            meta = kitsu_res.get("meta") or {}
+            total = meta.get("count", 100)
+            return {
+                "results": results,
+                "genre": genre,
+                "page": page,
+                "has_next": offset + 20 < total,
+            }
+        return {"results": [], "genre": genre, "error": None}
 
     return {
         "results": [parse_media(a) for a in anime_list],
@@ -194,6 +321,12 @@ async def search_jikan(q: str, page: int = 1):
     """
     result = await anilist_post(query, {"search": search_q, "page": page})
     anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+    if not anime_list:
+        offset = (page - 1) * 20
+        kitsu_res = await kitsu_get("anime", {"filter[text]": search_q, "page[limit]": 20, "page[offset]": offset})
+        kitsu_data = kitsu_res.get("data") or []
+        if kitsu_data:
+            return {"results": [parse_kitsu_item(x) for x in kitsu_data], "source": "kitsu"}
     return {"results": [parse_media(a) for a in anime_list], "source": "jikan"}
 
 
@@ -212,10 +345,15 @@ async def get_airing(limit: int = 20):
     result = await anilist_post(query, {"perPage": limit})
     anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
 
+    if not anime_list:
+        kitsu_res = await kitsu_get("anime", {"filter[status]": "current", "sort": "popularityRank", "page[limit]": min(limit, 20)})
+        kitsu_data = kitsu_res.get("data") or []
+        if kitsu_data:
+            return {"results": [parse_kitsu_item(x) for x in kitsu_data]}
+
     results = []
     for item in anime_list:
         r = parse_media(item)
-        # Use next airing episode number if available
         nae = item.get("nextAiringEpisode")
         if nae and nae.get("episode"):
             r["ep"] = nae["episode"] - 1 if nae["episode"] > 1 else nae["episode"]
@@ -227,9 +365,8 @@ async def get_airing(limit: int = 20):
 @router.get("/all")
 async def get_all_anime(page: int = 1, letter: str = None):
     anime_list = None
+    result = {}
     if letter and letter != "#":
-        # Sort alphabetically ascending - A titles appear on page 1
-        # Use search with letter to find relevant anime
         query = """
         query ($search: String, $page: Int) {
           Page(page: $page, perPage: 24) {
@@ -240,11 +377,9 @@ async def get_all_anime(page: int = 1, letter: str = None):
           }
         }
         """
-        # Try with the letter, fall back to letter+common suffix if 0 results
         result = await anilist_post(query, {"search": letter, "page": page})
         anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
 
-        # If no results (letter too short for AniList search), use alphabetical sort
         if not anime_list:
             fallback_query = """
             query ($page: Int) {
@@ -259,16 +394,13 @@ async def get_all_anime(page: int = 1, letter: str = None):
             result = await anilist_post(fallback_query, {"page": page})
             page_data = ((result.get("data") or {}).get("Page")) or {}
             all_items = page_data.get("media") or []
-            # Filter client-side to titles starting with selected letter
             anime_list = [
                 i for i in all_items
                 if ((i.get("title") or {}).get("english") or (i.get("title") or {}).get("romaji") or "").upper().startswith(letter.upper())
             ]
-            # If still none (e.g. page doesn't have that letter yet), return raw alphabetical
             if not anime_list:
                 anime_list = all_items
     else:
-        # Default: most popular anime
         query = """
         query ($page: Int) {
           Page(page: $page, perPage: 24) {
@@ -280,19 +412,33 @@ async def get_all_anime(page: int = 1, letter: str = None):
         }
         """
         result = await anilist_post(query, {"page": page})
+        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
 
     errors = result.get("errors")
     page_data = ((result.get("data") or {}).get("Page")) or {}
-    if not anime_list:
-        anime_list = page_data.get("media") or []
     page_info = page_data.get("pageInfo") or {}
 
-    if errors and not anime_list:
-        return {
-            "results": [],
-            "error": errors[0].get("message", "Unknown error"),
-            "page": page, "has_next": False, "total_pages": 1,
-        }
+    if (errors or not anime_list):
+        offset = (page - 1) * 20
+        params = {"page[limit]": 20, "page[offset]": offset}
+        if letter and letter != "#":
+            params["filter[text]"] = letter
+        else:
+            params["sort"] = "popularityRank"
+        kitsu_res = await kitsu_get("anime", params)
+        kitsu_data = kitsu_res.get("data") or []
+        if kitsu_data:
+            results = [parse_kitsu_item(x) for x in kitsu_data]
+            meta = kitsu_res.get("meta") or {}
+            total = meta.get("count", 240)
+            return {
+                "results": results,
+                "page": page,
+                "has_next": offset + 20 < total,
+                "total_pages": (total // 20) + 1,
+                "letter": letter,
+            }
+
 
     return {
         "results": [parse_media(a) for a in anime_list],
@@ -329,20 +475,41 @@ async def get_hero_slides():
     """
     result = await anilist_post(query)
     anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
-
-    # Only use anime that have a bannerImage
     with_banners = [a for a in anime_list if a.get("bannerImage")]
-    if not with_banners:
-        return {"slides": []}
 
-    # Shuffle and pick up to 6
+    if not with_banners:
+        kitsu_res = await kitsu_get("trending/anime")
+        kitsu_items = kitsu_res.get("data") or []
+        slides = []
+        for item in kitsu_items[:6]:
+            attr = item.get("attributes") or {}
+            banner = (attr.get("coverImage") or {}).get("large") or (attr.get("posterImage") or {}).get("large") or ""
+            if not banner:
+                continue
+            title = attr.get("canonicalTitle") or "Anime"
+            desc = attr.get("synopsis") or ""
+            import re
+            desc = re.sub(r"<[^>]+>", "", desc)[:180]
+            rating = attr.get("averageRating")
+            score_str = f"{round(float(rating)/10,1)}/10" if rating else "N/A"
+            slides.append({
+                "id": item.get("id"),
+                "title": title,
+                "synopsis": desc,
+                "image": banner,
+                "type": (attr.get("subtype") or "TV").upper(),
+                "episodes": str(attr.get("episodeCount") or "?"),
+                "rating": score_str,
+                "genres": [],
+            })
+        return {"slides": slides}
+
     random.shuffle(with_banners)
     picks = with_banners[:6]
 
     slides = []
     for item in picks:
         title_en = (item.get("title") or {}).get("english") or (item.get("title") or {}).get("romaji", "")
-        # Strip HTML from description
         desc = (item.get("description") or "").replace("<br>", " ").replace("<br/>", " ")
         import re
         desc = re.sub(r"<[^>]+>", "", desc)[:180]
@@ -364,7 +531,7 @@ async def get_hero_slides():
 
 @router.get("/details")
 async def get_details(id: Optional[int] = None, title: Optional[str] = None):
-    """Get full details of an anime by ID or Title from AniList."""
+    """Get full details of an anime by ID or Title from AniList with Kitsu fallback."""
     if not id and not title:
         return {"error": "Must provide id or title"}
 
@@ -447,7 +614,6 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
         title_lower = title.lower().strip() if title else ""
         variables["search"] = TITLE_REPLACEMENTS.get(title_lower, title)
 
-    # Stage 1: Direct Media Search
     result = await anilist_post(query, variables)
     errors = result.get("errors")
     media = (result.get("data") or {}).get("Media")
@@ -462,7 +628,6 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
     }
     """
 
-    # Stage 2: Page Search with exact title if direct Media search gave 404/error
     if (errors or not media) and title:
         try:
             page_res = await anilist_post(page_query, {"search": title})
@@ -475,7 +640,6 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
         except:
             pass
 
-    # Stage 3: Cleaned Title Search (strip Season X, Part Y, S2, 2nd Season, OVA, Movie, etc.)
     if (errors or not media) and title:
         import re
         cleaned = re.sub(r"\[.*?\]|\(.*?\)", "", title)
@@ -495,28 +659,49 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
             except:
                 pass
 
-    # Stage 4: Base Name Search (first 2-3 words excluding Season/Part keywords)
-    if (errors or not media) and title:
-        import re
-        words = [w for w in title.split() if w.lower() not in ["season", "part", "2nd", "3rd", "4th", "1st", "s2", "s3", "s4"]]
-        if len(words) >= 2:
-            base_name = " ".join(words[:3] if len(words) >= 3 else words[:2])
-            base_name = re.sub(r"[:,.-]$", "", base_name).strip()
-            try:
-                page_res = await anilist_post(page_query, {"search": base_name})
-                page_media = ((page_res.get("data") or {}).get("Page") or {}).get("media") or []
-                if page_media:
-                    found_id = page_media[0]["id"]
-                    result = await anilist_post(query, {"id": found_id})
-                    errors = result.get("errors")
-                    media = (result.get("data") or {}).get("Media")
-            except:
-                pass
+    if (errors or not media):
+        # Kitsu fallback for details page!
+        search_term = title or str(id)
+        kitsu_res = await kitsu_get("anime", {"filter[text]": search_term, "page[limit]": 1})
+        kitsu_data = kitsu_res.get("data") or []
+        if kitsu_data:
+            item = kitsu_data[0]
+            attr = item.get("attributes") or {}
+            rating = attr.get("averageRating")
+            score = round(float(rating) / 10, 1) if rating else None
+            poster = (attr.get("posterImage") or {}).get("large") or (attr.get("posterImage") or {}).get("original") or ""
+            banner = (attr.get("coverImage") or {}).get("large") or (attr.get("coverImage") or {}).get("original") or poster
 
-    if errors and not media:
-        return {"error": errors[0].get("message", "Anime not found")}
+            status_raw = (attr.get("status") or "").lower()
+            status = "RELEASING" if status_raw in ("current", "airing") else "FINISHED"
 
-    # Parse relations to find prequel, sequel, spin-offs, alternative setting etc.
+            desc = attr.get("synopsis") or ""
+            import re
+            desc = re.sub(r"<[^>]+>", "", desc)
+
+            return {
+                "id": item.get("id"),
+                "title": attr.get("canonicalTitle") or title or "Unknown",
+                "title_romaji": (attr.get("titles") or {}).get("en_jp") or attr.get("canonicalTitle") or "",
+                "title_native": (attr.get("titles") or {}).get("ja_jp") or "",
+                "banner": banner,
+                "cover": poster,
+                "description": desc,
+                "status": status,
+                "episodes": attr.get("episodeCount"),
+                "duration": attr.get("episodeLength"),
+                "score": score,
+                "genres": [],
+                "studio": "Unknown",
+                "year": attr.get("startDate", "")[:4] if attr.get("startDate") else None,
+                "season": "N/A",
+                "relations": [],
+                "recommendations": [],
+                "characters": [],
+                "trailer": {"id": attr.get("youtubeVideoId"), "url": f"https://www.youtube.com/embed/{attr.get('youtubeVideoId')}"} if attr.get("youtubeVideoId") else None
+            }
+        return {"error": "Anime details unavailable"}
+
     relations = []
     edges = (media.get("relations") or {}).get("edges") or []
     for edge in edges:
@@ -531,7 +716,6 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
                 "status": node.get("status"),
             })
 
-    # Parse recommendations
     recommendations = []
     rec_nodes = (media.get("recommendations") or {}).get("nodes") or []
     for node in rec_nodes:
@@ -546,7 +730,6 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
                 "type": rec_media.get("type"),
             })
 
-    # Parse characters
     characters = []
     char_edges = (media.get("characters") or {}).get("edges") or []
     for edge in char_edges:
@@ -558,7 +741,6 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
                 "image": (node.get("image") or {}).get("medium") or "",
             })
 
-    # Parse trailer
     trailer = media.get("trailer")
     trailer_data = None
     if trailer and trailer.get("site") == "youtube":
@@ -568,7 +750,6 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
             "thumbnail": trailer.get("thumbnail"),
         }
 
-    # Clean description from HTML tags
     desc = media.get("description") or ""
     import re
     desc = re.sub(r"<[^>]+>", "", desc)
@@ -605,6 +786,7 @@ async def get_details(id: Optional[int] = None, title: Optional[str] = None):
         "characters": characters,
         "trailer": trailer_data,
     }
+
 
 
 @router.get("/watch-order")
@@ -789,3 +971,33 @@ async def get_characters(id: int):
     except Exception as e:
         return []
 
+
+@router.get("/next-airing")
+async def get_next_airing(title: str = None, id: int = None):
+    """Get next airing episode info for an anime — proxied through backend to avoid renderer 403."""
+    if not title and not id:
+        return {"error": "Must provide title or id"}
+    query = """
+    query ($search: String, $id: Int) {
+      Media (search: $search, id: $id, type: ANIME) {
+        status
+        nextAiringEpisode {
+          airingAt
+          timeUntilAiring
+          episode
+        }
+      }
+    }
+    """
+    variables = {}
+    if id:
+        variables["id"] = id
+    else:
+        variables["search"] = title
+
+    result = await anilist_post(query, variables)
+    media = (result.get("data") or {}).get("Media") or {}
+    return {
+        "status": media.get("status"),
+        "nextAiringEpisode": media.get("nextAiringEpisode"),
+    }

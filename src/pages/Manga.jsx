@@ -194,8 +194,8 @@ export default function Manga() {
           <img 
             src={hero.image} 
             alt={hero.title}
-            referrerPolicy="no-referrer"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%', zIndex: 0 }} 
+            onError={e => { e.target.style.display = 'none' }}
           />
         )}
         {!scrolled && <div className="manga-hero-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(15,10,5,0.98) 0%, rgba(15,10,5,0.85) 40%, rgba(15,10,5,0.3) 100%), linear-gradient(to top, rgba(15,10,5,1) 0%, transparent 40%)', zIndex: 1 }} />}

@@ -1,10 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { AppContext } from '../App'
+import Hls from 'hls.js'
 
 export default function PlayerModal() {
   const { playerModal, setPlayerModal } = useContext(AppContext)
   const videoRef = useRef()
   const iframeRef = useRef()
+  const hlsRef = useRef(null)
   const [currentUrl, setCurrentUrl] = useState(playerModal?.url || '')
   const [activeTab, setActiveTab] = useState('online')
   const [subDub, setSubDub] = useState('sub')
@@ -34,12 +36,116 @@ export default function PlayerModal() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
-  if (!playerModal) return null
-
   // More robust video detection using URL extension + pathname
   const urlPath = (() => { try { return new URL(currentUrl).pathname } catch { return currentUrl } })()
-  const isDirectVideo = ['/library/stream', '.mp4', '.m3u8', '.mkv', '.webm', '.ogg']
-    .some(s => urlPath.includes(s)) || currentUrl.startsWith('blob:')
+  const isHls = currentUrl.includes('.m3u8') || currentUrl.includes('m3u8')
+  const isDirectVideo = isHls || ['/library/stream', '.mp4', '.mkv', '.webm', '.ogg']
+    .some(s => urlPath.includes(s)) || currentUrl.startsWith('blob:') || currentUrl.startsWith('file:')
+
+  // HLS / HTML5 Video player setup
+  useEffect(() => {
+    if (!videoRef.current || !currentUrl || activeTab !== 'online' || !isDirectVideo) return
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy()
+      hlsRef.current = null
+    }
+
+    if (isHls) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90
+        })
+        hlsRef.current = hls
+        hls.loadSource(currentUrl)
+        hls.attachMedia(videoRef.current)
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoRef.current?.play().catch(() => {})
+        })
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          console.warn('[Hls.js Error]', data)
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad()
+                break
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError()
+                break
+              default:
+                hls.destroy()
+                setVideoError(true)
+                break
+            }
+          }
+        })
+      } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        videoRef.current.src = currentUrl
+        videoRef.current.play().catch(() => {})
+      }
+    } else {
+      videoRef.current.src = currentUrl
+      videoRef.current.play().catch(() => {})
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
+  }, [currentUrl, isDirectVideo, isHls, activeTab])
+
+  if (!playerModal) return null
+
+  const handleSelectEpisode = async (ep) => {
+    setVideoError(false)
+    let url = ep.url
+    let alternatives = playerModal.alternatives
+    if (playerModal?.source?.startsWith('ext_')) {
+      const extId = playerModal.source.replace('ext_', '')
+      try {
+        const srvRes = await window.electronAPI?.extensions?.callProvider(extId, 'findEpisodeServer', [ep, 'Auto'])
+        const src = srvRes?.result?.videoSources?.[0]
+        if (src?.url) url = src.url
+      } catch (err) {
+        console.error('Failed to resolve extension episode:', err)
+      }
+    } else if (url && url.startsWith('anikoto:')) {
+      const dataIds = url.split('anikoto:')[1]
+      try {
+        const res = await fetch(`http://localhost:8642/anikoto/resolve?data_ids=${encodeURIComponent(dataIds)}&sub_dub=${subDub}`)
+        const data = await res.json()
+        if (data.url) url = data.url
+        if (data.alternatives) alternatives = data.alternatives
+      } catch {}
+    }
+    setCurrentUrl(url)
+    setPlayerModal(prev => ({
+      ...prev,
+      title: `${prev.title.split(' - Episode')[0]} - Episode ${ep.number}`,
+      epNumber: ep.number,
+      url,
+      alternatives,
+      dataIds: ep.url?.startsWith('anikoto:') ? ep.url.split('anikoto:')[1] : prev.dataIds
+    }))
+  }
+
+  const handleSwitchSubDub = async (newType) => {
+    setSubDub(newType)
+    if (playerModal.dataIds) {
+      try {
+        const res = await fetch(`http://localhost:8642/anikoto/resolve?data_ids=${encodeURIComponent(playerModal.dataIds)}&sub_dub=${newType}`)
+        const data = await res.json()
+        if (data.url) {
+          setCurrentUrl(data.url)
+          setVideoError(false)
+        }
+      } catch {}
+    }
+  }
 
   // Tab content renderer
   const renderTabContent = () => {
@@ -56,9 +162,9 @@ export default function PlayerModal() {
             ) : isDirectVideo ? (
               <video
                 ref={videoRef}
-                src={currentUrl}
                 controls
                 autoPlay
+                playsInline
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 onError={() => setVideoError(true)}
               />
@@ -131,7 +237,7 @@ export default function PlayerModal() {
   return (
     <div
       className="modal-overlay"
-      style={{ zIndex: 2000, background: 'rgba(5, 7, 13, 0.94)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      style={{ zIndex: 2000, background: 'rgba(5, 7, 13, 0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={(e) => e.target === e.currentTarget && setPlayerModal(null)}
     >
       <div
@@ -215,7 +321,7 @@ export default function PlayerModal() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span
-                onClick={() => setSubDub(s => s === 'sub' ? 'dub' : 'sub')}
+                onClick={() => handleSwitchSubDub(subDub === 'sub' ? 'dub' : 'sub')}
                 style={{ cursor: 'pointer', color: '#818cf8', fontWeight: 700 }}
               >
                 🎧 Switch to {subDub === 'sub' ? 'Dub' : 'Sub'}
@@ -243,7 +349,7 @@ export default function PlayerModal() {
                   return (
                     <div
                       key={idx}
-                      onClick={() => { setCurrentUrl(ep.url || currentUrl); setVideoError(false) }}
+                      onClick={() => handleSelectEpisode(ep)}
                       style={{
                         display: 'flex', gap: 10, padding: 8, borderRadius: 10,
                         background: isActive ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.02)',
@@ -278,3 +384,4 @@ export default function PlayerModal() {
     </div>
   )
 }
+

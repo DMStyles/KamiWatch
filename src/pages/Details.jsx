@@ -59,35 +59,19 @@ export default function Details() {
     const statusStr = (anime.status || '').toLowerCase()
     const isOngoing = statusStr.includes('currently') || statusStr.includes('airing') || statusStr.includes('releasing') || anime.airing
     if (isOngoing) {
-      fetchNextAiringSchedule(anime.title)
+      fetchNextAiringSchedule(anime.title, anime.id)
     } else {
       setNextAiring(null)
     }
   }, [anime])
 
-  const fetchNextAiringSchedule = async (title) => {
-    const query = `
-      query ($search: String) {
-        Media (search: $search, type: ANIME) {
-          status
-          nextAiringEpisode {
-            airingAt
-            timeUntilAiring
-            episode
-          }
-        }
-      }
-    `
+  const fetchNextAiringSchedule = async (title, animeId) => {
     try {
-      const res = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, variables: { search: title } })
-      })
+      const param = animeId ? `id=${animeId}` : `title=${encodeURIComponent(title)}`
+      const res = await fetch(`${API}/jikan/next-airing?${param}`)
       const data = await res.json()
-      const media = data?.data?.Media
-      if (media?.nextAiringEpisode) {
-        setNextAiring(media.nextAiringEpisode)
+      if (data?.nextAiringEpisode) {
+        setNextAiring(data.nextAiringEpisode)
       }
     } catch {}
   }
@@ -536,7 +520,9 @@ export default function Details() {
         alternatives,
         id: anime.id,
         malId: anime.id,
-        epNumber: ep.number
+        epNumber: ep.number,
+        episodes,
+        source: activeSource
       })
       try {
         const historyStr = localStorage.getItem('kamiwatch-history') || '[]'

@@ -688,14 +688,15 @@
 
 .modal-panel {
   background: var(--bg-modal);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(255,255,255,0.12);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  box-shadow: 0 32px 100px rgba(0,0,0,0.75), 0 0 0 1px rgba(79,70,229,0.08);
   overflow: hidden;
 }
 
@@ -757,19 +758,20 @@
 }
 
 .ep-btn {
-  padding: 8px 4px;
+  padding: 9px 4px;
   border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: all 0.18s ease;
   text-align: center;
+  letter-spacing: 0.01em;
 }
-.ep-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
-.ep-btn.selected { background: var(--accent-glow); border-color: var(--accent); color: var(--accent-light); }
+.ep-btn:hover { background: rgba(255,255,255,0.09); color: var(--text-primary); border-color: rgba(255,255,255,0.14); }
+.ep-btn.selected { background: rgba(79,70,229,0.2); border-color: rgba(79,70,229,0.5); color: var(--accent-light); box-shadow: 0 0 12px rgba(79,70,229,0.2); }
 
 .modal-footer {
   display: flex;
@@ -782,9 +784,9 @@
 
 /* Player */
 .player-panel {
-  background: rgba(10, 10, 15, 0.4);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(7, 8, 15, 0.5);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
   border-radius: var(--radius-lg);
   overflow: hidden;
   width: 90vw;
@@ -793,7 +795,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(79,70,229,0.1);
 }
 
 .player-header {

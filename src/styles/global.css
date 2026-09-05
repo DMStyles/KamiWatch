@@ -1,50 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* === Core Backgrounds === */
-  --bg-primary: #07070f;
-  --bg-secondary: #0d0d1a;
-  --bg-card: #111120;
-  --bg-card-hover: #191930;
-  --bg-modal: #0c0c1c;
+  /* === Core Backgrounds — Warm dark blue base === */
+  --bg-primary: #07080f;
+  --bg-secondary: #0c0d1c;
+  --bg-card: #0e0f1e;
+  --bg-card-hover: #141528;
+  --bg-modal: #0b0c1a;
 
-  /* === Accent — Rich Violet → Electric Purple === */
-  --accent: #7c3aed;
-  --accent-light: #a855f7;
-  --accent-dark: #5b21b6;
-  --accent-glow: rgba(124, 58, 237, 0.4);
-  --accent-glow-sm: rgba(124, 58, 237, 0.15);
+  /* === Accent — Indigo → Electric Blue === */
+  --accent: #4f46e5;
+  --accent-light: #818cf8;
+  --accent-dark: #3730a3;
+  --accent-glow: rgba(79, 70, 229, 0.45);
+  --accent-glow-sm: rgba(79, 70, 229, 0.18);
+  --accent-rgb: 79, 70, 229;
 
-  /* === Secondary — Electric Cyan === */
-  --cyan: #06b6d4;
-  --cyan-light: #22d3ee;
-  --cyan-glow: rgba(6, 182, 212, 0.25);
+  /* === Secondary — Sky Blue === */
+  --cyan: #3b82f6;
+  --cyan-light: #60a5fa;
+  --cyan-glow: rgba(59, 130, 246, 0.28);
 
-  /* === Gradient accent (used for text/borders) === */
-  --gradient-accent: linear-gradient(135deg, #7c3aed, #06b6d4);
-  --gradient-accent-45: linear-gradient(45deg, #7c3aed, #a855f7, #06b6d4);
+  /* === Gradient accent (indigo → blue) === */
+  --gradient-accent: linear-gradient(135deg, #4f46e5, #3b82f6);
+  --gradient-accent-45: linear-gradient(45deg, #4f46e5, #818cf8, #3b82f6);
   --gradient-dark: linear-gradient(180deg, transparent 0%, var(--bg-primary) 100%);
-  --gradient-hero-left: linear-gradient(90deg, rgba(7,7,15,0.98) 0%, rgba(7,7,15,0.85) 40%, rgba(7,7,15,0.4) 70%, transparent 100%);
-  --gradient-hero-bottom: linear-gradient(0deg, var(--bg-primary) 0%, transparent 60%);
+  --gradient-hero-left: linear-gradient(90deg, rgba(7,8,15,0.97) 0%, rgba(7,8,15,0.88) 38%, rgba(7,8,15,0.45) 65%, transparent 100%);
+  --gradient-hero-bottom: linear-gradient(0deg, var(--bg-primary) 0%, transparent 65%);
 
-  /* === Text === */
-  --text-primary: #eeeeff;
-  --text-secondary: #8a87b0;
-  --text-muted: #484670;
+  /* === Text — Warm whites === */
+  --text-primary: #eef0ff;
+  --text-secondary: #8486a9;
+  --text-muted: #42446a;
 
   /* === Borders === */
-  --border: rgba(255, 255, 255, 0.055);
-  --border-hover: rgba(255, 255, 255, 0.13);
-  --border-accent: rgba(124, 58, 237, 0.45);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --border-accent: rgba(79, 70, 229, 0.5);
 
   /* === Glassmorphism === */
-  --glass-bg: rgba(11, 11, 24, 0.72);
+  --glass-bg: rgba(11, 12, 26, 0.75);
   --glass-bg-light: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(18px);
-  --glass-blur-heavy: blur(40px);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(20px) saturate(180%);
+  --glass-blur-heavy: blur(40px) saturate(200%);
   --glass-blur-light: blur(8px);
 
   /* === Status === */
@@ -70,14 +71,15 @@
   --transition-med: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* === Shadows === */
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
-  --shadow: 0 4px 24px rgba(0,0,0,0.55);
-  --shadow-lg: 0 12px 48px rgba(0,0,0,0.7);
+  /* === Shadows — Deeper, cinematic === */
+  --shadow-sm: 0 2px 12px rgba(0,0,0,0.4);
+  --shadow: 0 6px 30px rgba(0,0,0,0.6);
+  --shadow-lg: 0 16px 60px rgba(0,0,0,0.75);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.5);
   --shadow-glow: 0 0 32px var(--accent-glow);
   --shadow-glow-sm: 0 0 16px var(--accent-glow-sm);
 
-  /* === Compatibility aliases (for pages.css references) === */
+  /* === Compatibility aliases === */
   --primary: var(--accent);
   --surface: var(--bg-card);
   --surface-2: var(--bg-card-hover);
@@ -205,22 +207,22 @@ img { display: block; max-width: 100%; }
 .btn-primary {
   background: var(--accent);
   color: #fff;
-  box-shadow: 0 0 0 rgba(124,58,237,0);
+  box-shadow: 0 2px 12px rgba(79,70,229,0.3);
 }
 .btn-primary:hover {
-  background: var(--accent-light);
-  box-shadow: 0 4px 20px var(--accent-glow);
+  background: #5b52f0;
+  box-shadow: 0 4px 28px rgba(79,70,229,0.55);
   transform: translateY(-1px);
 }
+.btn-primary:active { transform: translateY(0); }
 
 .btn-secondary {
   background: rgba(255,255,255,0.07);
   color: var(--text-primary);
-  border: 1px solid var(--border-hover);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 .btn-secondary:hover {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.11);
   border-color: rgba(255,255,255,0.2);
   transform: translateY(-1px);
 }
@@ -259,9 +261,9 @@ img { display: block; max-width: 100%; }
   text-transform: uppercase;
 }
 
-.badge-sub { background: rgba(6,182,212,0.15); color: var(--cyan-light); border: 1px solid rgba(6,182,212,0.3); }
-.badge-dub { background: rgba(124,58,237,0.15); color: var(--accent-light); border: 1px solid rgba(124,58,237,0.3); }
-.badge-source { background: rgba(255,255,255,0.07); color: var(--text-secondary); border: 1px solid var(--border); }
+.badge-sub { background: rgba(59,130,246,0.15); color: var(--cyan-light); border: 1px solid rgba(59,130,246,0.3); }
+.badge-dub { background: rgba(79,70,229,0.15); color: var(--accent-light); border: 1px solid rgba(79,70,229,0.3); }
+.badge-source { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--border); }
 .badge-type { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
 .badge-score { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
 
@@ -292,22 +294,24 @@ img { display: block; max-width: 100%; }
 }
 
 .section-title {
-  font-size: 17px;
-  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .section-title::before {
   content: '';
   display: block;
-  width: 3px;
-  height: 18px;
+  width: 4px;
+  height: 20px;
   background: var(--gradient-accent);
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .section-link {
@@ -325,9 +329,9 @@ img { display: block; max-width: 100%; }
 ============================================================ */
 .horizontal-scroll {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   overflow-x: auto;
-  padding: 4px 24px 12px;
+  padding: 4px 28px 16px;
   scroll-snap-type: x proximity;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -341,10 +345,11 @@ img { display: block; max-width: 100%; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
   width: 28px; height: 28px;
-  border: 2px solid rgba(255,255,255,0.1);
+  border: 2.5px solid rgba(255,255,255,0.08);
   border-top-color: var(--accent);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.75s linear infinite;
+  display: inline-block;
 }
 
 /* ============================================================

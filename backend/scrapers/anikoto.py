@@ -191,7 +191,7 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub", server: Optional[s
                 preferred = srv
                 break
     else:
-        for pref_name in ["VidPlay-1", "VidPlay", "HD-1", "Vidstream-2", "VidCloud-1"]:
+        for pref_name in ["VidCloud-1", "VidCloud", "Vidstream-2", "Vidstream", "MegaCloud", "VidPlay-1", "VidPlay", "HD-1"]:
             for srv in server_pool:
                 if pref_name.lower() in srv["name"].lower():
                     preferred = srv
@@ -199,6 +199,7 @@ async def resolve_stream(data_ids: str, sub_dub: str = "sub", server: Optional[s
             else:
                 continue
             break
+
 
     return {
         "url": preferred["url"],

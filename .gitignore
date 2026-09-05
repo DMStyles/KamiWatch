@@ -44,3 +44,7 @@ lerna-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+*.apk
+*.bak
+*_v5.*
+

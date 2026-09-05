@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef, useEffect } from 'react'
+import React, { useState, useContext, useRef, useEffect, useMemo } from 'react'
 import { AppContext } from '../App'
 import { useLocation, useNavigate } from 'react-router-dom'
 
@@ -79,7 +79,7 @@ export default function Search() {
     if (tab === 'browse' && browseResults.length === 0 && !genreMode && !query) {
       fetchBrowse(1, null)
     }
-  }, [tab])
+  }, [tab, browseResults.length, genreMode, query])
 
   const browseAiring = async () => {
     setBrowseLoading(true)
@@ -196,16 +196,16 @@ export default function Search() {
     if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const filtered = results.filter(r => {
+  const filtered = useMemo(() => results.filter(r => {
     if (query && !r.title.toLowerCase().includes(query.toLowerCase())) return false
     if (activeSource !== 'all' && r.source && r.source !== activeSource) return false
     return true
-  })
+  }), [results, query, activeSource])
 
-  const displayBrowseResults = browseResults.filter(item => {
+  const displayBrowseResults = useMemo(() => browseResults.filter(item => {
     if (query && !item.title.toLowerCase().includes(query.toLowerCase())) return false
     return true
-  })
+  }), [browseResults, query])
 
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
