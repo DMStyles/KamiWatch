@@ -12,6 +12,8 @@ from library import router as library_router
 from database import init_db
 from scrapers.manga import router as manga_router
 from sync import router as sync_router
+from scrapers.miruro import router as miruro_router
+from scrapers.anivault_source import router as anivault_router
 
 app = FastAPI(title="KamiWatch Backend", version="2.0.0")
 
@@ -33,6 +35,8 @@ app.include_router(download_router, prefix="/download", tags=["Download"])
 app.include_router(library_router, prefix="/library", tags=["Library"])
 app.include_router(manga_router, prefix="/manga", tags=["Manga"])
 app.include_router(sync_router, prefix="/sync", tags=["Sync"])
+app.include_router(miruro_router, prefix="/miruro", tags=["Miruro"])
+app.include_router(anivault_router, prefix="/anivault", tags=["AniVault"])
 
 @app.on_event("startup")
 async def startup():

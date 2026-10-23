@@ -5,9 +5,11 @@ import SkeletonCard from '../components/SkeletonCard'
 
 const API = 'http://localhost:8642'
 const BASE_SOURCES = [
+  { id: 'miruro', name: 'Miruro (HD Streaming & Mirrors)' },
+  { id: 'anivault', name: 'AniVault TV (Official Miruro Mirror)' },
   { id: 'anikoto', name: 'AniKoto (Fast, Multi-Server)' },
-  { id: 'kissanime', name: 'KissAnime (Backup)' },
   { id: 'animetake', name: 'AnimeTake (Dub/Sub)' },
+  { id: 'kissanime', name: 'KissAnime (Backup)' },
   { id: 'museasia', name: 'Muse Asia (Official YouTube)' }
 ]
 
@@ -513,6 +515,20 @@ export default function Details() {
         const res = await fetch(`${API}/animetake/resolve?url=${encodeURIComponent(finalUrl)}&title=${encodeURIComponent(anime.title)}&ep=${encodeURIComponent(epNum)}`)
         const data = await res.json()
         if (data.url) finalUrl = data.url
+      } else if (activeSource === 'miruro' || finalUrl.includes('miruro')) {
+        try {
+          const res = await fetch(`${API}/miruro/resolve?url=${encodeURIComponent(finalUrl)}&ep=${encodeURIComponent(epNum)}&sub_dub=${subDub}`)
+          const data = await res.json()
+          if (data.url) finalUrl = data.url
+          if (data.alternatives) alternatives = data.alternatives
+        } catch {}
+      } else if (activeSource === 'anivault' || finalUrl.includes('anivault')) {
+        try {
+          const res = await fetch(`${API}/anivault/resolve?url=${encodeURIComponent(finalUrl)}&ep=${encodeURIComponent(epNum)}&sub_dub=${subDub}`)
+          const data = await res.json()
+          if (data.url) finalUrl = data.url
+          if (data.alternatives) alternatives = data.alternatives
+        } catch {}
       }
       setPlayerModal({
         title: `${anime.title} - Episode ${ep.number}`,

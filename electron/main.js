@@ -87,6 +87,13 @@ function createWindow() {
       responseHeaders['Access-Control-Allow-Origin'] = ['*'];
       responseHeaders['Access-Control-Allow-Headers'] = ['*'];
       responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS, HEAD'];
+      delete responseHeaders['x-frame-options'];
+      delete responseHeaders['X-Frame-Options'];
+      if (responseHeaders['content-security-policy']) {
+        responseHeaders['content-security-policy'] = responseHeaders['content-security-policy'].map(csp => 
+          csp.replace(/frame-ancestors[^;]+;?/gi, '')
+        );
+      }
       callback({ responseHeaders });
     }
   );

@@ -121,6 +121,20 @@ export default function PlayerModal() {
         if (data.url) url = data.url
         if (data.alternatives) alternatives = data.alternatives
       } catch {}
+    } else if (playerModal?.source === 'miruro' || url?.includes('miruro')) {
+      try {
+        const res = await fetch(`http://localhost:8642/miruro/resolve?url=${encodeURIComponent(url)}&ep=${encodeURIComponent(ep.number)}&sub_dub=${subDub}`)
+        const data = await res.json()
+        if (data.url) url = data.url
+        if (data.alternatives) alternatives = data.alternatives
+      } catch {}
+    } else if (playerModal?.source === 'anivault' || url?.includes('anivault')) {
+      try {
+        const res = await fetch(`http://localhost:8642/anivault/resolve?url=${encodeURIComponent(url)}&ep=${encodeURIComponent(ep.number)}&sub_dub=${subDub}`)
+        const data = await res.json()
+        if (data.url) url = data.url
+        if (data.alternatives) alternatives = data.alternatives
+      } catch {}
     }
     setCurrentUrl(url)
     setPlayerModal(prev => ({
