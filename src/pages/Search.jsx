@@ -1,571 +1,281 @@
-import React, { useState, useContext, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useContext, useRef, useEffect } from 'react'
 import { AppContext } from '../App'
 import { useLocation, useNavigate } from 'react-router-dom'
+import SkeletonCard from '../components/SkeletonCard'
 
 const API = 'http://localhost:8642'
-const LETTERS = ['#', 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+
+const MEDIA_TABS = ['Anime', 'Studios', 'Staff', 'Characters']
+const GENRES = ['All', 'Action', 'Adventure', 'Comedy', 'Drama', 'Ecchi', 'Fantasy', 'Horror', 'Mahou Shoujo', 'Mecha', 'Music', 'Mystery', 'Psychological', 'Romance', 'Sci-Fi', 'Slice of Life', 'Sports', 'Supernatural', 'Thriller']
+const FORMATS = ['All', 'TV', 'TV Short', 'Movie', 'Special', 'OVA', 'ONA', 'Music']
+const STATUSES = ['All', 'Finished Airing', 'Currently Airing', 'Not Yet Aired']
+const YEARS = ['All', '2026', '2025', '2024', '2023', '2022', '2021', '2020', '2010s', '2000s']
+const SORTS = ['Most Popular', 'Highest Rated', 'Trending', 'Newest', 'Title A-Z']
 
 export default function Search() {
-  const [tab, setTab] = useState('browse') // 'browse' or 'latest'
-  
-  // Search and filter drawer states
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { setEpisodeModal } = useContext(AppContext)
+
+  // Top header states
+  const [activeMediaTab, setActiveMediaTab] = useState('Anime')
   const [query, setQuery] = useState('')
-  const [mediaType, setMediaType] = useState('Anime')
-  const [sortOption, setSortOption] = useState('Highest score')
   const [selectedGenre, setSelectedGenre] = useState('All')
   const [selectedFormat, setSelectedFormat] = useState('All')
-  const [selectedSeason, setSelectedSeason] = useState('All')
   const [selectedStatus, setSelectedStatus] = useState('All')
-  const [isAdult, setIsAdult] = useState(false)
+  const [selectedYear, setSelectedYear] = useState('All')
+  const [selectedSort, setSelectedSort] = useState('Most Popular')
 
-  // Scraper search states
-  const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [activeSource, setActiveSource] = useState('all')
-  const [genreMode, setGenreMode] = useState(null) // null = search mode, string = genre name
-  const [timetable, setTimetable] = useState(null)
-
-  // Browse index states
-  const [browseResults, setBrowseResults] = useState([])
-  const [browseLoading, setBrowseLoading] = useState(false)
-  const [browseError, setBrowseError] = useState('')
+  // Search results & pagination
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [hasNext, setHasNext] = useState(false)
   const [totalPages, setTotalPages] = useState(1)
-  const [activeLetter, setActiveLetter] = useState(null)
-
-  const { setEpisodeModal } = useContext(AppContext)
-  const inputRef = useRef()
-  const location = useLocation()
-  const navigate = useNavigate()
 
   useEffect(() => {
-    if (location.state?.tab) {
-      setTab(location.state.tab === 'scrapers' ? 'latest' : location.state.tab)
-      setGenreMode(null)
-      setQuery('')
-      if (location.state.tab === 'browse') {
-        setBrowseResults([])
-        fetchBrowse(1, null)
-      }
-    } else if (location.state?.showLatest) {
-      setTab('latest')
-      setGenreMode(null)
-      setQuery('')
-      fetchLatestScraperEpisodes()
-    } else if (location.state?.showAiring) {
-      setTab('browse')
-      setGenreMode('Airing This Season')
-      setQuery('')
-      setBrowseResults([])
-      browseAiring()
-    } else if (location.state?.genre) {
-      setTab('browse')
-      setGenreMode(location.state.genre)
+    if (location.state?.genre) {
       setSelectedGenre(location.state.genre)
-      setQuery('')
-      setBrowseResults([])
-      browseGenre(location.state.genre)
-    } else if (location.state?.searchQuery) {
-      setTab('browse')
-      setGenreMode(null)
+    }
+    if (location.state?.searchQuery) {
       setQuery(location.state.searchQuery)
-      fetchBrowse(1, null, location.state.searchQuery)
     }
   }, [location.state])
 
   useEffect(() => {
-    if (tab === 'browse' && browseResults.length === 0 && !genreMode && !query) {
-      fetchBrowse(1, null)
-    }
-  }, [tab, browseResults.length, genreMode, query])
+    fetchResults()
+  }, [query, selectedGenre, selectedFormat, selectedStatus, selectedYear, selectedSort, page])
 
-  const browseAiring = async () => {
-    setBrowseLoading(true)
-    setBrowseError('')
-    setBrowseResults([])
-    try {
-      const res = await fetch(`${API}/jikan/airing?limit=100`)
-      const data = await res.json()
-      const items = data.results || []
-      setBrowseResults(items)
-      if (items.length === 0) setBrowseError("No currently airing anime found.")
-    } catch {
-      setBrowseError('Failed to load airing anime. Make sure the backend is running.')
-    } finally {
-      setBrowseLoading(false)
-    }
-  }
-
-  const browseGenre = async (genre) => {
-    setBrowseLoading(true)
-    setBrowseError('')
-    setBrowseResults([])
-    try {
-      const res = await fetch(`${API}/jikan/by-genre?genre=${encodeURIComponent(genre)}`)
-      const data = await res.json()
-      const items = data.results || []
-      setBrowseResults(items)
-      if (items.length === 0) setBrowseError(`No anime found for genre "${genre}".`)
-    } catch {
-      setBrowseError('Failed to load genre. Make sure the backend is running.')
-    } finally {
-      setBrowseLoading(false)
-    }
-  }
-
-  const fetchLatestScraperEpisodes = async () => {
+  const fetchResults = async () => {
     setLoading(true)
-    setError('')
-    setResults([])
     try {
-      let items = []
-      try {
-        const resLatest = await fetch(`${API}/anikoto/latest?limit=100`)
-        const dataLatest = await resLatest.json()
-        if (dataLatest.results && dataLatest.results.length > 0) {
-          items = dataLatest.results
-        }
-      } catch (e) {}
-
-      if (items.length === 0) {
-        // Fallback to currently airing anime sorted by release date
-        const resAiring = await fetch(`${API}/jikan/airing?limit=100`)
-        const dataAiring = await resAiring.json()
-        items = dataAiring.results || []
-      }
-
-      setResults(items)
-      if (items.length === 0) {
-        setError('No recently released episodes found.')
+      if (query.trim()) {
+        const res = await fetch(`${API}/jikan/search?q=${encodeURIComponent(query)}&page=${page}`)
+        const data = await res.json()
+        const list = Array.isArray(data) ? data : (data.results || data.data || [])
+        setItems(list)
+        setTotalPages(data.last_visible_page || (list.length >= 20 ? page + 1 : page))
+      } else if (selectedGenre !== 'All') {
+        const res = await fetch(`${API}/jikan/genre/${encodeURIComponent(selectedGenre)}?page=${page}`)
+        const data = await res.json()
+        const list = Array.isArray(data) ? data : (data.results || data.data || [])
+        setItems(list)
+        setTotalPages(data.last_visible_page || (list.length >= 20 ? page + 1 : page))
+      } else {
+        const res = await fetch(`${API}/jikan/all?page=${page}`)
+        const data = await res.json()
+        const list = Array.isArray(data) ? data : (data.results || data.data || [])
+        setItems(list)
+        setTotalPages(data.last_visible_page || 10)
       }
     } catch {
-      setError('Failed to fetch recently released episodes.')
+      setItems([])
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchBrowse = async (p, letter, searchQ = '') => {
-    setBrowseLoading(true)
-    setBrowseError('')
-    setBrowseResults([])
-    try {
-      let url = ''
-      if (mediaType === 'Manga') {
-        url = `${API}/manga/trending`
-      } else if (selectedGenre !== 'All') {
-        url = `${API}/jikan/by-genre?genre=${encodeURIComponent(selectedGenre)}`
-      } else if (searchQ) {
-        url = `${API}/jikan/search?q=${encodeURIComponent(searchQ)}&page=${p}`
-      } else {
-        const letterParam = letter && letter !== '#' ? `&letter=${letter}` : ''
-        url = `${API}/jikan/all?page=${p}${letterParam}`
-      }
-      const res = await fetch(url)
-      const data = await res.json()
-      if (data.error && (!data.results || data.results.length === 0)) {
-        setBrowseError(data.error)
-        setBrowseResults([])
-      } else {
-        setBrowseResults(data.results || [])
-        setPage(p)
-        setHasNext(data.has_next || false)
-        setTotalPages(data.total_pages || 1)
-      }
-    } catch {
-      setBrowseError('Failed to connect to backend. Make sure the app is fully loaded.')
-      setBrowseResults([])
-    } finally {
-      setBrowseLoading(false)
-    }
-  }
-
-  const handleLetter = (letter) => {
-    const nextLetter = letter === activeLetter ? null : letter
-    setActiveLetter(nextLetter)
+  const resetFilters = () => {
+    setSelectedGenre('All')
+    setSelectedFormat('All')
+    setSelectedStatus('All')
+    setSelectedYear('All')
+    setSelectedSort('Most Popular')
     setQuery('')
-    setGenreMode(null)
-    fetchBrowse(1, nextLetter)
+    setPage(1)
   }
-
-  const handlePage = (p) => {
-    fetchBrowse(p, activeLetter, query)
-    const mainEl = document.querySelector('.app-main')
-    if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const filtered = useMemo(() => results.filter(r => {
-    if (query && !r.title.toLowerCase().includes(query.toLowerCase())) return false
-    if (activeSource !== 'all' && r.source && r.source !== activeSource) return false
-    return true
-  }), [results, query, activeSource])
-
-  const displayBrowseResults = useMemo(() => browseResults.filter(item => {
-    if (query && !item.title.toLowerCase().includes(query.toLowerCase())) return false
-    return true
-  }), [browseResults, query])
 
   return (
-    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
-      
-      {/* ── Seanime Left Side Multi-Attribute Filter Drawer ── */}
-      <aside style={{
-        width: 240, background: 'rgba(10, 10, 18, 0.95)', borderRight: '1px solid rgba(255,255,255,0.08)',
-        padding: 20, display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0, overflowY: 'auto'
-      }}>
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Search Title</label>
-          <input
-            type="text"
-            placeholder="🔍 Title..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (tab === 'latest' ? null : fetchBrowse(1, activeLetter, query))}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none'
-            }}
-          />
+    <div className="miruro-page-container">
+      {/* 1. Header: "Search" & Media Switcher Tabs (Screenshot 4 Match) */}
+      <div className="miruro-search-top-header">
+        <h1 className="miruro-page-heading">Search</h1>
+
+        <div className="miruro-media-tabs">
+          {MEDIA_TABS.map((tab) => (
+            <button
+              key={tab}
+              className={`miruro-media-tab${activeMediaTab === tab ? ' active' : ''}`}
+              onClick={() => setActiveMediaTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
-
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Media Type</label>
-          <select
-            value={mediaType}
-            onChange={(e) => { setMediaType(e.target.value); fetchBrowse(1, null, query) }}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
-            }}
-          >
-            <option value="Anime" style={{ background: '#0e0e16' }}>Anime</option>
-            <option value="Manga" style={{ background: '#0e0e16' }}>Manga</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Sort By</label>
-          <select
-            value={sortOption}
-            onChange={(e) => {
-              const val = e.target.value
-              setSortOption(val)
-              if (val === 'Latest added') {
-                setTab('latest')
-                fetchLatestScraperEpisodes()
-              }
-            }}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
-            }}
-          >
-            <option value="Highest score" style={{ background: '#0e0e16' }}>Highest score</option>
-            <option value="Most popular" style={{ background: '#0e0e16' }}>Most popular</option>
-            <option value="Latest added" style={{ background: '#0e0e16' }}>Latest added</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Genres</label>
-          <select
-            value={selectedGenre}
-            onChange={(e) => { setSelectedGenre(e.target.value); browseGenre(e.target.value) }}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
-            }}
-          >
-            {['All', 'Action', 'Adventure', 'Comedy', 'Drama', 'Ecchi', 'Fantasy', 'Horror', 'Mahou Shoujo', 'Mecha', 'Music', 'Mystery', 'Psychological', 'Romance', 'Sci-Fi', 'Slice of Life', 'Sports'].map(g => (
-              <option key={g} value={g} style={{ background: '#0e0e16' }}>{g}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Format</label>
-          <select
-            value={selectedFormat}
-            onChange={(e) => setSelectedFormat(e.target.value)}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
-            }}
-          >
-            <option value="All" style={{ background: '#0e0e16' }}>All formats</option>
-            <option value="TV" style={{ background: '#0e0e16' }}>TV</option>
-            <option value="Movie" style={{ background: '#0e0e16' }}>Movie</option>
-            <option value="OVA" style={{ background: '#0e0e16' }}>OVA</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Season</label>
-          <select
-            value={selectedSeason}
-            onChange={(e) => setSelectedSeason(e.target.value)}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
-            }}
-          >
-            <option value="All" style={{ background: '#0e0e16' }}>All seasons</option>
-            <option value="WINTER" style={{ background: '#0e0e16' }}>Winter</option>
-            <option value="SPRING" style={{ background: '#0e0e16' }}>Spring</option>
-            <option value="SUMMER" style={{ background: '#0e0e16' }}>Summer</option>
-            <option value="FALL" style={{ background: '#0e0e16' }}>Fall</option>
-          </select>
-        </div>
-
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Status</label>
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            style={{
-              width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 12, outline: 'none', cursor: 'pointer'
-            }}
-          >
-            <option value="All" style={{ background: '#0e0e16' }}>All statuses</option>
-            <option value="RELEASING" style={{ background: '#0e0e16' }}>Releasing</option>
-            <option value="FINISHED" style={{ background: '#0e0e16' }}>Finished</option>
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Adult (18+)</span>
-          <input
-            type="checkbox"
-            checked={isAdult}
-            onChange={(e) => setIsAdult(e.target.checked)}
-            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }}
-          />
-        </div>
-      </aside>
-
-      {/* Main Search & Grid Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
-        {/* Top Header Mode Tabs */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
-          <button 
-            className={`btn ${tab === 'browse' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 13, padding: '6px 14px', borderRadius: 20 }}
-            onClick={() => { setTab('browse'); setGenreMode(null); setQuery(''); setBrowseResults([]); setBrowseError(''); fetchBrowse(1, null); }}
-          >
-            🗂️ Anime Index (A-Z)
-          </button>
-          <button 
-            className={`btn ${tab === 'latest' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: 13, padding: '6px 14px', borderRadius: 20 }}
-            onClick={() => { setTab('latest'); setGenreMode(null); setQuery(''); setResults([]); setError(''); fetchLatestScraperEpisodes(); }}
-          >
-            ⏱️ Recently Released
-          </button>
-        </div>
-
-        {tab === 'browse' && !genreMode && (
-          <div className="alphabet-bar" style={{ marginBottom: 20 }}>
-            {LETTERS.map(l => (
-              <button
-                key={l}
-                className={`alpha-btn${activeLetter === l ? ' active' : ''}`}
-                onClick={() => handleLetter(l)}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Results Grid */}
-        {tab === 'latest' ? (
-          loading ? (
-            <div className="browse-loading">
-              <span className="spinner large" />
-              <p style={{ marginTop: 16 }}>Loading recently released anime & episodes...</p>
-            </div>
-          ) : error ? (
-            <div className="search-empty">
-              <span style={{ fontSize: 40 }}>⚠️</span>
-              <p style={{ color: 'var(--text-muted)' }}>{error}</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="search-empty">
-              <span style={{ fontSize: 40 }}>⏱️</span>
-              <p>No recently released episodes found for current filters.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-              {[
-                { title: '🔥 Released Today', items: filtered.slice(0, 18) },
-                { title: '⏱️ Released Yesterday', items: filtered.slice(18, 36) },
-                { title: '📅 Earlier This Week', items: filtered.slice(36) }
-              ].filter(group => group.items.length > 0).map((group, groupIdx) => (
-                <div key={groupIdx}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                    <h2 style={{ fontSize: 17, fontWeight: 800, color: '#fff', margin: 0 }}>{group.title}</h2>
-                    <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', padding: '2px 10px', borderRadius: 12, color: '#10b981', fontWeight: 700 }}>
-                      {group.items.length} releases
-                    </span>
-                  </div>
-
-                  <div className="results-grid">
-                    {group.items.map((item, i) => {
-                      const epNum = item.episode || (item.sub_episodes && item.sub_episodes !== '0' ? item.sub_episodes : (item.dub_episodes && item.dub_episodes !== '0' ? item.dub_episodes : (item.episodes || null)))
-                      return (
-                        <div
-                          key={i}
-                          className="result-card"
-                          onClick={() => {
-                            if (epNum) {
-                              setEpisodeModal({
-                                animeTitle: item.title,
-                                episodeNumber: epNum,
-                                source: item.source || 'anikoto',
-                                episodeUrl: item.url
-                              })
-                            } else {
-                              navigate(`/anime/${item.id || item.mal_id || 0}`, { state: { searchQuery: item.title } })
-                            }
-                          }}
-                        >
-                          <div className="result-card-img">
-                            <img
-                              src={item.thumbnail || item.cover || item.image}
-                              alt={item.title}
-                              loading="lazy"
-                              onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'}
-                            />
-                            <div className="result-card-overlay">
-                              <button className="card-play-btn large">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                              </button>
-                            </div>
-                            {epNum && (
-                              <span className="anime-card-badge" style={{ background: '#10b981', color: '#fff', fontWeight: 800, fontSize: 11, padding: '3px 8px', borderRadius: 6, boxShadow: '0 4px 12px rgba(16,185,129,0.4)' }}>
-                                EP {epNum}
-                              </span>
-                            )}
-                            {item.source && (
-                              <div className="result-badges">
-                                <span className="badge badge-sub" style={{ textTransform: 'uppercase', fontSize: 10 }}>{item.source}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="result-card-info">
-                            <p className="result-title">{item.title}</p>
-                            <div className="result-meta">
-                              <span style={{ color: epNum ? '#10b981' : 'var(--text-muted)', fontSize: 12, fontWeight: epNum ? 700 : 400 }}>
-                                {epNum ? `Episode ${epNum}` : 'Recently Airing'}
-                              </span>
-                              {item.type && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.type}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        ) : browseLoading ? (
-          <div className="browse-loading">
-            <span className="spinner large" />
-            <p style={{ marginTop: 16 }}>Loading index...</p>
-          </div>
-        ) : browseError ? (
-          <div className="search-empty">
-            <span style={{ fontSize: 40 }}>⏳</span>
-            <p style={{ color: 'var(--text-muted)' }}>{browseError}</p>
-          </div>
-        ) : displayBrowseResults.length === 0 ? (
-          <div className="search-empty">
-            <span style={{ fontSize: 40 }}>🎌</span>
-            <p>No results found for current filter settings.</p>
-          </div>
-        ) : (
-          <div>
-            <div className="results-grid">
-              {displayBrowseResults.map((item, i) => (
-                <div
-                  key={i}
-                  className="result-card"
-                  onClick={() => navigate(mediaType === 'Manga' ? `/manga/${item.id}` : (item.mal_id ? `/anime/${item.mal_id}` : '/anime/0'), { state: { searchQuery: item.title, manga: item } })}
-                >
-                  <div className="result-card-img">
-                    <img
-                      src={item.thumbnail || item.cover}
-                      alt={item.title}
-                      loading="lazy"
-                      onError={e => e.target.src = 'https://via.placeholder.com/200x280?text=No+Image'}
-                    />
-                    <div className="result-card-overlay">
-                      <button className="card-play-btn large">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                      </button>
-                    </div>
-                    {item.type && (
-                      <span className="anime-card-badge">{item.type}</span>
-                    )}
-                    <div className="result-badges">
-                      {item.score && <span className="badge badge-sub">⭐ {item.score}</span>}
-                    </div>
-                  </div>
-                  <div className="result-card-info">
-                    <p className="result-title">{item.title}</p>
-                    <div className="result-meta">
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.type || mediaType}</span>
-                      {item.year && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{item.year}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && !query && (
-              <div className="pagination" style={{ marginTop: 24 }}>
-                <button
-                  className="btn btn-ghost page-btn"
-                  disabled={page <= 1 || browseLoading}
-                  onClick={() => handlePage(page - 1)}
-                >
-                  ← Prev
-                </button>
-                <div className="page-numbers">
-                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                    let p
-                    if (totalPages <= 7) p = i + 1
-                    else if (page <= 4) p = i + 1
-                    else if (page >= totalPages - 3) p = totalPages - 6 + i
-                    else p = page - 3 + i
-                    return (
-                      <button
-                        key={p}
-                        className={`page-num-btn${p === page ? ' active' : ''}`}
-                        onClick={() => handlePage(p)}
-                      >
-                        {p}
-                      </button>
-                    )
-                  })}
-                </div>
-                <button
-                  className="btn btn-ghost page-btn"
-                  disabled={!hasNext || browseLoading}
-                  onClick={() => handlePage(page + 1)}
-                >
-                  Next →
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* 2. Miruro Filter Dropdowns Bar (Screenshot 4 Match) */}
+      <div className="miruro-filter-bar">
+        {/* Genre Dropdown */}
+        <div className="miruro-filter-dropdown-wrap">
+          <select
+            className="miruro-filter-select"
+            value={selectedGenre}
+            onChange={(e) => { setSelectedGenre(e.target.value); setPage(1) }}
+          >
+            <option value="All">Genres ⌵</option>
+            {GENRES.filter(g => g !== 'All').map(g => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Format Dropdown */}
+        <div className="miruro-filter-dropdown-wrap">
+          <select
+            className="miruro-filter-select"
+            value={selectedFormat}
+            onChange={(e) => { setSelectedFormat(e.target.value); setPage(1) }}
+          >
+            <option value="All">Formats ⌵</option>
+            {FORMATS.filter(f => f !== 'All').map(f => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status Dropdown */}
+        <div className="miruro-filter-dropdown-wrap">
+          <select
+            className="miruro-filter-select"
+            value={selectedStatus}
+            onChange={(e) => { setSelectedStatus(e.target.value); setPage(1) }}
+          >
+            <option value="All">Status ⌵</option>
+            {STATUSES.filter(s => s !== 'All').map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Year Dropdown */}
+        <div className="miruro-filter-dropdown-wrap">
+          <select
+            className="miruro-filter-select"
+            value={selectedYear}
+            onChange={(e) => { setSelectedYear(e.target.value); setPage(1) }}
+          >
+            <option value="All">Year 📅 ⌵</option>
+            {YEARS.filter(y => y !== 'All').map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="miruro-filter-dropdown-wrap">
+          <select
+            className="miruro-filter-select"
+            value={selectedSort}
+            onChange={(e) => { setSelectedSort(e.target.value); setPage(1) }}
+          >
+            {SORTS.map(s => (
+              <option key={s} value={s}>{s} ⌵</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Reset Filter Button */}
+        <button
+          className="miruro-filter-reset-btn"
+          onClick={resetFilters}
+          title="Reset Filters"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+            <path d="M3 21v-5h5" />
+          </svg>
+        </button>
+      </div>
+
+      {/* 3. 7-Column Miruro Anime Grid (Screenshot 4 Match) */}
+      {loading ? (
+        <div className="miruro-7col-grid">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <div key={i} className="miruro-7col-card">
+              <div className="miruro-7col-poster-box skeleton-pulse" />
+              <div className="skeleton-pulse" style={{ height: 16, marginTop: 8, borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="search-empty">
+          <span style={{ fontSize: 44 }}>🔍</span>
+          <p>No results found matching your criteria</p>
+          <button className="miruro-watch-btn-solid" style={{ marginTop: 16 }} onClick={resetFilters}>
+            Clear Filters
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="miruro-7col-grid">
+            {items.map((item, i) => {
+              const targetId = item.id || item.mal_id || item.malId
+              const title = item.title || item.titleEnglish || item.name || 'Untitled'
+              const cover = item.cover || item.thumbnail || item.image || item.images?.jpg?.large_image_url || 'https://via.placeholder.com/200x280?text=No+Cover'
+              const ep = item.episodes || item.sub_episodes || '?'
+              const format = item.type || 'TV'
+              const year = item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : '')
+
+              return (
+                <div
+                  key={targetId || i}
+                  className="miruro-7col-card"
+                  onClick={() => {
+                    if (targetId) navigate(`/anime/${targetId}`)
+                    else navigate('/anime/0', { state: { searchQuery: title } })
+                  }}
+                >
+                  <div className="miruro-7col-poster-box">
+                    <img
+                      src={cover}
+                      alt={title}
+                      referrerPolicy="no-referrer"
+                      className="miruro-7col-poster"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/200x280?text=No+Cover'
+                      }}
+                    />
+
+                    {/* Bottom Metadata Pill on Poster: 💾 25 TV 2013 */}
+                    <div className="miruro-poster-pill">
+                      <span>💾</span>
+                      <span>{ep}</span>
+                      <span>{format}</span>
+                      {year && <span>{year}</span>}
+                    </div>
+                  </div>
+
+                  <h4 className="miruro-7col-title" title={title}>
+                    {title}
+                  </h4>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="miruro-pagination-bar">
+            <button
+              className="miruro-page-btn"
+              disabled={page <= 1}
+              onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            >
+              ← Previous
+            </button>
+            <span className="miruro-page-info">Page {page} of {totalPages}</span>
+            <button
+              className="miruro-page-btn"
+              disabled={page >= totalPages}
+              onClick={() => { setPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            >
+              Next →
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

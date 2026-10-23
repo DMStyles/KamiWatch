@@ -911,3 +911,1035 @@
   z-index: 1;
   text-shadow: 0 2px 8px rgba(0,0,0,0.6);
 }
+
+
+/* ============================================================
+   100% MIRURO SCREENSHOTS REPLICATION STYLES
+   ============================================================ */
+
+/* --- MIRURO HERO (Screenshot 1) --- */
+.miruro-hero-logo {
+  max-height: 95px;
+  max-width: 320px;
+  object-fit: contain;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.8));
+}
+
+.miruro-hero-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.miruro-hero-pill-badge {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #ededed;
+  backdrop-filter: blur(6px);
+}
+
+.miruro-watch-btn-solid {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0a0a0a;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+}
+.miruro-watch-btn-solid:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.miruro-detail-btn-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ededed;
+  font-size: 13.5px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.miruro-detail-btn-glass:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.miruro-bookmark-btn-glass {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ededed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.miruro-bookmark-btn-glass:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* --- HOME 2-COLUMN SPLIT WITH TOP AIRING SIDEBAR (Screenshot 1) --- */
+.miruro-home-split-layout {
+  display: flex;
+  gap: 24px;
+  padding: 0 24px 24px;
+  width: 100%;
+}
+
+.miruro-home-main-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.miruro-top-airing-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+.miruro-section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.miruro-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.miruro-section-heading {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.miruro-subdub-pill-group {
+  display: flex;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 2px;
+}
+
+.miruro-subdub-toggle {
+  padding: 3px 12px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8e8e93;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.miruro-subdub-toggle.active {
+  background: #ffffff;
+  color: #0a0a0a;
+}
+
+.miruro-pagination-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
+
+.miruro-page-nav-arrow {
+  background: transparent;
+  border: none;
+  color: #8e8e93;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.miruro-page-nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.miruro-page-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ededed;
+}
+
+.miruro-latest-card-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+/* TOP AIRING BOX (Screenshot 1) */
+.miruro-top-airing-box {
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
+  position: sticky;
+  top: 16px;
+}
+
+.miruro-top-airing-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.miruro-top-airing-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+}
+
+.miruro-top-airing-tabs {
+  display: flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.miruro-top-airing-tab {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: #8e8e93;
+  cursor: pointer;
+}
+
+.miruro-top-airing-tab.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.miruro-top-airing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.miruro-top-airing-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.miruro-top-airing-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.miruro-rank-badge {
+  font-size: 13px;
+  font-weight: 800;
+  width: 24px;
+  text-align: center;
+  color: #8e8e93;
+}
+.miruro-rank-badge.rank-1 { color: #fbbf24; }
+.miruro-rank-badge.rank-2 { color: #cbd5e1; }
+.miruro-rank-badge.rank-3 { color: #f97316; }
+
+.miruro-top-airing-thumb {
+  width: 44px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: #18181b;
+}
+
+.miruro-top-airing-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.miruro-top-airing-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ededed;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.miruro-top-airing-item-meta {
+  font-size: 11px;
+  color: #8e8e93;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+.miruro-top-airing-item-meta .score-star {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+/* --- TRENDING PAGE (Screenshot 2) --- */
+.miruro-page-container {
+  padding: 20px 28px 60px;
+}
+
+.miruro-trending-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.miruro-season-pills {
+  display: flex;
+  gap: 8px;
+}
+
+.miruro-season-pill {
+  padding: 7px 18px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8e8e93;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.miruro-season-pill.active {
+  background: #ffffff;
+  color: #0a0a0a;
+  border-color: #ffffff;
+}
+
+.miruro-year-dropdown-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 5px 14px;
+}
+
+.miruro-year-select {
+  background: transparent;
+  border: none;
+  color: #ededed;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.miruro-year-select option {
+  background: #18181b;
+  color: #ededed;
+}
+
+.miruro-trending-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.miruro-wide-card {
+  display: flex;
+  gap: 14px;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.miruro-wide-card:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.miruro-wide-poster-wrap {
+  width: 90px;
+  height: 130px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #1c1c1f;
+}
+
+.miruro-wide-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.miruro-wide-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.miruro-wide-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+}
+
+.miruro-wide-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a1a1aa;
+  margin-bottom: 6px;
+}
+
+.miruro-green-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.miruro-wide-synopsis {
+  font-size: 11.5px;
+  color: #8e8e93;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 8px 0;
+}
+
+.miruro-wide-genres {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.miruro-mini-pill {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+  font-weight: 600;
+  color: #a1a1aa;
+}
+
+/* --- DISCOVER PAGE (Screenshot 3) --- */
+.miruro-discover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.miruro-page-heading {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.miruro-page-subheading {
+  font-size: 13px;
+  color: #8e8e93;
+  margin: 4px 0 0 0;
+}
+
+.miruro-discover-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.miruro-discover-tab {
+  padding: 7px 18px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8e8e93;
+  cursor: pointer;
+}
+
+.miruro-discover-tab.active {
+  background: #ffffff;
+  color: #0a0a0a;
+}
+
+.miruro-surprise-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.miruro-discover-showcase {
+  position: relative;
+  height: 380px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.miruro-discover-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.miruro-discover-overlay-grad {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.95) 100%),
+              linear-gradient(90deg, rgba(10,10,10,0.9) 0%, transparent 60%);
+}
+
+.miruro-discover-content {
+  position: relative;
+  z-index: 10;
+  padding: 32px;
+  max-width: 640px;
+}
+
+.miruro-discover-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.1;
+  margin: 0 0 10px 0;
+}
+
+.miruro-discover-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a1a1aa;
+  margin-bottom: 12px;
+}
+
+.miruro-meta-badge {
+  background: rgba(255, 255, 255, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+.miruro-discover-synopsis {
+  font-size: 13px;
+  color: #d4d4d8;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0 0 18px 0;
+}
+
+.miruro-discover-btn-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.miruro-discover-dots {
+  position: absolute;
+  bottom: 20px;
+  right: 28px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.miruro-discover-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.miruro-discover-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+/* --- SEARCH PAGE (Screenshot 4) --- */
+.miruro-search-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.miruro-media-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.miruro-media-tab {
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8e8e93;
+  cursor: pointer;
+}
+
+.miruro-media-tab.active {
+  background: #ffffff;
+  color: #0a0a0a;
+}
+
+.miruro-filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.miruro-filter-dropdown-wrap {
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0 12px;
+}
+
+.miruro-filter-select {
+  background: transparent;
+  border: none;
+  color: #ededed;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 0;
+  cursor: pointer;
+  outline: none;
+}
+.miruro-filter-select option {
+  background: #18181b;
+  color: #ededed;
+}
+
+.miruro-filter-reset-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8e8e93;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.miruro-filter-reset-btn:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.miruro-7col-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.miruro-7col-card {
+  cursor: pointer;
+  transition: transform 0.18s ease;
+}
+.miruro-7col-card:hover {
+  transform: translateY(-4px);
+}
+
+.miruro-7col-poster-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #18181b;
+}
+
+.miruro-7col-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.miruro-poster-pill {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ededed;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.miruro-7col-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-top: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.miruro-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.miruro-page-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ededed;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.miruro-page-btn:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.miruro-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.miruro-page-info {
+  font-size: 13px;
+  color: #8e8e93;
+}
+
+/* --- SCHEDULE PAGE (Screenshot 5) --- */
+.miruro-schedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.miruro-schedule-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.miruro-schedule-filter-pills {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9999px;
+  padding: 3px;
+}
+
+.miruro-schedule-pill {
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  color: #8e8e93;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.miruro-schedule-pill.active {
+  background: #ffffff;
+  color: #0a0a0a;
+}
+
+.miruro-schedule-week-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 3px 12px;
+}
+
+.miruro-week-arrow {
+  background: transparent;
+  border: none;
+  color: #8e8e93;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.miruro-week-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ededed;
+}
+
+.miruro-schedule-layout {
+  display: flex;
+  gap: 24px;
+}
+
+.miruro-schedule-days-col {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.miruro-schedule-day-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+.miruro-schedule-day-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+.miruro-schedule-day-card.active {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.05);
+}
+
+.miruro-schedule-day-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.miruro-day-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.miruro-day-date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.miruro-day-date {
+  font-size: 11px;
+  color: #8e8e93;
+}
+
+.miruro-today-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+.miruro-day-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8e8e93;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 7px;
+  border-radius: 9999px;
+}
+
+.miruro-schedule-content-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.miruro-time-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.miruro-time-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.miruro-time-section-heading {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #8e8e93;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 8px;
+  margin: 0;
+}
+
+.miruro-schedule-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.miruro-schedule-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.miruro-schedule-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  background: #161619;
+}
+
+.miruro-schedule-card-thumb {
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: #1c1c1f;
+}
+
+.miruro-schedule-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.miruro-schedule-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ededed;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 0 6px 0;
+}
+
+.miruro-schedule-card-meta {
+  font-size: 11px;
+  color: #8e8e93;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.miruro-air-badge {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  color: #ededed;
+}
+
+.miruro-scroll-nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ededed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+.miruro-scroll-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}

@@ -4,6 +4,8 @@ import MiruroRail from './components/MiruroRail'
 import MiruroHeader from './components/MiruroHeader'
 
 import Home from './pages/Home'
+import Trending from './pages/Trending'
+import Discover from './pages/Discover'
 import Search from './pages/Search'
 import Downloads from './pages/Downloads'
 import Schedule from './pages/Schedule'
@@ -278,6 +280,8 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/home" replace />} />
                 <Route path="/home" element={<Home />} />
+                <Route path="/trending" element={<Trending />} />
+                <Route path="/discover" element={<Discover />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/anime/:id" element={<Details />} />
                 <Route path="/downloads" element={<Downloads />} />

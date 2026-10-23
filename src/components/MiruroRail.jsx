@@ -4,7 +4,7 @@ import { AppContext } from '../App'
 
 /**
  * Miruro-style Slim Left Icon Rail (w-14 / 56px).
- * Features mascot logo at top, Lucide-styled navigation icons with active indicator,
+ * Features Miruro cat mascot at top, navigation icons matching the screenshots,
  * and profile/settings at bottom.
  */
 export default function MiruroRail() {
@@ -25,22 +25,31 @@ export default function MiruroRail() {
       )
     },
     {
-      to: '/search',
-      state: { tab: 'browse' },
+      to: '/trending',
       label: 'Trending',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rail-icon">
-          <path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4" />
+          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+        </svg>
+      )
+    },
+    {
+      to: '/discover',
+      label: 'Discover',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rail-icon">
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" fillOpacity="0.2" />
         </svg>
       )
     },
     {
       to: '/search',
-      label: 'Discover',
+      label: 'Search',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rail-icon">
-          <circle cx="12" cy="12" r="10" />
-          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
       )
     },
@@ -61,7 +70,8 @@ export default function MiruroRail() {
       label: 'Library',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rail-icon">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
         </svg>
       )
     },
@@ -103,11 +113,14 @@ export default function MiruroRail() {
 
   return (
     <aside className="miruro-site-rail" title="Navigation">
-      {/* Top: Miruro-Style Cat Mascot / Brand Emblem */}
+      {/* Top: Miruro-Style Cat Mascot */}
       <NavLink to="/home" className="rail-logo-btn" title="KamiWatch Home">
         <div className="rail-mascot">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z" />
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5c.67 0 1.35.09 2 .26 1.78-2 4-2.26 5.5-1.76.7 1.63.2 3.65-.5 5 1.34 1.55 2 3.5 2 5.5 0 5-4.03 9-9 9s-9-4-9-9c0-2 .66-3.95 2-5.5-.7-1.35-1.2-3.37-.5-5 1.5-.5 3.72-.24 5.5 1.76.65-.17 1.33-.26 2-.26z" />
+            <circle cx="9" cy="13" r="1.2" fill="currentColor" />
+            <circle cx="15" cy="13" r="1.2" fill="currentColor" />
+            <path d="M11 16c.3.3.6.5 1 .5s.7-.2 1-.5" />
           </svg>
         </div>
       </NavLink>

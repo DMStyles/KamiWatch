@@ -9,16 +9,29 @@ const API = 'http://localhost:8642'
 
 const DEFAULT_HERO_SLIDES = [
   {
+    id: 171630,
+    title: 'Dragon Ball Daima',
+    synopsis: 'Due to a conspiracy, Goku and his friends are turned small. In order to fix things, they will head off to a new world! An adventure with action in an unknown and mysterious world begins.',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/171630-yDk1Jp3wJgWk.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/171630-yDk1Jp3wJgWk.jpg',
+    logo: 'https://images.metahub.space/logo/medium/tt29497526/img',
+    genre: ['Adventure', 'Comedy', 'Fantasy', 'Action'],
+    score: '8.4',
+    type: 'TV',
+    episodes: '20',
+    year: '2026',
+  },
+  {
     id: 21,
     title: 'One Piece',
     synopsis: 'Monkey D. Luffy sets off on an adventure with his pirate crew to find the greatest treasure known as the "One Piece" and become the Pirate King.',
     backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
     image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
     genre: ['Action', 'Adventure', 'Fantasy'],
-    score: '8.7',
+    score: '8.8',
     type: 'TV',
     episodes: '1100+',
-    duration: '24m',
+    year: '1999',
   },
   {
     id: 101922,
@@ -30,7 +43,7 @@ const DEFAULT_HERO_SLIDES = [
     score: '8.6',
     type: 'TV',
     episodes: '26',
-    duration: '24m',
+    year: '2019',
   },
   {
     id: 16498,
@@ -42,31 +55,7 @@ const DEFAULT_HERO_SLIDES = [
     score: '9.0',
     type: 'TV',
     episodes: '25',
-    duration: '24m',
-  },
-  {
-    id: 1535,
-    title: 'Death Note',
-    synopsis: 'A high school student discovers a supernatural notebook that allows him to kill anyone by writing their name, embarking on a moral crusade as a self-styled god.',
-    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/1535.jpg',
-    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/1535.jpg',
-    genre: ['Mystery', 'Psychological', 'Thriller'],
-    score: '8.6',
-    type: 'TV',
-    episodes: '37',
-    duration: '23m',
-  },
-  {
-    id: 11061,
-    title: 'Hunter x Hunter (2011)',
-    synopsis: 'Gon Freecss aspires to become a Hunter, an exceptional being capable of greatness, with the help of his friends and his potential to find his father.',
-    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/11061.jpg',
-    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/11061.jpg',
-    genre: ['Action', 'Adventure', 'Fantasy'],
-    score: '9.0',
-    type: 'TV',
-    episodes: '148',
-    duration: '24m',
+    year: '2013',
   },
 ]
 
@@ -83,6 +72,7 @@ const GENRE_CARDS = [
 
 const GENRE_TAGS = ['All', 'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror', 'Mystery', 'Psychological', 'Romance', 'Sci-Fi', 'Slice of Life', 'Supernatural']
 
+/** Miruro Hero Banner with clearlogo, metadata pills, Watch/Details/+ buttons */
 function MiruroHero({ slides }) {
   const [idx, setIdx] = useState(0)
   const [fading, setFading] = useState(false)
@@ -95,7 +85,7 @@ function MiruroHero({ slides }) {
     setTimeout(() => {
       setIdx(newIdx)
       setFading(false)
-    }, 300)
+    }, 250)
   }
 
   const goNext = () => goTo((idx + 1) % slides.length)
@@ -103,44 +93,38 @@ function MiruroHero({ slides }) {
 
   useEffect(() => {
     if (slides.length < 2) return
-    let mounted = true
     timerRef.current = setInterval(() => {
-      if (!mounted) return
       setFading(true)
       setTimeout(() => {
-        if (!mounted) return
         setIdx(prev => (prev + 1) % slides.length)
         setFading(false)
-      }, 300)
-    }, 6500)
-    return () => {
-      mounted = false
-      clearInterval(timerRef.current)
-    }
+      }, 250)
+    }, 7000)
+    return () => clearInterval(timerRef.current)
   }, [slides.length])
 
   const slide = slides[idx]
   if (!slide) return null
 
-  const targetId = slide.id || slide.malId
+  const targetId = slide.id || slide.malId || slide.mal_id
   const handleWatch = () => {
     if (targetId) navigate(`/anime/${targetId}`)
     else if (slide.title) navigate('/anime/0', { state: { searchQuery: slide.title } })
   }
 
-  const scoreFormatted = slide.rating || (slide.score ? (typeof slide.score === 'number' && slide.score > 10 ? (slide.score / 10).toFixed(1) : slide.score) : '8.8')
+  const genres = Array.isArray(slide.genre)
+    ? slide.genre
+    : (Array.isArray(slide.genres) ? slide.genres.map(g => (typeof g === 'object' ? g.name : g)) : ['Adventure', 'Action'])
 
   return (
     <div className="miruro-hero">
-      {/* Cinematic Backdrop Image */}
+      {/* Background Banner */}
       <img
         src={slide.backdrop || slide.image || slide.bannerImage}
         alt={slide.title}
         referrerPolicy="no-referrer"
         className="miruro-hero-backdrop"
-        style={{
-          opacity: fading ? 0 : 1,
-        }}
+        style={{ opacity: fading ? 0 : 1 }}
       />
 
       {/* Multi-Directional Gradient Overlays */}
@@ -153,54 +137,45 @@ function MiruroHero({ slides }) {
         className="miruro-hero-content"
         style={{
           opacity: fading ? 0 : 1,
-          transform: fading ? 'translateY(10px)' : 'translateY(0)',
+          transform: fading ? 'translateY(8px)' : 'translateY(0)',
         }}
       >
-        {/* Miruro Spotlight Pills Row */}
-        <div className="miruro-hero-pills">
-          <span className="spotlight-rank-badge">
-            #{idx + 1} Spotlight
-          </span>
-          <span className="hero-chip">
-            {slide.type || 'TV'}
-          </span>
-          {scoreFormatted && (
-            <span className="hero-chip score">
-              ★ {scoreFormatted}
-            </span>
-          )}
-          {slide.episodes && (
-            <span className="hero-chip">
-              {slide.episodes} Ep
-            </span>
-          )}
-          <span className="hero-chip sub">
-            CC
-          </span>
-          <span className="hero-chip dub">
-            MIC
-          </span>
-        </div>
+        {/* Title Logo (if available) or Bold Typography */}
+        {slide.logo ? (
+          <img src={slide.logo} alt={slide.title} className="miruro-hero-logo" />
+        ) : (
+          <h1 className="miruro-hero-title">
+            {slide.title}
+          </h1>
+        )}
 
-        {/* Title */}
-        <h1 className="miruro-hero-title">
-          {slide.title}
-        </h1>
+        {/* Metadata Pills: 3 Episodes, 2026, Adventure, Comedy, Fantasy */}
+        <div className="miruro-hero-meta-row">
+          {slide.episodes && (
+            <span className="miruro-hero-pill-badge">{slide.episodes} Episodes</span>
+          )}
+          {slide.year && (
+            <span className="miruro-hero-pill-badge">{slide.year}</span>
+          )}
+          {genres.slice(0, 3).map((g, i) => (
+            <span key={i} className="miruro-hero-pill-badge">{g}</span>
+          ))}
+        </div>
 
         {/* Synopsis */}
         <p className="miruro-hero-synopsis">
           {slide.synopsis}
         </p>
 
-        {/* Action Buttons */}
+        {/* Action Buttons: ▶ Watch Now | ⓘ Details | + */}
         <div className="miruro-hero-actions">
-          <button className="miruro-hero-watch-btn" onClick={handleWatch}>
+          <button className="miruro-watch-btn-solid" onClick={handleWatch}>
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
             <span>Watch Now</span>
           </button>
-          <button className="miruro-hero-detail-btn" onClick={handleWatch}>
+          <button className="miruro-detail-btn-glass" onClick={handleWatch}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="16" x2="12" y2="12" />
@@ -209,27 +184,24 @@ function MiruroHero({ slides }) {
             <span>Details</span>
           </button>
           <button
-            className="miruro-hero-bookmark-btn"
+            className="miruro-bookmark-btn-glass"
             onClick={() => {
               const currentList = JSON.parse(localStorage.getItem('kamiwatch-watchlist') || '{}')
               const key = String(slide.id || slide.title)
-              if (currentList[key]) {
-                delete currentList[key]
-              } else {
-                currentList[key] = {
-                  id: slide.id,
-                  title: slide.title,
-                  cover: slide.backdrop || slide.image,
-                  status: 'watching',
-                  updatedAt: Date.now()
-                }
+              currentList[key] = {
+                id: slide.id,
+                title: slide.title,
+                cover: slide.backdrop || slide.image,
+                status: 'watching',
+                updatedAt: Date.now()
               }
               localStorage.setItem('kamiwatch-watchlist', JSON.stringify(currentList))
             }}
             title="Add to Watchlist"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
         </div>
@@ -270,42 +242,16 @@ function Row({ title, icon, items = [], loading = false, onSeeAll, renderCard, s
   if (!loading && items.length === 0) return null
 
   return (
-    <div style={{ marginBottom: 36, position: 'relative' }}>
+    <div style={{ marginBottom: 32, position: 'relative' }}>
       <div className="section-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {icon && <span style={{ fontSize: 20 }}>{icon}</span>}
+          {icon && <span style={{ fontSize: 18 }}>{icon}</span>}
           <span className="section-title">{title}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', gap: 4 }}>
-            <button
-              onClick={() => scroll('left')}
-              title="Scroll Left"
-              style={{
-                width: 30, height: 30, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)',
-                color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', transition: 'all 0.2s', fontSize: 16, lineHeight: 1
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-            >
-              ‹
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              title="Scroll Right"
-              style={{
-                width: 30, height: 30, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)',
-                color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', transition: 'all 0.2s', fontSize: 16, lineHeight: 1
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-            >
-              ›
-            </button>
+            <button onClick={() => scroll('left')} className="miruro-scroll-nav-btn" title="Scroll Left">‹</button>
+            <button onClick={() => scroll('right')} className="miruro-scroll-nav-btn" title="Scroll Right">›</button>
           </div>
           {onSeeAll && <span className="section-link" onClick={onSeeAll}>See All →</span>}
         </div>
@@ -325,22 +271,20 @@ export default function Home() {
   const { setEpisodeModal } = useContext(AppContext)
   const [heroSlides, setHeroSlides] = useState(DEFAULT_HERO_SLIDES)
   const [activeGenre, setActiveGenre] = useState('All')
-  const [follows, setFollows] = useState([])
-  const [trendingAnime, setTrendingAnime] = useState([])
-  const [trendingLoading, setTrendingLoading] = useState(true)
-  const [hiddenGems, setHiddenGems] = useState([])
-  const [gemsLoading, setGemsLoading] = useState(true)
-  const [airingEpisodes, setAiringEpisodes] = useState([])
-  const [airingLoading, setAiringLoading] = useState(true)
   const [latestEpisodes, setLatestEpisodes] = useState([])
   const [latestLoading, setLatestLoading] = useState(true)
+  const [latestSubDub, setLatestSubDub] = useState('sub')
+  const [latestPage, setLatestPage] = useState(1)
+  const [topAiring, setTopAiring] = useState([])
+  const [topAiringFilter, setTopAiringFilter] = useState('Week')
+  const [trendingAnime, setTrendingAnime] = useState([])
+  const [trendingLoading, setTrendingLoading] = useState(true)
+  const [airingEpisodes, setAiringEpisodes] = useState([])
+  const [airingLoading, setAiringLoading] = useState(true)
   const [upcomingAnime, setUpcomingAnime] = useState([])
   const [upcomingLoading, setUpcomingLoading] = useState(true)
-  const [recommendations, setRecommendations] = useState([])
   const [mangaTrending, setMangaTrending] = useState([])
-  const [mangaNew, setMangaNew] = useState([])
   const [history, setHistory] = useState([])
-  const [mangaHistory, setMangaHistory] = useState([])
 
   useEffect(() => {
     const toArray = (d, key = 'results') => {
@@ -352,7 +296,7 @@ export default function Home() {
       return []
     }
 
-    // Load watch history & normalize
+    // Load watch history
     try {
       const h = JSON.parse(localStorage.getItem('kamiwatch-history') || '[]')
       const normalized = h.map(item => ({
@@ -361,12 +305,7 @@ export default function Home() {
         id: item.id || item.animeId || item.malId,
         cover: item.cover || item.thumbnail || '',
       }))
-      setHistory(normalized.slice(0, 16))
-    } catch {}
-
-    try {
-      const mh = JSON.parse(localStorage.getItem('kamiwatch-manga-history') || '[]')
-      setMangaHistory(mh.slice(0, 10))
+      setHistory(normalized.slice(0, 14))
     } catch {}
 
     // Fetch hero slides
@@ -375,8 +314,18 @@ export default function Home() {
       if (slides.length >= 3) setHeroSlides(slides)
     }).catch(() => {})
 
-    // Fetch follows
-    fetch(`${API}/library/follows`).then(r => r.json()).then(d => setFollows(toArray(d))).catch(() => {})
+    // Latest episodes (Screenshot 1: "Latest Episodes")
+    fetch(`${API}/anikoto/latest`).then(r => r.json()).then(d => {
+      const list = toArray(d)
+      setLatestEpisodes(list)
+      setLatestLoading(false)
+    }).catch(() => setLatestLoading(false))
+
+    // Top Airing (Right Sidebar list)
+    fetch(`${API}/jikan/airing?limit=10`).then(r => r.json()).then(d => {
+      const list = toArray(d)
+      setTopAiring(list.slice(0, 10))
+    }).catch(() => {})
 
     // Popular / Trending Anime
     fetch(`${API}/jikan/all?page=1`).then(r => r.json()).then(d => {
@@ -384,26 +333,11 @@ export default function Home() {
       setTrendingLoading(false)
     }).catch(() => setTrendingLoading(false))
 
-    // Hidden Gems (Underrated Animes)
-    fetch(`${API}/jikan/hidden-gems`).then(r => r.json()).then(d => {
-      const items = toArray(d)
-      if (items.length > 0) setHiddenGems(items.slice(0, 16))
-      setGemsLoading(false)
-    }).catch(() => {
-      setGemsLoading(false)
-    })
-
-    // Airing
+    // Airing This Season
     fetch(`${API}/jikan/airing?limit=20`).then(r => r.json()).then(d => {
       setAiringEpisodes(toArray(d).slice(0, 20))
       setAiringLoading(false)
     }).catch(() => setAiringLoading(false))
-
-    // Latest episodes
-    fetch(`${API}/anikoto/latest`).then(r => r.json()).then(d => {
-      setLatestEpisodes(toArray(d).slice(0, 20))
-      setLatestLoading(false)
-    }).catch(() => setLatestLoading(false))
 
     // Upcoming
     fetch(`${API}/anikoto/upcoming`).then(r => r.json()).then(d => {
@@ -413,50 +347,20 @@ export default function Home() {
 
     // Manga
     fetch(`${API}/manga/trending`).then(r => r.json()).then(d => setMangaTrending(toArray(d).slice(0, 14))).catch(() => {})
-    fetch(`${API}/manga/new-releases`).then(r => r.json()).then(d => setMangaNew(toArray(d).slice(0, 14))).catch(() => {})
-
-    // Recommendations
-    try {
-      const watchHistory = JSON.parse(localStorage.getItem('kamiwatch-history') || '[]')
-      const malIds = watchHistory.slice(0, 5).map(h => h.malId || h.id).filter(Boolean)
-      if (malIds.length > 0) {
-        fetch(`${API}/jikan/recommendations?ids=${malIds.join(',')}`)
-          .then(r => r.json())
-          .then(d => setRecommendations(toArray(d).slice(0, 16)))
-          .catch(() => {})
-      }
-    } catch {}
   }, [])
 
-  // Progress map
-  const progressMap = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('kamiwatch_episode_progress') || '{}')
-    } catch { return {} }
-  })()
-
-  const getProgress = (anime) => {
-    const id = anime.malId || anime.id
-    const pKey = Object.keys(progressMap).find(k =>
-      k === String(id) || k.startsWith(`${id}_`) || progressMap[k]?.animeId === id
-    )
-    if (!pKey) return 0
-    const p = progressMap[pKey]
-    if (typeof p === 'number') return p
-    if (p?.percent) return p.percent
-    return 0
-  }
+  // Filter latest episodes by page and sub/dub
+  const paginatedLatest = latestEpisodes.slice((latestPage - 1) * 7, latestPage * 7)
 
   return (
     <div style={{ minHeight: '100%', paddingBottom: 60 }}>
-      {/* === MIRURO CINEMATIC HERO SPOTLIGHT === */}
+      {/* 1. Miruro Cinematic Hero Spotlight */}
       <MiruroHero slides={heroSlides} />
 
-      {/* === QUICK GENRE BAR === */}
-      <div style={{ padding: '24px 0 12px', marginBottom: 8 }}>
+      {/* 2. Genre Tags Strip */}
+      <div style={{ padding: '20px 24px 8px' }}>
         <div style={{
-          display: 'flex', gap: 8, overflowX: 'auto', padding: '0 28px',
-          scrollbarWidth: 'none', msOverflowStyle: 'none'
+          display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none'
         }}>
           {GENRE_TAGS.map(g => (
             <button
@@ -465,14 +369,7 @@ export default function Home() {
                 setActiveGenre(g)
                 if (g !== 'All') navigate('/search', { state: { genre: g } })
               }}
-              style={{
-                padding: '6px 18px', borderRadius: 99, border: 'none',
-                fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease',
-                background: activeGenre === g ? 'var(--gradient-accent)' : 'rgba(255,255,255,0.06)',
-                color: activeGenre === g ? '#fff' : 'var(--text-secondary)',
-                boxShadow: activeGenre === g ? '0 0 16px var(--accent-glow)' : 'none',
-              }}
+              className={`genre-tag-pill${activeGenre === g ? ' active' : ''}`}
             >
               {g}
             </button>
@@ -480,163 +377,222 @@ export default function Home() {
         </div>
       </div>
 
-      {/* === CONTINUE WATCHING === */}
-      {history.length > 0 && (
-        <Row
-          title="Continue Watching"
-          icon="🍿"
-          items={history}
-          renderCard={(item, i) => (
-            <AnimeCard
-              key={i}
-              anime={item}
-              badge={item.epNumber ? `EP ${item.epNumber}` : (item.episode ? `EP ${item.episode}` : undefined)}
-              progress={getProgress(item)}
-              wide
+      {/* 3. Main Split Content: Left Rail (Latest Episodes + Rows) & Right Column (TOP AIRING Sidebar) */}
+      <div className="miruro-home-split-layout">
+        {/* Left Column (Approx 75% width) */}
+        <div className="miruro-home-main-col">
+          {/* Latest Episodes Section with Sub/Dub toggle & Pagination (Screenshot 1 Match) */}
+          <div className="miruro-section-header-row">
+            <div className="miruro-section-title-wrap">
+              <span className="miruro-section-heading">Latest Episodes</span>
+              <div className="miruro-subdub-pill-group">
+                <button
+                  className={`miruro-subdub-toggle${latestSubDub === 'sub' ? ' active' : ''}`}
+                  onClick={() => setLatestSubDub('sub')}
+                >
+                  SUB
+                </button>
+                <button
+                  className={`miruro-subdub-toggle${latestSubDub === 'dub' ? ' active' : ''}`}
+                  onClick={() => setLatestSubDub('dub')}
+                >
+                  DUB
+                </button>
+              </div>
+            </div>
+
+            <div className="miruro-pagination-pill">
+              <button
+                className="miruro-page-nav-arrow"
+                disabled={latestPage <= 1}
+                onClick={() => setLatestPage(p => Math.max(1, p - 1))}
+              >
+                ‹
+              </button>
+              <span className="miruro-page-count">{latestPage} / 3</span>
+              <button
+                className="miruro-page-nav-arrow"
+                disabled={latestPage >= 3}
+                onClick={() => setLatestPage(p => Math.min(3, p + 1))}
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          {/* 7-Card Horizontal Grid for Latest Episodes */}
+          <div className="miruro-latest-card-row">
+            {latestLoading ? (
+              <SkeletonCard count={7} />
+            ) : paginatedLatest.map((item, i) => {
+              const epNum = item.episode || (item.sub_episodes && item.sub_episodes !== '0' ? item.sub_episodes : '1')
+              return (
+                <AnimeCard
+                  key={i}
+                  anime={item}
+                  badge={`EP ${epNum}`}
+                  onClick={() => setEpisodeModal({
+                    title: item.title,
+                    url: item.url,
+                    thumbnail: item.thumbnail || item.cover,
+                    source: item.source || 'anikoto'
+                  })}
+                />
+              )
+            })}
+          </div>
+
+          {/* Continue Watching (if exists) */}
+          {history.length > 0 && (
+            <Row
+              title="Continue Watching"
+              icon="🍿"
+              items={history}
+              renderCard={(item, i) => (
+                <AnimeCard
+                  key={i}
+                  anime={item}
+                  badge={item.epNumber ? `EP ${item.epNumber}` : undefined}
+                />
+              )}
             />
           )}
-        />
-      )}
 
-      {/* === CONTINUE READING (MANGA) === */}
-      {mangaHistory.length > 0 && (
-        <Row
-          title="Continue Reading"
-          icon="📖"
-          items={mangaHistory}
-          renderCard={(item, i) => {
-            const mId = item.mangaId || item.id
-            const mTitle = item.title || item.mangaTitle || 'Manga'
-            const mCover = item.cover || item.image || 'https://via.placeholder.com/200x280?text=No+Cover'
-            const chapterTag = item.chapterNumber ? `Ch. ${item.chapterNumber}` : (item.chapterTitle || '')
-
-            return (
-              <MangaCard 
-                key={i} 
-                manga={{ id: mId, title: mTitle, cover: mCover, description: item.description || '' }} 
-                badge={chapterTag}
-                style={{ flexShrink: 0, width: 148 }} 
-              />
-            )
-          }}
-        />
-      )}
-
-      {/* === MY LIST (FOLLOWS) === */}
-      {follows.length > 0 && (
-        <Row
-          title="My List"
-          icon="📌"
-          items={follows}
-          renderCard={(item, i) => <AnimeCard key={i} anime={item} />}
-        />
-      )}
-
-      {/* === HIDDEN GEMS (UNDERRATED ANIME) === */}
-      {(hiddenGems.length > 0 || gemsLoading) && (
-        <Row
-          title="Hidden Gems (Underrated Masterpieces)"
-          icon="💎"
-          items={hiddenGems}
-          loading={gemsLoading}
-          skeletonCount={8}
-          renderCard={(item, i) => <AnimeCard key={i} anime={item} />}
-        />
-      )}
-
-      {/* === TRENDING ANIME (WITH #1 - #10 RANK BADGES) === */}
-      <Row
-        title="Trending Anime"
-        icon="🔥"
-        items={trendingAnime}
-        loading={trendingLoading}
-        skeletonCount={10}
-        onSeeAll={() => navigate('/search')}
-        renderCard={(item, i) => (
-          <AnimeCard
-            key={i}
-            anime={item}
-            rank={i < 10 ? i + 1 : undefined}
+          {/* Airing This Season */}
+          <Row
+            title="Airing This Season"
+            icon="⚡"
+            items={airingEpisodes.map(a => ({
+              ...a,
+              id: a.id || a.mal_id,
+              malId: a.mal_id || a.id,
+              title: a.title,
+              cover: a.cover || a.thumbnail || a.image || a.images?.jpg?.large_image_url,
+              score: a.score,
+              type: a.type,
+            }))}
+            loading={airingLoading}
+            skeletonCount={7}
+            renderCard={(item, i) => <AnimeCard key={i} anime={item} />}
           />
-        )}
-      />
 
-      {/* === AIRING THIS SEASON === */}
-      <Row
-        title="Airing This Season"
-        icon="⚡"
-        items={airingEpisodes.map(a => ({
-          ...a,
-          id: a.id || a.mal_id,
-          malId: a.mal_id || a.id,
-          title: a.title,
-          cover: a.cover || a.thumbnail || a.image || a.images?.jpg?.large_image_url || a.images?.jpg?.image_url,
-          score: a.score,
-          type: a.type,
-          episodes: a.episodes || a.sub_episodes,
-        }))}
-        loading={airingLoading}
-        skeletonCount={10}
-        renderCard={(item, i) => <AnimeCard key={i} anime={item} />}
-      />
+          {/* Trending Anime */}
+          <Row
+            title="Trending Anime"
+            icon="🔥"
+            items={trendingAnime}
+            loading={trendingLoading}
+            skeletonCount={7}
+            onSeeAll={() => navigate('/trending')}
+            renderCard={(item, i) => (
+              <AnimeCard
+                key={i}
+                anime={item}
+                rank={i < 10 ? i + 1 : undefined}
+              />
+            )}
+          />
 
-      {/* === LATEST EPISODES === */}
-      <Row
-        title="Latest Episodes"
-        icon="🆕"
-        items={latestEpisodes}
-        loading={latestLoading}
-        skeletonCount={10}
-        onSeeAll={() => navigate('/search')}
-        renderCard={(item, i) => {
-          const epNum = item.episode || (item.sub_episodes && item.sub_episodes !== '0' ? item.sub_episodes : (item.dub_episodes !== '0' ? item.dub_episodes : null))
-          return (
-            <AnimeCard
-              key={i}
-              anime={item}
-              badge={epNum ? `EP ${epNum}` : undefined}
-              onClick={() => setEpisodeModal({ title: item.title, url: item.url, thumbnail: item.thumbnail || item.cover, source: item.source || 'anikoto' })}
+          {/* Upcoming */}
+          {upcomingAnime.length > 0 && (
+            <Row
+              title="Upcoming Anime"
+              icon="⏳"
+              items={upcomingAnime}
+              loading={upcomingLoading}
+              skeletonCount={7}
+              renderCard={(item, i) => <AnimeCard key={i} anime={item} badge="SOON" />}
             />
-          )
-        }}
-      />
-
-      {/* === UPCOMING ANIME === */}
-      {upcomingAnime.length > 0 && (
-        <Row
-          title="Upcoming Anime"
-          icon="⏳"
-          items={upcomingAnime}
-          loading={upcomingLoading}
-          skeletonCount={8}
-          renderCard={(item, i) => <AnimeCard key={i} anime={item} badge="SOON" />}
-        />
-      )}
-
-      {/* === RECOMMENDED FOR YOU === */}
-      {recommendations.length > 0 && (
-        <Row
-          title="Recommended for You"
-          icon="✨"
-          items={recommendations}
-          renderCard={(item, i) => <AnimeCard key={i} anime={item} />}
-        />
-      )}
-
-      {/* === TRENDING MANGA === */}
-      {mangaTrending.length > 0 && (
-        <Row
-          title="Trending Manga"
-          icon="📚"
-          items={mangaTrending}
-          renderCard={(item, i) => (
-            <MangaCard key={i} manga={item} style={{ flexShrink: 0, width: 148 }} />
           )}
-        />
-      )}
 
-      {/* === BROWSE BY GENRE GRID === */}
-      <div style={{ marginBottom: 32, padding: '0 4px' }}>
+          {/* Trending Manga */}
+          {mangaTrending.length > 0 && (
+            <Row
+              title="Trending Manga"
+              icon="📚"
+              items={mangaTrending}
+              renderCard={(item, i) => (
+                <MangaCard key={i} manga={item} style={{ flexShrink: 0, width: 140 }} />
+              )}
+            />
+          )}
+        </div>
+
+        {/* Right Sidebar: TOP AIRING (Screenshot 1 Match) */}
+        <aside className="miruro-top-airing-sidebar">
+          <div className="miruro-top-airing-box">
+            <div className="miruro-top-airing-header">
+              <span className="miruro-top-airing-title">TOP AIRING</span>
+              <div className="miruro-top-airing-tabs">
+                {['Day', 'Week', 'Month'].map(t => (
+                  <button
+                    key={t}
+                    className={`miruro-top-airing-tab${topAiringFilter === t ? ' active' : ''}`}
+                    onClick={() => setTopAiringFilter(t)}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="miruro-top-airing-list">
+              {topAiring.map((show, idx) => {
+                const targetId = show.id || show.mal_id || show.malId
+                const title = show.title || show.titleEnglish || 'Unknown Anime'
+                const cover = show.cover || show.thumbnail || show.image || show.images?.jpg?.large_image_url || 'https://via.placeholder.com/120x160?text=No+Cover'
+                const score = show.score ? (typeof show.score === 'number' && show.score > 10 ? (show.score / 10).toFixed(1) : show.score) : '8.8'
+                const format = show.type || 'TV'
+
+                return (
+                  <div
+                    key={targetId || idx}
+                    className="miruro-top-airing-item"
+                    onClick={() => {
+                      if (targetId) navigate(`/anime/${targetId}`)
+                      else navigate('/anime/0', { state: { searchQuery: title } })
+                    }}
+                  >
+                    <span className={`miruro-rank-badge rank-${idx + 1}`}>
+                      #{idx + 1}
+                    </span>
+
+                    <img
+                      src={cover}
+                      alt={title}
+                      referrerPolicy="no-referrer"
+                      className="miruro-top-airing-thumb"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/120x160?text=No+Cover'
+                      }}
+                    />
+
+                    <div className="miruro-top-airing-info">
+                      <h4 className="miruro-top-airing-item-title" title={title}>
+                        {title}
+                      </h4>
+                      <div className="miruro-top-airing-item-meta">
+                        <span className="score-star">★ {score}</span>
+                        <span>·</span>
+                        <span>{format}</span>
+                        {show.episodes && (
+                          <>
+                            <span>·</span>
+                            <span>{show.episodes} Ep</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {/* 4. Browse by Genre Grid */}
+      <div style={{ marginTop: 20, padding: '0 24px' }}>
         <div className="section-header">
           <span className="section-title">Browse by Genre</span>
         </div>
