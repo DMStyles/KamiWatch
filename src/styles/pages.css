@@ -1,4 +1,502 @@
 /* ============================================================
+   MIRURO CARD COMPONENT — Anime & Manga
+============================================================ */
+.miruro-card {
+  cursor: pointer;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.miruro-card:hover {
+  transform: translateY(-6px);
+}
+
+.miruro-card-poster-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.miruro-card:hover .miruro-card-poster-wrap {
+  border-color: rgba(139, 92, 246, 0.55);
+  box-shadow: 0 12px 36px rgba(139, 92, 246, 0.25), 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.miruro-card-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.miruro-card:hover .miruro-card-poster {
+  transform: scale(1.06);
+}
+
+.miruro-card-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  opacity: 0.4;
+  background: #121320;
+}
+
+/* Badges */
+.miruro-card-badge-score {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(9, 10, 16, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  letter-spacing: 0.01em;
+  z-index: 2;
+}
+
+.miruro-card-badge-type {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(9, 10, 16, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  z-index: 2;
+}
+
+.miruro-card-rank-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--gradient-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 9px;
+  border-radius: 7px;
+  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.5);
+  z-index: 3;
+  letter-spacing: 0.02em;
+}
+
+.miruro-card-rank-badge .rank-hash {
+  opacity: 0.75;
+  font-size: 10px;
+  margin-right: 1px;
+}
+
+.miruro-card-bottom-chips {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  gap: 5px;
+  z-index: 2;
+}
+
+.chip-ep {
+  background: var(--gradient-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px var(--accent-glow);
+  letter-spacing: 0.02em;
+}
+
+.chip-sub {
+  background: rgba(6, 182, 212, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+}
+
+.chip-dub {
+  background: rgba(139, 92, 246, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: var(--accent-light);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+}
+
+/* Progress bar */
+.miruro-card-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 3;
+}
+
+.miruro-card-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.8);
+  border-radius: 0 2px 2px 0;
+}
+
+.miruro-card-progress-fill.complete {
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
+/* Hover overlay with center glowing play */
+.miruro-card-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(9, 10, 16, 0.94) 0%, rgba(9, 10, 16, 0.45) 50%, rgba(9, 10, 16, 0.2) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 4;
+}
+
+.miruro-card:hover .miruro-card-hover-overlay {
+  opacity: 1;
+}
+
+.miruro-card-play-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--gradient-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 0 24px var(--accent-glow), 0 4px 16px rgba(0, 0, 0, 0.6);
+  transform: scale(0.85);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  padding-left: 3px;
+}
+
+.miruro-card:hover .miruro-card-play-circle {
+  transform: scale(1.08);
+}
+
+.miruro-card-info-btn {
+  padding: 5px 16px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.miruro-card-info-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+  transform: scale(1.04);
+}
+
+/* Info */
+.miruro-card-info {
+  padding: 8px 2px 0;
+}
+
+.miruro-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.2s ease;
+  margin-bottom: 3px;
+}
+
+.miruro-card:hover .miruro-card-title {
+  color: var(--accent-light);
+}
+
+.miruro-card-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ============================================================
+   MIRURO CINEMATIC HERO SPOTLIGHT
+============================================================ */
+.miruro-hero {
+  position: relative;
+  height: 58vh;
+  min-height: 420px;
+  max-height: 580px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  background: var(--bg-primary);
+}
+
+.miruro-hero-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+  transition: opacity 0.45s ease, transform 0.6s ease;
+  transform: scale(1.02);
+}
+
+.miruro-hero-overlay-left {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(9, 10, 16, 0.98) 0%, rgba(9, 10, 16, 0.90) 38%, rgba(9, 10, 16, 0.4) 70%, transparent 100%);
+  z-index: 1;
+}
+
+.miruro-hero-overlay-bottom {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, var(--bg-primary) 0%, rgba(9, 10, 16, 0.85) 25%, transparent 70%);
+  z-index: 1;
+}
+
+.miruro-hero-overlay-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: linear-gradient(180deg, rgba(9, 10, 16, 0.5) 0%, transparent 100%);
+  z-index: 1;
+}
+
+.miruro-hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 0 48px 48px;
+  max-width: 680px;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.miruro-hero-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.spotlight-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  color: var(--accent-light);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  box-shadow: 0 0 16px var(--accent-glow-sm);
+}
+
+.hero-chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hero-chip.score {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.hero-chip.sub {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: rgba(6, 182, 212, 0.35);
+  color: var(--cyan);
+  font-weight: 800;
+}
+
+.hero-chip.dub {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: var(--accent-light);
+  font-weight: 800;
+}
+
+.miruro-hero-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: #ffffff;
+  margin-bottom: 12px;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
+}
+
+.miruro-hero-synopsis {
+  font-size: 14px;
+  line-height: 1.65;
+  color: rgba(241, 245, 249, 0.75);
+  margin-bottom: 24px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 580px;
+}
+
+.miruro-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.miruro-hero-watch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 28px;
+  border-radius: var(--radius);
+  background: var(--gradient-accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 24px var(--accent-glow);
+  transition: all var(--transition);
+}
+
+.miruro-hero-watch-btn:hover {
+  box-shadow: 0 0 34px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.miruro-hero-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 24px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.miruro-hero-detail-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.miruro-hero-nav {
+  position: absolute;
+  bottom: 40px;
+  right: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 2;
+}
+
+.miruro-hero-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.miruro-hero-nav-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.miruro-hero-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.miruro-hero-dot {
+  width: 8px;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+}
+
+.miruro-hero-dot.active {
+  width: 26px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* ============================================================
    UNIFIED ANIME CARD — used by AnimeCard.jsx component
 ============================================================ */
 .anime-card {

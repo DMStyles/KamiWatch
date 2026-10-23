@@ -504,6 +504,67 @@ async def get_hero_slides():
             })
         return {"slides": slides}
 
+
+@router.get("/hidden-gems")
+async def get_hidden_gems():
+    """Return high-scoring, critically acclaimed underrated anime."""
+    import random
+    query = """
+    query {
+      Page(page: 1, perPage: 30) {
+        media(type: ANIME, sort: SCORE_DESC, isAdult: false, format_in: [TV, MOVIE], averageScore_greater: 80, popularity_lesser: 120000) {
+          id
+          title { english romaji }
+          description(asHtml: false)
+          bannerImage
+          coverImage { extraLarge large }
+          format
+          episodes
+          averageScore
+          genres
+          seasonYear
+        }
+      }
+    }
+    """
+    try:
+        result = await anilist_post(query)
+        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+        if anime_list:
+            items = []
+            for a in anime_list:
+                title = (a.get("title") or {}).get("english") or (a.get("title") or {}).get("romaji") or "Unknown"
+                items.append({
+                    "id": a.get("id"),
+                    "title": title,
+                    "cover": (a.get("coverImage") or {}).get("extraLarge") or (a.get("coverImage") or {}).get("large") or "",
+                    "score": round(a.get("averageScore") / 10, 1) if a.get("averageScore") else None,
+                    "type": (a.get("format") or "TV").replace("_", " "),
+                    "episodes": a.get("episodes"),
+                    "genres": a.get("genres") or [],
+                    "year": a.get("seasonYear"),
+                })
+            random.shuffle(items)
+            return {"results": items[:16]}
+    except Exception as e:
+        pass
+
+    curated = [
+        {"id": 46102, "title": "Odd Taxi", "score": 8.7, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1185/115868.jpg"},
+        {"id": 46095, "title": "Vivy: Fluorite Eye's Song", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1208/115802.jpg"},
+        {"id": 37520, "title": "Dororo", "score": 8.2, "type": "TV", "episodes": 24, "cover": "https://cdn.myanimelist.net/images/anime/1879/100467.jpg"},
+        {"id": 44074, "title": "Link Click", "score": 8.7, "type": "ONA", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/1109/118055.jpg"},
+        {"id": 22135, "title": "Ping Pong the Animation", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/58041.jpg"},
+        {"id": 13125, "title": "From the New World", "score": 8.3, "type": "TV", "episodes": 25, "cover": "https://cdn.myanimelist.net/images/anime/12/41199.jpg"},
+        {"id": 35557, "title": "Land of the Lustrous", "score": 8.4, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/12/88204.jpg"},
+        {"id": 35828, "title": "Pluto", "score": 8.4, "type": "ONA", "episodes": 8, "cover": "https://cdn.myanimelist.net/images/anime/1841/138767.jpg"},
+        {"id": 7785, "title": "The Tatami Galaxy", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/75914.jpg"},
+        {"id": 48849, "title": "Sonny Boy", "score": 7.8, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/1917/116773.jpg"},
+        {"id": 2251, "title": "Baccano!", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/11/4844.jpg"},
+        {"id": 790, "title": "Ergo Proxy", "score": 7.9, "type": "TV", "episodes": 23, "cover": "https://cdn.myanimelist.net/images/anime/4/20547.jpg"},
+    ]
+    return {"results": curated}
+
     random.shuffle(with_banners)
     picks = with_banners[:6]
 
@@ -527,6 +588,67 @@ async def get_hero_slides():
         })
 
     return {"slides": slides}
+
+
+@router.get("/hidden-gems")
+async def get_hidden_gems():
+    """Return high-scoring, critically acclaimed underrated anime."""
+    import random
+    query = """
+    query {
+      Page(page: 1, perPage: 30) {
+        media(type: ANIME, sort: SCORE_DESC, isAdult: false, format_in: [TV, MOVIE], averageScore_greater: 80, popularity_lesser: 120000) {
+          id
+          title { english romaji }
+          description(asHtml: false)
+          bannerImage
+          coverImage { extraLarge large }
+          format
+          episodes
+          averageScore
+          genres
+          seasonYear
+        }
+      }
+    }
+    """
+    try:
+        result = await anilist_post(query)
+        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+        if anime_list:
+            items = []
+            for a in anime_list:
+                title = (a.get("title") or {}).get("english") or (a.get("title") or {}).get("romaji") or "Unknown"
+                items.append({
+                    "id": a.get("id"),
+                    "title": title,
+                    "cover": (a.get("coverImage") or {}).get("extraLarge") or (a.get("coverImage") or {}).get("large") or "",
+                    "score": round(a.get("averageScore") / 10, 1) if a.get("averageScore") else None,
+                    "type": (a.get("format") or "TV").replace("_", " "),
+                    "episodes": a.get("episodes"),
+                    "genres": a.get("genres") or [],
+                    "year": a.get("seasonYear"),
+                })
+            random.shuffle(items)
+            return {"results": items[:16]}
+    except Exception as e:
+        pass
+
+    curated = [
+        {"id": 46102, "title": "Odd Taxi", "score": 8.7, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1185/115868.jpg"},
+        {"id": 46095, "title": "Vivy: Fluorite Eye's Song", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1208/115802.jpg"},
+        {"id": 37520, "title": "Dororo", "score": 8.2, "type": "TV", "episodes": 24, "cover": "https://cdn.myanimelist.net/images/anime/1879/100467.jpg"},
+        {"id": 44074, "title": "Link Click", "score": 8.7, "type": "ONA", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/1109/118055.jpg"},
+        {"id": 22135, "title": "Ping Pong the Animation", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/58041.jpg"},
+        {"id": 13125, "title": "From the New World", "score": 8.3, "type": "TV", "episodes": 25, "cover": "https://cdn.myanimelist.net/images/anime/12/41199.jpg"},
+        {"id": 35557, "title": "Land of the Lustrous", "score": 8.4, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/12/88204.jpg"},
+        {"id": 35828, "title": "Pluto", "score": 8.4, "type": "ONA", "episodes": 8, "cover": "https://cdn.myanimelist.net/images/anime/1841/138767.jpg"},
+        {"id": 7785, "title": "The Tatami Galaxy", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/75914.jpg"},
+        {"id": 48849, "title": "Sonny Boy", "score": 7.8, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/1917/116773.jpg"},
+        {"id": 2251, "title": "Baccano!", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/11/4844.jpg"},
+        {"id": 790, "title": "Ergo Proxy", "score": 7.9, "type": "TV", "episodes": 23, "cover": "https://cdn.myanimelist.net/images/anime/4/20547.jpg"},
+    ]
+    return {"results": curated}
 
 
 @router.get("/details")

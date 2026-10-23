@@ -3,50 +3,51 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* === Core Backgrounds — Warm dark blue base === */
-  --bg-primary: #07080f;
-  --bg-secondary: #0c0d1c;
-  --bg-card: #0e0f1e;
-  --bg-card-hover: #141528;
-  --bg-modal: #0b0c1a;
+  /* === Core Backgrounds — Miruro Obsidian Dark === */
+  --bg-primary: #090a10;
+  --bg-secondary: #0e0f18;
+  --bg-card: #121320;
+  --bg-card-hover: #181a2c;
+  --bg-modal: #0c0d16;
 
-  /* === Accent — Indigo → Electric Blue === */
-  --accent: #4f46e5;
-  --accent-light: #818cf8;
-  --accent-dark: #3730a3;
-  --accent-glow: rgba(79, 70, 229, 0.45);
-  --accent-glow-sm: rgba(79, 70, 229, 0.18);
-  --accent-rgb: 79, 70, 229;
+  /* === Miruro Signature Accent — Electric Violet & Purple === */
+  --accent: #8b5cf6;
+  --accent-light: #a78bfa;
+  --accent-dark: #7c3aed;
+  --accent-glow: rgba(139, 92, 246, 0.4);
+  --accent-glow-sm: rgba(139, 92, 246, 0.2);
+  --accent-rgb: 139, 92, 246;
 
-  /* === Secondary — Sky Blue === */
-  --cyan: #3b82f6;
-  --cyan-light: #60a5fa;
-  --cyan-glow: rgba(59, 130, 246, 0.28);
+  /* === Secondary Accents — Electric Cyan & Pink === */
+  --cyan: #06b6d4;
+  --cyan-light: #38bdf8;
+  --cyan-glow: rgba(6, 182, 212, 0.28);
+  --pink: #ec4899;
 
-  /* === Gradient accent (indigo → blue) === */
-  --gradient-accent: linear-gradient(135deg, #4f46e5, #3b82f6);
-  --gradient-accent-45: linear-gradient(45deg, #4f46e5, #818cf8, #3b82f6);
+  /* === Gradients === */
+  --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --gradient-accent-45: linear-gradient(45deg, #8b5cf6, #a78bfa, #38bdf8);
   --gradient-dark: linear-gradient(180deg, transparent 0%, var(--bg-primary) 100%);
-  --gradient-hero-left: linear-gradient(90deg, rgba(7,8,15,0.97) 0%, rgba(7,8,15,0.88) 38%, rgba(7,8,15,0.45) 65%, transparent 100%);
-  --gradient-hero-bottom: linear-gradient(0deg, var(--bg-primary) 0%, transparent 65%);
+  --gradient-hero-left: linear-gradient(90deg, rgba(9,10,16,0.98) 0%, rgba(9,10,16,0.90) 42%, rgba(9,10,16,0.45) 70%, transparent 100%);
+  --gradient-hero-bottom: linear-gradient(0deg, var(--bg-primary) 0%, rgba(9,10,16,0.8) 25%, transparent 70%);
 
-  /* === Text — Warm whites === */
-  --text-primary: #eef0ff;
-  --text-secondary: #8486a9;
-  --text-muted: #42446a;
+  /* === Text — High Contrast & Slate Muted === */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
 
   /* === Borders === */
-  --border: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.14);
-  --border-accent: rgba(79, 70, 229, 0.5);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.18);
+  --border-accent: rgba(139, 92, 246, 0.45);
 
   /* === Glassmorphism === */
-  --glass-bg: rgba(11, 12, 26, 0.75);
-  --glass-bg-light: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: blur(20px) saturate(180%);
+  --glass-bg: rgba(12, 13, 22, 0.82);
+  --glass-bg-light: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-blur: blur(24px) saturate(190%);
   --glass-blur-heavy: blur(40px) saturate(200%);
-  --glass-blur-light: blur(8px);
+  --glass-blur-light: blur(10px);
 
   /* === Status === */
   --success: #10b981;
@@ -54,6 +55,7 @@
   --warning: #f59e0b;
 
   /* === Layout === */
+  --topnav-height: 58px;
   --sidebar-width: 68px;
   --sidebar-expanded-width: 224px;
   --titlebar-height: 36px;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import TitleBar from './components/TitleBar'
+import TopNav from './components/TopNav'
+
 import Home from './pages/Home'
 import Search from './pages/Search'
 import Downloads from './pages/Downloads'
@@ -118,7 +118,7 @@ export default function App() {
         if (sd.history && Array.isArray(sd.history)) {
           const local = JSON.parse(localStorage.getItem('kamiwatch-history') || '[]')
           const merged = [...local, ...sd.history].reduce((acc, current) => {
-            const x = acc.find(item => item.title === current.title)
+            const x = acc.find(item => (item.id && current.id && item.id === current.id) || (item.title || item.animeTitle) === (current.title || current.animeTitle))
             if (!x) return acc.concat([current])
             return acc
           }, [])
@@ -261,7 +261,7 @@ export default function App() {
   return (
     <AppContext.Provider value={ctx}>
       <div className="app-shell">
-        <TitleBar />
+        <TopNav />
         {(updateAvailable || updateDownloaded) && (
           <UpdateBanner
             downloaded={updateDownloaded}
@@ -269,8 +269,8 @@ export default function App() {
             onInstall={() => window.electronAPI?.installUpdate()}
           />
         )}
-        <div className="app-body">
-          <Sidebar />
+
+
           <main className="app-main">
             <ErrorBoundary>
               <Routes>
@@ -289,7 +289,7 @@ export default function App() {
               </Routes>
             </ErrorBoundary>
           </main>
-        </div>
+
         {episodeModal && <EpisodeModal />}
         {playerModal && <PlayerModal />}
         {showAuthModal && (
