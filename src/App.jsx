@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import TopNav from './components/TopNav'
+import MiruroRail from './components/MiruroRail'
+import MiruroHeader from './components/MiruroHeader'
 
 import Home from './pages/Home'
 import Search from './pages/Search'
@@ -261,7 +262,8 @@ export default function App() {
   return (
     <AppContext.Provider value={ctx}>
       <div className="app-shell">
-        <TopNav />
+        <MiruroRail />
+        <MiruroHeader />
         {(updateAvailable || updateDownloaded) && (
           <UpdateBanner
             downloaded={updateDownloaded}

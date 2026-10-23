@@ -206,7 +206,31 @@ function MiruroHero({ slides }) {
               <line x1="12" y1="16" x2="12" y2="12" />
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
-            <span>Detail</span>
+            <span>Details</span>
+          </button>
+          <button
+            className="miruro-hero-bookmark-btn"
+            onClick={() => {
+              const currentList = JSON.parse(localStorage.getItem('kamiwatch-watchlist') || '{}')
+              const key = String(slide.id || slide.title)
+              if (currentList[key]) {
+                delete currentList[key]
+              } else {
+                currentList[key] = {
+                  id: slide.id,
+                  title: slide.title,
+                  cover: slide.backdrop || slide.image,
+                  status: 'watching',
+                  updatedAt: Date.now()
+                }
+              }
+              localStorage.setItem('kamiwatch-watchlist', JSON.stringify(currentList))
+            }}
+            title="Add to Watchlist"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
           </button>
         </div>
       </div>

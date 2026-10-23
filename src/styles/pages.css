@@ -403,20 +403,21 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 28px;
-  border-radius: var(--radius);
-  background: var(--gradient-accent);
-  color: #fff;
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: #0a0a0a;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   border: none;
-  box-shadow: 0 0 24px var(--accent-glow);
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.25);
   transition: all var(--transition);
 }
 
 .miruro-hero-watch-btn:hover {
-  box-shadow: 0 0 34px var(--accent-glow);
+  background: #f4f4f5;
+  box-shadow: 0 6px 28px rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
 }
 
@@ -424,12 +425,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 24px;
-  border-radius: var(--radius);
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: #ededed;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -438,6 +439,27 @@
 
 .miruro-hero-detail-btn:hover {
   background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.miruro-hero-bookmark-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ededed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.miruro-hero-bookmark-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
 }
