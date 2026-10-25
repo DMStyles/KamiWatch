@@ -1228,6 +1228,52 @@
   margin-bottom: 24px;
 }
 
+/* Miruro Polished Genre Strip & Pills */
+.miruro-genre-strip-wrapper {
+  padding: 18px 28px 10px;
+  position: relative;
+}
+
+.miruro-genre-strip-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-behavior: smooth;
+}
+
+.genre-tag-pill {
+  padding: 7px 16px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.genre-tag-pill:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #f3f4f6;
+  transform: translateY(-1px);
+}
+
+.genre-tag-pill.active {
+  background: #7c3aed;
+  border-color: #8b5cf6;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4);
+}
+
 .miruro-season-pills {
   display: flex;
   gap: 8px;

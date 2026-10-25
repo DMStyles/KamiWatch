@@ -9,36 +9,12 @@ const API = 'http://localhost:8642'
 
 const DEFAULT_HERO_SLIDES = [
   {
-    id: 171630,
-    title: 'Dragon Ball Daima',
-    synopsis: 'Due to a conspiracy, Goku and his friends are turned small. In order to fix things, they will head off to a new world! An adventure with action in an unknown and mysterious world begins.',
-    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/171630-yDk1Jp3wJgWk.jpg',
-    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/171630-yDk1Jp3wJgWk.jpg',
-    logo: 'https://images.metahub.space/logo/medium/tt29497526/img',
-    genre: ['Adventure', 'Comedy', 'Fantasy', 'Action'],
-    score: '8.4',
-    type: 'TV',
-    episodes: '20',
-    year: '2026',
-  },
-  {
-    id: 21,
-    title: 'One Piece',
-    synopsis: 'Monkey D. Luffy sets off on an adventure with his pirate crew to find the greatest treasure known as the "One Piece" and become the Pirate King.',
-    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
-    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
-    genre: ['Action', 'Adventure', 'Fantasy'],
-    score: '8.8',
-    type: 'TV',
-    episodes: '1100+',
-    year: '1999',
-  },
-  {
     id: 101922,
     title: 'Demon Slayer: Kimetsu no Yaiba',
     synopsis: "Tanjiro Kamado's peaceful life is shattered when a demon slaughters his family. He trains to become a Demon Slayer to avenge them and cure his sister Nezuko.",
-    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-YfZhKgD9GIWK.jpg',
-    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-YfZhKgD9GIWK.jpg',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-33MtJGsUSxga.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-33MtJGsUSxga.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-WBsBl0ClmgYL.jpg',
     genre: ['Action', 'Supernatural', 'Historical'],
     score: '8.6',
     type: 'TV',
@@ -46,16 +22,56 @@ const DEFAULT_HERO_SLIDES = [
     year: '2019',
   },
   {
+    id: 113415,
+    title: 'JUJUTSU KAISEN',
+    synopsis: 'A boy swallows a cursed talisman - the finger of a demon - and becomes cursed himself. He enters a shaman school to locate the demon other body parts.',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/113415-jQBSkxWAAk83.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/113415-jQBSkxWAAk83.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-LHBAeoZDIsnF.jpg',
+    genre: ['Action', 'Fantasy', 'Supernatural'],
+    score: '8.7',
+    type: 'TV',
+    episodes: '24',
+    year: '2020',
+  },
+  {
+    id: 151807,
+    title: 'Solo Leveling',
+    synopsis: 'In a world where hunters must battle deadly monsters to protect humanity, Sung Jinwoo, notoriously known as the weakest hunter of all mankind, finds himself in a struggle for survival.',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/151807-37yfQA3ym8PA.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/151807-37yfQA3ym8PA.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx151807-it355ZgzquUd.png',
+    genre: ['Action', 'Adventure', 'Fantasy'],
+    score: '8.5',
+    type: 'TV',
+    episodes: '12',
+    year: '2024',
+  },
+  {
     id: 16498,
     title: 'Attack on Titan',
     synopsis: 'In a world where humanity lives behind walls to protect themselves from man-eating giants called Titans, young Eren Yeager vows to destroy them all.',
-    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498-85f1cT89d4lC.jpg',
-    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498-85f1cT89d4lC.jpg',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498-8jpFCOcDmneX.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/16498-8jpFCOcDmneX.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-buvcRTBx4NSm.jpg',
     genre: ['Action', 'Drama', 'Dark Fantasy'],
     score: '9.0',
     type: 'TV',
     episodes: '25',
     year: '2013',
+  },
+  {
+    id: 21,
+    title: 'One Piece',
+    synopsis: 'Monkey D. Luffy sets off on an adventure with his pirate crew to find the greatest treasure known as the "One Piece" and become the Pirate King.',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/21-wf37VakJmZqs.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21-ELSYx3yMPcKM.jpg',
+    genre: ['Action', 'Adventure', 'Fantasy'],
+    score: '8.8',
+    type: 'TV',
+    episodes: '1100+',
+    year: '1999',
   },
 ]
 
@@ -120,11 +136,18 @@ function MiruroHero({ slides }) {
     <div className="miruro-hero">
       {/* Background Banner */}
       <img
-        src={slide.backdrop || slide.image || slide.bannerImage}
+        src={slide.backdrop || slide.image || slide.bannerImage || slide.cover}
         alt={slide.title}
         referrerPolicy="no-referrer"
         className="miruro-hero-backdrop"
         style={{ opacity: fading ? 0 : 1 }}
+        onError={(e) => {
+          if (slide.cover && e.target.src !== slide.cover) {
+            e.target.src = slide.cover
+          } else if (slide.thumbnail && e.target.src !== slide.thumbnail) {
+            e.target.src = slide.thumbnail
+          }
+        }}
       />
 
       {/* Multi-Directional Gradient Overlays */}
@@ -358,10 +381,8 @@ export default function Home() {
       <MiruroHero slides={heroSlides} />
 
       {/* 2. Genre Tags Strip */}
-      <div style={{ padding: '20px 24px 8px' }}>
-        <div style={{
-          display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none'
-        }}>
+      <div className="miruro-genre-strip-wrapper">
+        <div className="miruro-genre-strip-scroll hide-scroll">
           {GENRE_TAGS.map(g => (
             <button
               key={g}

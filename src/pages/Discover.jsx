@@ -6,11 +6,61 @@ import SkeletonCard from '../components/SkeletonCard'
 
 const API = 'http://localhost:8642'
 
+const DEFAULT_SPOTLIGHT = [
+  {
+    id: 113415,
+    title: 'JUJUTSU KAISEN',
+    synopsis: 'A boy swallows a cursed talisman - the finger of a demon - and becomes cursed himself. He enters a shaman school to locate the demon other body parts.',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/113415-jQBSkxWAAk83.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/113415-jQBSkxWAAk83.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-LHBAeoZDIsnF.jpg',
+    genre: ['Action', 'Fantasy', 'Supernatural'],
+    score: '8.7',
+    type: 'TV',
+    year: '2020',
+  },
+  {
+    id: 151807,
+    title: 'Solo Leveling',
+    synopsis: 'In a world where hunters must battle deadly monsters to protect humanity, Sung Jinwoo finds himself in a struggle for survival and discovers a quest log only he can see.',
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/151807-37yfQA3ym8PA.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/151807-37yfQA3ym8PA.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx151807-it355ZgzquUd.png',
+    genre: ['Action', 'Adventure', 'Fantasy'],
+    score: '8.5',
+    type: 'TV',
+    year: '2024',
+  },
+  {
+    id: 101922,
+    title: 'Demon Slayer: Kimetsu no Yaiba',
+    synopsis: "Tanjiro Kamado's peaceful life is shattered when a demon slaughters his family. He trains to become a Demon Slayer to avenge them and cure his sister Nezuko.",
+    backdrop: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-33MtJGsUSxga.jpg',
+    image: 'https://s4.anilist.co/file/anilistcdn/media/anime/banner/101922-33MtJGsUSxga.jpg',
+    cover: 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-WBsBl0ClmgYL.jpg',
+    genre: ['Action', 'Supernatural', 'Historical'],
+    score: '8.6',
+    type: 'TV',
+    year: '2019',
+  }
+]
+
+const FALLBACK_GEMS = [
+  { id: 46102, title: 'Odd Taxi', score: 8.7, type: 'TV', episodes: 13, cover: 'https://cdn.myanimelist.net/images/anime/1185/115868.jpg' },
+  { id: 46095, title: "Vivy: Fluorite Eye's Song", score: 8.4, type: 'TV', episodes: 13, cover: 'https://cdn.myanimelist.net/images/anime/1208/115802.jpg' },
+  { id: 37520, title: 'Dororo', score: 8.2, type: 'TV', episodes: 24, cover: 'https://cdn.myanimelist.net/images/anime/1879/100467.jpg' },
+  { id: 44074, title: 'Link Click', score: 8.7, type: 'ONA', episodes: 11, cover: 'https://cdn.myanimelist.net/images/anime/1109/118055.jpg' },
+  { id: 22135, title: 'Ping Pong the Animation', score: 8.6, type: 'TV', episodes: 11, cover: 'https://cdn.myanimelist.net/images/anime/10/58041.jpg' },
+  { id: 13125, title: 'From the New World', score: 8.3, type: 'TV', episodes: 25, cover: 'https://cdn.myanimelist.net/images/anime/12/41199.jpg' },
+  { id: 35557, title: 'Land of the Lustrous', score: 8.4, type: 'TV', episodes: 12, cover: 'https://cdn.myanimelist.net/images/anime/12/88204.jpg' },
+  { id: 35828, title: 'Pluto', score: 8.4, type: 'ONA', episodes: 8, cover: 'https://cdn.myanimelist.net/images/anime/1841/138767.jpg' },
+]
+
 export default function Discover() {
   const navigate = useNavigate()
   const { setEpisodeModal } = useContext(AppContext)
   const [activeTab, setActiveTab] = useState('For You')
-  const [spotlightItems, setSpotlightItems] = useState([])
+  const [spotlightItems, setSpotlightItems] = useState(DEFAULT_SPOTLIGHT)
   const [spotlightIdx, setSpotlightIdx] = useState(0)
   const [allAnime, setAllAnime] = useState([])
   const [hiddenGems, setHiddenGems] = useState([])
@@ -24,29 +74,39 @@ export default function Discover() {
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const [r1, r2, r3] = await Promise.allSettled([
+      const [r1, r2, r3, r4] = await Promise.allSettled([
         fetch(`${API}/jikan/hero-slides`).then(r => r.json()),
-        fetch(`${API}/jikan/all?page=1`).then(r => r.json()),
+        fetch(`${API}/jikan/airing?limit=16`).then(r => r.json()),
         fetch(`${API}/jikan/hidden-gems`).then(r => r.json()),
+        fetch(`${API}/jikan/all?page=1`).then(r => r.json()),
       ])
 
-      if (r1.status === 'fulfilled' && (r1.value.slides || r1.value.results)) {
-        const slides = r1.value.slides || r1.value.results || []
-        setSpotlightItems(slides.slice(0, 6))
+      const toList = (res) => {
+        if (!res || res.status !== 'fulfilled' || !res.value) return []
+        const val = res.value
+        if (Array.isArray(val)) return val
+        if (Array.isArray(val.results)) return val.results
+        if (Array.isArray(val.data)) return val.data
+        if (Array.isArray(val.slides)) return val.slides
+        return []
       }
 
-      if (r2.status === 'fulfilled') {
-        const list = Array.isArray(r2.value) ? r2.value : (r2.value.results || r2.value.data || [])
-        setAllAnime(list.slice(0, 24))
-        setPopularSeason(list.slice(0, 14))
-      }
+      const slides = toList(r1)
+      setSpotlightItems(slides.length > 0 ? slides.slice(0, 6) : DEFAULT_SPOTLIGHT)
 
-      if (r3.status === 'fulfilled') {
-        const gems = Array.isArray(r3.value) ? r3.value : (r3.value.results || r3.value.data || [])
-        setHiddenGems(gems.slice(0, 14))
-      }
-    } catch {}
-    finally {
+      const airing = toList(r2)
+      const all = toList(r4)
+      const popular = airing.length > 0 ? airing : all
+      setPopularSeason(popular.length > 0 ? popular.slice(0, 14) : FALLBACK_GEMS)
+      setAllAnime(all.length > 0 ? all : popular)
+
+      const gems = toList(r3)
+      setHiddenGems(gems.length > 0 ? gems.slice(0, 14) : FALLBACK_GEMS)
+    } catch {
+      setSpotlightItems(DEFAULT_SPOTLIGHT)
+      setPopularSeason(FALLBACK_GEMS)
+      setHiddenGems(FALLBACK_GEMS)
+    } finally {
       setLoading(false)
     }
   }

@@ -20,10 +20,16 @@ export default function Trending() {
   const fetchTrending = async (season, year) => {
     setLoading(true)
     try {
-      // Fetch trending / seasonal anime from backend (Jikan / AniList)
-      const res = await fetch(`${API}/jikan/all?page=1`)
+      // Fetch trending / seasonal anime from backend based on chosen season & year
+      const res = await fetch(`${API}/jikan/season?season=${encodeURIComponent(season)}&year=${encodeURIComponent(year)}`)
       const data = await res.json()
-      const list = Array.isArray(data) ? data : (data.results || data.data || [])
+      let list = Array.isArray(data) ? data : (data.results || data.data || [])
+      if (!list || list.length === 0) {
+        // Fallback to all trending if empty
+        const fallbackRes = await fetch(`${API}/jikan/all?page=1`)
+        const fallbackData = await fallbackRes.json()
+        list = Array.isArray(fallbackData) ? fallbackData : (fallbackData.results || fallbackData.data || [])
+      }
       setItems(list.slice(0, 36))
     } catch {
       setItems([])

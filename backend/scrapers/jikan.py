@@ -64,6 +64,8 @@ MEDIA_FRAGMENT = """
   id
   title { english romaji }
   coverImage { large extraLarge }
+  description(asHtml: false)
+  genres
   episodes
   format
   averageScore
@@ -241,10 +243,17 @@ def parse_media(item: dict) -> dict:
     img = (item.get("coverImage") or {})
     thumbnail = img.get("extraLarge") or img.get("large", "")
     media_id = item.get("id")
+    raw_desc = (item.get("description") or "").replace("<br>", " ").replace("<br/>", " ")
+    import re
+    synopsis = re.sub(r"<[^>]+>", "", raw_desc).strip()
     return {
         "id": media_id,
         "title": title_en or title_jp,
         "title_japanese": title_jp,
+        "synopsis": synopsis or "No synopsis available for this title.",
+        "description": synopsis or "No synopsis available for this title.",
+        "genres": item.get("genres") or ["Action", "Fantasy"],
+        "genre": item.get("genres") or ["Action", "Fantasy"],
         "cover": thumbnail,
         "image": thumbnail,
         "thumbnail": thumbnail,
@@ -254,7 +263,7 @@ def parse_media(item: dict) -> dict:
         "score": score,
         "source": "jikan",
         "mal_id": media_id,
-        "year": (item.get("startDate") or {}).get("year"),
+        "year": (item.get("startDate") or {}).get("year") or (item.get("seasonYear")),
         "status": item.get("status"),
         "ep": item.get("episodes") or "?",
     }
@@ -496,98 +505,104 @@ async def get_hero_slides():
                 "id": item.get("id"),
                 "title": title,
                 "synopsis": desc,
+                "backdrop": banner,
                 "image": banner,
+                "bannerImage": banner,
+                "cover": (attr.get("posterImage") or {}).get("large") or banner,
                 "type": (attr.get("subtype") or "TV").upper(),
                 "episodes": str(attr.get("episodeCount") or "?"),
+                "score": score_str.replace("/10", ""),
                 "rating": score_str,
-                "genres": [],
+                "genres": ["Action", "Adventure"],
+                "genre": ["Action", "Adventure"],
             })
         return {"slides": slides}
 
-
-@router.get("/hidden-gems")
-async def get_hidden_gems():
-    """Return high-scoring, critically acclaimed underrated anime."""
-    import random
-    query = """
-    query {
-      Page(page: 1, perPage: 30) {
-        media(type: ANIME, sort: SCORE_DESC, isAdult: false, format_in: [TV, MOVIE], averageScore_greater: 80, popularity_lesser: 120000) {
-          id
-          title { english romaji }
-          description(asHtml: false)
-          bannerImage
-          coverImage { extraLarge large }
-          format
-          episodes
-          averageScore
-          genres
-          seasonYear
-        }
-      }
-    }
-    """
-    try:
-        result = await anilist_post(query)
-        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
-        if anime_list:
-            items = []
-            for a in anime_list:
-                title = (a.get("title") or {}).get("english") or (a.get("title") or {}).get("romaji") or "Unknown"
-                items.append({
-                    "id": a.get("id"),
-                    "title": title,
-                    "cover": (a.get("coverImage") or {}).get("extraLarge") or (a.get("coverImage") or {}).get("large") or "",
-                    "score": round(a.get("averageScore") / 10, 1) if a.get("averageScore") else None,
-                    "type": (a.get("format") or "TV").replace("_", " "),
-                    "episodes": a.get("episodes"),
-                    "genres": a.get("genres") or [],
-                    "year": a.get("seasonYear"),
-                })
-            random.shuffle(items)
-            return {"results": items[:16]}
-    except Exception as e:
-        pass
-
-    curated = [
-        {"id": 46102, "title": "Odd Taxi", "score": 8.7, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1185/115868.jpg"},
-        {"id": 46095, "title": "Vivy: Fluorite Eye's Song", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1208/115802.jpg"},
-        {"id": 37520, "title": "Dororo", "score": 8.2, "type": "TV", "episodes": 24, "cover": "https://cdn.myanimelist.net/images/anime/1879/100467.jpg"},
-        {"id": 44074, "title": "Link Click", "score": 8.7, "type": "ONA", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/1109/118055.jpg"},
-        {"id": 22135, "title": "Ping Pong the Animation", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/58041.jpg"},
-        {"id": 13125, "title": "From the New World", "score": 8.3, "type": "TV", "episodes": 25, "cover": "https://cdn.myanimelist.net/images/anime/12/41199.jpg"},
-        {"id": 35557, "title": "Land of the Lustrous", "score": 8.4, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/12/88204.jpg"},
-        {"id": 35828, "title": "Pluto", "score": 8.4, "type": "ONA", "episodes": 8, "cover": "https://cdn.myanimelist.net/images/anime/1841/138767.jpg"},
-        {"id": 7785, "title": "The Tatami Galaxy", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/75914.jpg"},
-        {"id": 48849, "title": "Sonny Boy", "score": 7.8, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/1917/116773.jpg"},
-        {"id": 2251, "title": "Baccano!", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/11/4844.jpg"},
-        {"id": 790, "title": "Ergo Proxy", "score": 7.9, "type": "TV", "episodes": 23, "cover": "https://cdn.myanimelist.net/images/anime/4/20547.jpg"},
-    ]
-    return {"results": curated}
-
     random.shuffle(with_banners)
-    picks = with_banners[:6]
+    picks = with_banners[:8]
 
     slides = []
     for item in picks:
         title_en = (item.get("title") or {}).get("english") or (item.get("title") or {}).get("romaji", "")
         desc = (item.get("description") or "").replace("<br>", " ").replace("<br/>", " ")
         import re
-        desc = re.sub(r"<[^>]+>", "", desc)[:180]
+        desc = re.sub(r"<[^>]+>", "", desc)[:220]
         score = item.get("averageScore")
+        score_val = str(round(score / 10, 1)) if score else "8.5"
         episodes = item.get("episodes") or "?"
+        banner = item.get("bannerImage") or (item.get("coverImage") or {}).get("extraLarge") or (item.get("coverImage") or {}).get("large", "")
+        cover = (item.get("coverImage") or {}).get("extraLarge") or (item.get("coverImage") or {}).get("large", "")
+        year = str(item.get("seasonYear") or "2026")
+        genres = item.get("genres") or ["Action", "Adventure"]
         slides.append({
             "id": item.get("id"),
             "title": title_en,
             "synopsis": desc,
-            "image": item.get("bannerImage") or (item.get("coverImage") or {}).get("extraLarge", ""),
+            "backdrop": banner,
+            "image": banner,
+            "bannerImage": banner,
+            "cover": cover,
+            "thumbnail": cover,
             "type": (item.get("format") or "TV").replace("_", " "),
             "episodes": str(episodes),
-            "rating": f"{round(score/10,1)}/10" if score else "N/A",
-            "genres": item.get("genres") or [],
+            "score": score_val,
+            "rating": f"{score_val}/10",
+            "year": year,
+            "genres": genres,
+            "genre": genres,
         })
 
     return {"slides": slides}
+
+
+@router.get("/season")
+async def get_seasonal_anime(season: str = "WINTER", year: int = 2026, page: int = 1):
+    """Return seasonal anime from AniList based on season and year."""
+    season_clean = season.upper().strip()
+    if season_clean not in ["WINTER", "SPRING", "SUMMER", "FALL"]:
+        season_clean = "WINTER"
+
+    query = """
+    query ($season: MediaSeason, $seasonYear: Int, $page: Int) {
+      Page(page: $page, perPage: 36) {
+        pageInfo { hasNextPage currentPage lastPage }
+        media(type: ANIME, season: $season, seasonYear: $seasonYear, sort: POPULARITY_DESC, isAdult: false) {
+          """ + MEDIA_FRAGMENT + """
+        }
+      }
+    }
+    """
+    try:
+        result = await anilist_post(query, {"season": season_clean, "seasonYear": year, "page": page})
+        anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
+        page_info = ((result.get("data") or {}).get("Page") or {}).get("pageInfo") or {}
+        if anime_list:
+            return {
+                "results": [parse_media(a) for a in anime_list],
+                "page": page,
+                "has_next": page_info.get("hasNextPage", False),
+                "total_pages": page_info.get("lastPage", 1),
+                "season": season_clean,
+                "year": year
+            }
+    except Exception:
+        pass
+
+    # Fallback to general listing if specific season had zero results
+    kitsu_res = await kitsu_get("anime", {
+        "page[limit]": 24,
+        "sort": "-userCount"
+    })
+    kitsu_items = kitsu_res.get("data") or []
+    results = [parse_kitsu_item(x) for x in kitsu_items] if kitsu_items else []
+    return {
+        "results": results,
+        "page": page,
+        "has_next": False,
+        "total_pages": 1,
+        "season": season_clean,
+        "year": year
+    }
 
 
 @router.get("/hidden-gems")
@@ -598,16 +613,7 @@ async def get_hidden_gems():
     query {
       Page(page: 1, perPage: 30) {
         media(type: ANIME, sort: SCORE_DESC, isAdult: false, format_in: [TV, MOVIE], averageScore_greater: 80, popularity_lesser: 120000) {
-          id
-          title { english romaji }
-          description(asHtml: false)
-          bannerImage
-          coverImage { extraLarge large }
-          format
-          episodes
-          averageScore
-          genres
-          seasonYear
+          """ + MEDIA_FRAGMENT + """
         }
       }
     }
@@ -616,37 +622,20 @@ async def get_hidden_gems():
         result = await anilist_post(query)
         anime_list = ((result.get("data") or {}).get("Page") or {}).get("media") or []
         if anime_list:
-            items = []
-            for a in anime_list:
-                title = (a.get("title") or {}).get("english") or (a.get("title") or {}).get("romaji") or "Unknown"
-                items.append({
-                    "id": a.get("id"),
-                    "title": title,
-                    "cover": (a.get("coverImage") or {}).get("extraLarge") or (a.get("coverImage") or {}).get("large") or "",
-                    "score": round(a.get("averageScore") / 10, 1) if a.get("averageScore") else None,
-                    "type": (a.get("format") or "TV").replace("_", " "),
-                    "episodes": a.get("episodes"),
-                    "genres": a.get("genres") or [],
-                    "year": a.get("seasonYear"),
-                })
-            random.shuffle(items)
-            return {"results": items[:16]}
-    except Exception as e:
+            random.shuffle(anime_list)
+            return {"results": [parse_media(a) for a in anime_list[:20]]}
+    except Exception:
         pass
 
     curated = [
-        {"id": 46102, "title": "Odd Taxi", "score": 8.7, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1185/115868.jpg"},
-        {"id": 46095, "title": "Vivy: Fluorite Eye's Song", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1208/115802.jpg"},
-        {"id": 37520, "title": "Dororo", "score": 8.2, "type": "TV", "episodes": 24, "cover": "https://cdn.myanimelist.net/images/anime/1879/100467.jpg"},
-        {"id": 44074, "title": "Link Click", "score": 8.7, "type": "ONA", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/1109/118055.jpg"},
-        {"id": 22135, "title": "Ping Pong the Animation", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/58041.jpg"},
-        {"id": 13125, "title": "From the New World", "score": 8.3, "type": "TV", "episodes": 25, "cover": "https://cdn.myanimelist.net/images/anime/12/41199.jpg"},
-        {"id": 35557, "title": "Land of the Lustrous", "score": 8.4, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/12/88204.jpg"},
-        {"id": 35828, "title": "Pluto", "score": 8.4, "type": "ONA", "episodes": 8, "cover": "https://cdn.myanimelist.net/images/anime/1841/138767.jpg"},
-        {"id": 7785, "title": "The Tatami Galaxy", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/75914.jpg"},
-        {"id": 48849, "title": "Sonny Boy", "score": 7.8, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/1917/116773.jpg"},
-        {"id": 2251, "title": "Baccano!", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/11/4844.jpg"},
-        {"id": 790, "title": "Ergo Proxy", "score": 7.9, "type": "TV", "episodes": 23, "cover": "https://cdn.myanimelist.net/images/anime/4/20547.jpg"},
+        {"id": 46102, "title": "Odd Taxi", "score": 8.7, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1185/115868.jpg", "synopsis": "A cynical walrus taxi driver gets involved in a missing girl mystery and the criminal underworld of Tokyo.", "genres": ["Mystery", "Drama"]},
+        {"id": 46095, "title": "Vivy: Fluorite Eye's Song", "score": 8.4, "type": "TV", "episodes": 13, "cover": "https://cdn.myanimelist.net/images/anime/1208/115802.jpg", "synopsis": "An autonomous AI songstress embarks on a century-long mission to prevent an AI war and save humanity.", "genres": ["Sci-Fi", "Action", "Music"]},
+        {"id": 37520, "title": "Dororo", "score": 8.2, "type": "TV", "episodes": 24, "cover": "https://cdn.myanimelist.net/images/anime/1879/100467.jpg", "synopsis": "A young ronin born without limbs or facial features travels feudal Japan slaying demons to reclaim his body parts.", "genres": ["Action", "Adventure", "Supernatural"]},
+        {"id": 44074, "title": "Link Click", "score": 8.7, "type": "ONA", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/1109/118055.jpg", "synopsis": "Using superpowers to enter photos, two friends take on client requests that soon spiral into deadly danger.", "genres": ["Drama", "Mystery", "Supernatural"]},
+        {"id": 22135, "title": "Ping Pong the Animation", "score": 8.6, "type": "TV", "episodes": 11, "cover": "https://cdn.myanimelist.net/images/anime/10/58041.jpg", "synopsis": "Two lifelong friends and table tennis prodigies navigate rivalry, personal growth, and sports mastery.", "genres": ["Sports", "Drama", "Psychological"]},
+        {"id": 13125, "title": "From the New World", "score": 8.3, "type": "TV", "episodes": 25, "cover": "https://cdn.myanimelist.net/images/anime/12/41199.jpg", "synopsis": "In a utopian future society of psychic humans, five children uncover the dark history of their civilization.", "genres": ["Drama", "Horror", "Mystery", "Sci-Fi"]},
+        {"id": 35557, "title": "Land of the Lustrous", "score": 8.4, "type": "TV", "episodes": 12, "cover": "https://cdn.myanimelist.net/images/anime/12/88204.jpg", "synopsis": "In a mysterious world inhabited by immortal humanoid gems, brittle Phosphophyllite searches for purpose.", "genres": ["Action", "Drama", "Fantasy", "Mystery"]},
+        {"id": 35828, "title": "Pluto", "score": 8.4, "type": "ONA", "episodes": 8, "cover": "https://cdn.myanimelist.net/images/anime/1841/138767.jpg", "synopsis": "In an ideal world where humans and robots co-exist, a series of assassinations of the world's most advanced robots begins.", "genres": ["Action", "Mystery", "Sci-Fi", "Mecha"]},
     ]
     return {"results": curated}
 
