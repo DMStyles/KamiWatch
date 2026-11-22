@@ -234,6 +234,32 @@ export default function Settings() {
           <h2 className="settings-section-title">Playback & Interface</h2>
           <div className="settings-row">
             <div>
+              <label className="settings-label">Default Streaming Source</label>
+              <p className="settings-desc">Primary server source used to search and stream anime</p>
+            </div>
+            <select
+              className="settings-select"
+              value={local.defaultSource || 'anikoto'}
+              onChange={e => set('defaultSource', e.target.value)}
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '6px 12px',
+                color: 'var(--text-primary)',
+                fontSize: 13
+              }}
+            >
+              <option value="anikoto">⚡ AniKoto (Fast, Multi-Server - Recommended)</option>
+              <option value="miruro">🌟 Miruro (HD Streaming & Mirrors)</option>
+              <option value="anivault">🛡️ AniVault TV (Official Miruro Mirror)</option>
+              <option value="animetake">🎬 AnimeTake (Dub/Sub)</option>
+              <option value="kissanime">🍿 KissAnime (Backup)</option>
+              <option value="museasia">📺 Muse Asia (Official YouTube)</option>
+            </select>
+          </div>
+          <div className="settings-row">
+            <div>
               <label className="settings-label">Anime Title Language</label>
               <p className="settings-desc">Show English titles or Japanese (Romaji) titles</p>
             </div>

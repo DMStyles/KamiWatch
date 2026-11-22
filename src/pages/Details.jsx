@@ -5,9 +5,9 @@ import SkeletonCard from '../components/SkeletonCard'
 
 const API = 'http://localhost:8642'
 const BASE_SOURCES = [
+  { id: 'anikoto', name: 'AniKoto (Fast, Multi-Server)' },
   { id: 'miruro', name: 'Miruro (HD Streaming & Mirrors)' },
   { id: 'anivault', name: 'AniVault TV (Official Miruro Mirror)' },
-  { id: 'anikoto', name: 'AniKoto (Fast, Multi-Server)' },
   { id: 'animetake', name: 'AnimeTake (Dub/Sub)' },
   { id: 'kissanime', name: 'KissAnime (Backup)' },
   { id: 'museasia', name: 'Muse Asia (Official YouTube)' }
@@ -18,7 +18,7 @@ export default function Details() {
   const navigate = useNavigate()
   const location = useLocation()
   
-  const { settings, playerModal, setPlayerModal, setDownloads } = useContext(AppContext)
+  const { settings, saveSettings, playerModal, setPlayerModal, setDownloads } = useContext(AppContext)
   const [sourcesList, setSourcesList] = useState(BASE_SOURCES)
 
   useEffect(() => {
@@ -107,8 +107,21 @@ export default function Details() {
   }
 
   // Scraper Source States
-  const [activeSource, setActiveSource] = useState(BASE_SOURCES[0].id)
-  const activeSourceRef = React.useRef(BASE_SOURCES[0].id) // ref to avoid stale closure in async callbacks
+  const getInitialSource = () => {
+    const s = settings?.defaultSource
+    if (s && s !== 'miruro') return s
+    return 'anikoto'
+  }
+  const [activeSource, setActiveSource] = useState(getInitialSource)
+  const activeSourceRef = React.useRef(getInitialSource())
+
+  useEffect(() => {
+    const s = settings?.defaultSource
+    if (s && s !== 'miruro' && s !== activeSource) {
+      setActiveSource(s)
+      activeSourceRef.current = s
+    }
+  }, [settings?.defaultSource])
   const [searchResults, setSearchResults] = useState([])
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [searchingSource, setSearchingSource] = useState(false)
@@ -418,6 +431,9 @@ export default function Details() {
   const handleSourceChange = (sourceId) => {
     setActiveSource(sourceId)
     activeSourceRef.current = sourceId
+    if (saveSettings) {
+      saveSettings({ ...settings, defaultSource: sourceId })
+    }
     if (anime) {
       searchSourceScraper(anime.title, sourceId)
     }

@@ -48,6 +48,7 @@ export default function App() {
     theme: 'dark',
     maxConcurrent: 3,
     titleLanguage: 'english',
+    defaultSource: 'anikoto',
     anikotoDomain: 'https://anikototv.to',
     animetakeDomain: 'https://animetake.tv',
     kissanimeDomain: 'https://kissanime.com.vc',
@@ -189,7 +190,11 @@ export default function App() {
     let currentSettings = settings
     if (savedSettings) {
       try {
-        currentSettings = { ...defaultSettings, ...JSON.parse(savedSettings) }
+        const parsed = JSON.parse(savedSettings)
+        if (!parsed.defaultSource || parsed.defaultSource === 'miruro') {
+          parsed.defaultSource = 'anikoto'
+        }
+        currentSettings = { ...defaultSettings, ...parsed }
         setSettings(currentSettings)
       } catch (e) {
         console.error('Failed to parse settings', e)
